@@ -50,3 +50,9 @@ One entry per decision: date, decision, rationale. Plan-affecting entries name t
 | D27 | Supersedes the retry parts of D21: generator and batch size chosen during development, then one terminal validation gate without enlargement, retry, or pooling; failure or inconclusive result means no equivalence claim | Outcome-dependent enlargement and repeated gates break fixed-look TOST error control | v3.4 §4.1 |
 | D28 | Supersedes the class wording of D23: E4 patches are described by route (generator-mediated / decoder-input) and geometry (region / probe direction); one primary combination and comparator frozen on SELECT | The single class label mixed two independent factors and left the primary contrast ambiguous | v3.4 §9.2, §12.2 |
 | D29 | G0 refinements: numerical flips are a hypothesis; changed-output count only with paired reference predictions; prefix recomputation instead of a general inequality invariant; marginal baseline evaluated on TEST | Final-round minor findings; all verified against the plan text | v3.4 §2.2, §8.2 |
+
+## 2026-11-08 — Execution environment
+
+| ID | Decision | Rationale | Plan |
+|---|---|---|---|
+| D30 | Supersedes the WSL2 part of D07: the Python environment runs natively on Windows with `uv` (Python 3.12, CPU, FP32); plan §2.2 item 1 wording ("under WSL2") is updated in the next plan version | WSL cannot reach the network through the corporate proxy; Windows reaches PyPI through the local proxy; the Sudoku path needs no Linux-only kernels | v3.4 §2.2 item 1 (wording pending) |

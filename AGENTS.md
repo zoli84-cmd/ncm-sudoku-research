@@ -19,7 +19,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - Never invent hashes, sample sizes, power estimates, or results; open items stay explicitly open
 - Claim boundaries follow plan §13: written artifacts keep the hedging and "does not follow" qualifiers; no compressed or caveman-style prose in project files
 - Upstream code: `HazyResearch/ncm` at commit `c70274273f489abc73832b2b98584a8483b6b203`, planned as an unmodified submodule under `third_party/ncm`; own code goes to `src/ncm_sudoku/`
-- Numerical policy: FP32, eager mode, deterministic algorithms, CPU under WSL2 first (plan §2.2)
+- Numerical policy: FP32, eager mode, deterministic algorithms, CPU on native Windows (plan §2.2, DECISIONS D30)
 - Not committed (see `.gitignore`): checkpoints, datasets, run outputs, paper PDFs, `.env`
 - Secrets: `CONSENSUS_API_KEY` is read from the environment only; never write keys to files, logs, or commits
 
@@ -28,12 +28,15 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - Workflow: Superpowers process skills (brainstorming → writing-plans → executing-plans / test-driven-development → verification-before-completion)
 - From Mattpocock skills use only `grilling` (plan stress tests), `research` (primary-source notes), `domain-modeling` (glossary for plan §3 notation)
 - Coding style: Karpathy guidelines (surface assumptions, verifiable success criteria, surgical changes); Ponytail and Caveman are disabled for this project in `.claude/settings.json`
-- Environment: `uv`-managed Python 3.12, pytest; supplementary GLMM as an R script with lme4
+- Environment: `uv`-managed Python 3.12 on native Windows, pytest; supplementary GLMM as an R script with lme4
 - Library docs: Context7 for PyTorch, huggingface_hub, statsmodels, scipy APIs
 - Literature: Consensus API for peer-reviewed methodology search; supplement with arXiv / Semantic Scholar / Exa for recent ML preprints; save results and the query log under `literature/`
 - Code-graph tooling (Graft or graphify, pick one) only after the upstream `ncm` submodule exists
 
 ## Verification
+
+- From the project root on Windows (Git Bash or PowerShell): `uv run pytest -q`
+- Slow real-data checks, once the released data is downloaded: `uv run pytest -q -m slow`
 
 ## Child DOX Index
 
@@ -47,6 +50,9 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
+- [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
+- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` holds grid conventions and NCM token serialization
+- [tests/](tests/): pytest suite, one test module per package module
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
 - [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A Sudoku core)
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
