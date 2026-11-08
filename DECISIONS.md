@@ -21,3 +21,12 @@ One entry per decision: date, decision, rationale. Plan-affecting entries name t
 | D13 | Main analysis in Python; supplementary GLMM as one R script with lme4 on exported CSV | lme4 is the tool cited by the plan; GLMM is supplementary | — |
 | D14 | Related-work novelty search (Consensus API, arXiv, Exa) before WP0, saved under `literature/` with a query log | Novelty claims in §2.1 are unverified; cheaper to learn before engineering | — |
 | D15 | Layout: `src/ncm_sudoku/`, `tests/` (pytest), `third_party/ncm` submodule, `uv` lockfile, `experiments/`, `literature/` | G0 identity and validator tests become the project's verification | — |
+
+## 2026-11-08 — Related-work review (`literature/related_work_novelty_check.md`)
+
+| ID | Decision | Rationale | Plan |
+|---|---|---|---|
+| D16 | Add a secondary exploratory unit–digit probe target (27 units × 9 digits), label definition aligned with Kniazev & Fijalkow (2026) before PROBE-VAL | Direct comparison with the closest prior Sudoku probing result, where unit-level probes succeed and per-cell candidate probes plateau | v3.2 §8.3 |
+| D17 | E4: size- and norm-matched random-direction control for every probe-direction intervention; report the clean–patched distance for every patch | HRM study found probe directions decodable but not more causal than random; patching interaction effects grow with distance | v3.2 §9.2 |
+| D18 | Interpret H3 against NCM's corruption training and non-canonical codes; G0 records the checkpoint's training regime; new §13 interpretation row | A positive compensation effect may be a trained robustness property; replaced codes may be absorbed | v3.2 §7.1, §13 |
+| D19 | Narrow and date the novelty claim ("to our knowledge, as of 2026-11-08"); add references [16]–[21]; repeat the search before submission | Sudoku candidate decodability is not new; NCM follow-ups appear within weeks | v3.2 §2.1, §15 |
