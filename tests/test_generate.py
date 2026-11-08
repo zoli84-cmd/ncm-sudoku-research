@@ -52,3 +52,25 @@ def test_generate_many_ids_unique():
     batch = generate_many(3, 10)
     assert len({g.puzzle_id for g in batch}) == 10
     assert len({g.solution.tobytes() for g in batch}) == 10
+
+
+def test_generate_records_numpy_version():
+    gp = generate_puzzle(1, 0)
+    assert gp.numpy_version == np.__version__
+
+
+GOLDEN = {
+    (1, 0): "0b3ffaeb4820c6b985406f2385d359059255e5790db79dc18750ad2c4bed0800",
+    (20261108, 7): "25f8f03c111e8290fc4f576840babad6fdf8c7ebf50b7a5d8f1e10711d8e38e8",
+}
+
+
+@pytest.mark.parametrize("key", sorted(GOLDEN))
+def test_generate_golden_output(key):
+    # Pins what a puzzle_id names; a numpy RNG-stream change must fail here,
+    # and then needs a new GENERATOR_VERSION and a DECISIONS.md entry.
+    import hashlib
+
+    gp = generate_puzzle(*key)
+    digest = hashlib.sha256(gp.puzzle.tobytes() + gp.solution.tobytes()).hexdigest()
+    assert digest == GOLDEN[key], f"recorded with numpy 2.5.4, running {gp.numpy_version}"

@@ -28,6 +28,7 @@ class GeneratedPuzzle:
     seed: int
     index: int
     attempts: int
+    numpy_version: str  # the RNG stream (and so the puzzle a puzzle_id names) depends on numpy
 
 
 def random_solution(rng: np.random.Generator) -> np.ndarray:
@@ -83,6 +84,7 @@ def generate_puzzle(seed: int, index: int, n_clues: int = 30, max_attempts: int 
                 seed=seed,
                 index=index,
                 attempts=attempt,
+                numpy_version=np.__version__,
             )
     raise GenerationError(f"seed={seed} index={index}: {n_clues} clues not reached in {max_attempts} attempts")
 

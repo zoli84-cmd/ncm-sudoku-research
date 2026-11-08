@@ -64,8 +64,11 @@ def hidden_singles(grid) -> list[tuple[int, int, int]]:
 
 def inference_waves(grid, max_waves: int = 81) -> WaveResult:
     g = np.asarray(grid).astype(np.int8).copy()
-    if not check_puzzle(g).consistent:
+    status = check_puzzle(g)
+    if not status.consistent:
         raise ConflictError("inconsistent clues")
+    if status.n_solutions == 0:
+        raise ConflictError("clues admit no solution")
     depth = np.where(g != 0, 0, STUCK).astype(np.int16)
     rules: list[set[str]] = [set() for _ in range(81)]
     n_waves = 0

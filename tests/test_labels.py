@@ -101,3 +101,12 @@ def test_labels_do_not_mutate_input():
     inference_waves(g)
     candidate_mask(g)
     assert np.array_equal(g, P)
+
+
+def test_waves_unsatisfiable_input_raises():
+    # Consistent clues, no solution: r0c8 has no candidate (plan §5.2 item 3).
+    g = np.zeros(81, dtype=np.int8)
+    g[0:8] = np.arange(1, 9)
+    g[9 * 4 + 8] = 9
+    with pytest.raises(ConflictError):
+        inference_waves(g)
