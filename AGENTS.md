@@ -51,8 +51,10 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
-- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` holds grid conventions and NCM token serialization
-- [tests/](tests/): pytest suite, one test module per package module
+- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set)
+- [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures; `-m slow` runs real-data checks
+- [scripts/](scripts/): `fetch_released_data.py` downloads the released evaluation set into `data/released/` (git-ignored)
+- [experiments/provenance/](experiments/provenance/): `released_data.json` with dataset revision, sizes, SHA-256
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
 - [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A Sudoku core)
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
