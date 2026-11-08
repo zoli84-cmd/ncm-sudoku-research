@@ -20,6 +20,9 @@ _boxes = [
     for bc in range(3)
 ]
 UNITS = np.array(_rows + _cols + _boxes, dtype=np.int64)  # rows 0-8, cols 9-17, boxes 18-26
+# Cell c -> position in the 89-token output / state sequence (the 91-token puzzle
+# prefix adds BOS in front: 1 + CELL_TOKEN_INDICES).
+CELL_TOKEN_INDICES = np.array([c + c // 9 for c in range(81)], dtype=np.int64)
 PEERS = tuple(
     frozenset(int(p) for u in UNITS if c in u for p in u) - {c} for c in range(81)
 )
