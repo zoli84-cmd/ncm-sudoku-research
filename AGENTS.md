@@ -44,4 +44,5 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
+- [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
 - [resources/](resources/): source materials; `2610.14162v1.pdf` is the NCM paper (arXiv:2610.14162), local only
