@@ -30,3 +30,15 @@ One entry per decision: date, decision, rationale. Plan-affecting entries name t
 | D17 | E4: size- and norm-matched random-direction control for every probe-direction intervention; report the clean–patched distance for every patch | HRM study found probe directions decodable but not more causal than random; patching interaction effects grow with distance | v3.2 §9.2 |
 | D18 | Interpret H3 against NCM's corruption training and non-canonical codes; G0 records the checkpoint's training regime; new §13 interpretation row | A positive compensation effect may be a trained robustness property; replaced codes may be absorbed | v3.2 §7.1, §13 |
 | D19 | Narrow and date the novelty claim ("to our knowledge, as of 2026-11-08"); add references [16]–[21]; repeat the search before submission | Sudoku candidate decodability is not new; NCM follow-ups appear within weeks | v3.2 §2.1, §15 |
+
+## 2026-11-08 — External review R1 (`.reviews/plan-v3-2/decisions.md`)
+
+| ID | Decision | Rationale | Plan |
+|---|---|---|---|
+| D20 | Two-part G0 acceptance rule: official solve rate within ±1.0 pp of 86.1% on the 2,000 released boards, and 100% agreement of within-device identity tests; identical batch composition across branches A–D | Upstream eval is already FP32 eager (verified), so only CPU/CUDA argmax flips remain; deterministic algorithms guarantee repeatability only for identical shapes | v3.3 §2.2 items 1, 2, 5 |
+| D21 | Supersedes D11: frozen generator, separate development batch, model-free solver-depth gate, TOST equivalence (±5 pp, 90% interval) with a simulated batch size (at least 1,000 planned), inconclusive is not mismatch, all analysis subsets generated after the gate | Both reviewers: the 500-puzzle 95%-containment gate passes only about 65% of the time at true equality, and tuning on CAL cannot validate itself | v3.3 §4.1 |
+| D22 | Cumulative states via an own per-level loop with clones | Upstream `idx_to_zhats` returns 12 references to one tensor (verified) | v3.3 §2.2 item 6 |
+| D23 | E4: generator-mediated vs decoder-input patch classes; one primary comparator per class; random-direction distribution, K, and distance definition fixed on SELECT | Upstream decodes only from discrete codes (verified); controls were underspecified | v3.3 §9.2, §12.2 |
+| D24 | Provenance is partial orbit protection; generator algorithm specified; duplicate and symmetry-invariant screening | Independent draws can share an orbit; the sampler is not proven uniform | v3.3 §4, §4.1 |
+| D25 | Level 2 reworded as a low-capacity comparison; level 12 added as a secondary full-resolution comparison; permuted null probe tuned on its own permuted PROBE-VAL | Bit bounds do not predict readability; interpolation bottleneck below level 12; avoid inflating theta_1 | v3.3 §8.2, §8.3 |
+| D26 | Deferred: re-quantization diagnostic for geometric residual cancellation in E2 (backlog, after the pilot); WP0-B must load checkpoints with `weights_only=True` or inspect them first (upstream uses `weights_only=False`) | Scope control; untrusted checkpoint pickle | — |

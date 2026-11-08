@@ -4,7 +4,7 @@ DOX rules are inherited from `C:\Users\ako2bp\AGENTS.md`; this file is the proje
 
 ## Purpose
 
-Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.2.md](research_plan_v3.2.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
+Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.3.md](research_plan_v3.3.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
 
 ## Ownership
 
@@ -14,7 +14,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 ## Local Contracts
 
 - Language: every project file (code, docs, notes, protocols, AGENTS.md) is written in English; communication with the user is in Hungarian
-- Plan versions: `research_plan_v3.2.md` is authoritative; `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
+- Plan versions: `research_plan_v3.3.md` is authoritative; `research_plan_v3.2.md`, `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
 - Lock: the preregistration lock is a git tag plus an embargoed OSF registration citing the tag hash (plan §12.2, §16)
 - Never invent hashes, sample sizes, power estimates, or results; open items stay explicitly open
 - Claim boundaries follow plan §13: written artifacts keep the hedging and "does not follow" qualifiers; no compressed or caveman-style prose in project files
@@ -37,7 +37,8 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 
 ## Child DOX Index
 
-- [research_plan_v3.2.md](research_plan_v3.2.md): authoritative research plan
+- [research_plan_v3.3.md](research_plan_v3.3.md): authoritative research plan
+- [research_plan_v3.2.md](research_plan_v3.2.md): frozen plan v3.2 (related-work review, before external review R1)
 - [research_plan_v3.1.md](research_plan_v3.1.md): frozen plan v3.1 (setup decisions, before related-work review)
 - [DECISIONS.md](DECISIONS.md): decision log and post-lock deviation log
 - [research_plan_v3.md](research_plan_v3.md): frozen English translation of plan v3.0
