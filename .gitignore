@@ -22,3 +22,6 @@ resources/*.pdf
 
 # Copilot review transcripts (large, regenerable from the CLI session)
 .reviews/**/transcript.*.md
+
+# Per-puzzle raw run outputs
+runs/

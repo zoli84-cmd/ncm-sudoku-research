@@ -1,0 +1,21 @@
+{
+  "checkpoints_license": "MIT",
+  "code_license": "MIT",
+  "files": {
+    "sudoku/hard/config.yaml": {
+      "bytes": 1980,
+      "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+    },
+    "sudoku/hard/generator.pt": {
+      "bytes": 102560203,
+      "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+    },
+    "sudoku/hard/tokenizer.pt": {
+      "bytes": 59816209,
+      "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+    }
+  },
+  "repo_id": "hazyresearch/ncm-checkpoints",
+  "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+  "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+}

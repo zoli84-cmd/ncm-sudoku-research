@@ -54,7 +54,10 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set)
 - [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures; `-m slow` runs real-data checks
 - [scripts/](scripts/): `fetch_released_data.py` downloads the released evaluation set into `data/released/` (git-ignored)
-- [experiments/provenance/](experiments/provenance/): `released_data.json` with dataset revision, sizes, SHA-256
+- [experiments/provenance/](experiments/provenance/): `released_data.json` (dataset) and `checkpoints.json` (checkpoint revision, sizes, SHA-256, licenses, upstream commit)
+- [third_party/ncm/](third_party/ncm/): upstream HazyResearch/ncm as a git submodule at the pinned commit; never modified; imported via `ncm_sudoku.model.import_upstream`
+- `checkpoints/` (git-ignored): downloaded by `scripts/fetch_checkpoints.py`; load only through `ncm_sudoku.model.load_model` (weights_only=True)
+- `runs/` (git-ignored): per-puzzle raw run outputs
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
 - [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A Sudoku core)
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
