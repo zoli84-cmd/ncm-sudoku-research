@@ -1,0 +1,180 @@
+diff --git a/research_plan_v3.2.md b/research_plan_v3.3.md
+index 6cc469d..dc15a22 100644
+--- a/research_plan_v3.2.md
++++ b/research_plan_v3.3.md
+@@ -1,8 +1,8 @@
+ # NCM–Sudoku: hierarchical sensitivity, error propagation, and logical representations
+ 
+-**Research plan v3.2 — v3.1 plus the related-work review of 2026-11-08**  
++**Research plan v3.3 — v3.2 plus the external review round R1 of 2026-11-08**  
+ **Date:** 2026-11-08  
+-**Predecessors:** `research_plan_v3.1.md`, `research_plan_v3.md` (English translation of the Hungarian `NCM_Sudoku_kutatasi_terv_v3.md`); all remain unchanged.  
++**Predecessors:** `research_plan_v3.2.md`, `research_plan_v3.1.md`, `research_plan_v3.md` (English translation of the Hungarian `NCM_Sudoku_kutatasi_terv_v3.md`); all remain unchanged.  
+ **Status:** pilot protocol prepared for execution. Source verification is done; running the model, numerically reproducing the checkpoints, and validating the intervention infrastructure are not. Preregistration of the confirmatory study can be finalized after G0 and a separate pilot.  
+ **Versioning:** the English document is authoritative from v3.1 on. Every change from v3.0 is listed in Section 16 and justified in `DECISIONS.md`.
+ 
+@@ -41,12 +41,12 @@ Related work (search of 2026-11-08, `literature/related_work_novelty_check.md`):
+ 
+ ### 2.2 G0: reproduction and instrumentation
+ 
+-1. **Environment and provenance:** record commit, dependencies, Python/PyTorch/CUDA, device, precision, configuration, checkpoint and data file hashes, licenses, seeds. **Numerical policy:** all experiments run in FP32, eager mode (no `torch.compile`), with deterministic algorithms enabled, initially on CPU under WSL2. The paper used BF16 mixed precision and `torch.compile`; the deviation from the published numbers is reported, not corrected. An additional BF16 run is optional and only quantifies that deviation. A GPU is introduced only if the measured cost (item 9) requires it.
+-2. **Original run:** debug on a small technical sample, then reproduce the official evaluation with the original metric and with the standalone Sudoku metrics. The acceptable-deviation rule must be fixed before the comparison, with knowledge of the original evaluation and data.
++1. **Environment and provenance:** record commit, dependencies, Python/PyTorch/CUDA, device, precision, configuration, checkpoint and data file hashes, licenses, seeds. **Numerical policy:** all experiments run in FP32, eager mode, with deterministic algorithms enabled, initially on CPU under WSL2. The upstream evaluation path (`scripts/eval_shard.py`) already runs in FP32 eager mode without autocast or `torch.compile` but hard-codes CUDA; BF16 mixed precision and `torch.compile` belong to the paper's training setup [1, App. C]. The planned difference from the published evaluation is therefore CPU instead of CUDA kernels, through an own runner that mirrors `eval_shard.py` and `eval_merge.py` without modifying upstream code. Results are stated for this numerical configuration. A GPU is introduced only if the measured cost (item 9) requires it; a CUDA cross-check on the same puzzles is optional.
++2. **Original run:** debug on a small technical sample, then reproduce the official evaluation with the original metric and with the standalone Sudoku metrics. **G0 acceptance rule:** (a) the official `exact` solve rate on the 2,000 released hard boards lies within ±1.0 percentage point of the published 86.1%; because the boards are identical, a difference reflects numerical near-tie argmax flips, and the number of boards with a changed output is reported; (b) the within-device identity tests (item 5) agree exactly, 100%. If (a) fails while (b) passes, the cause is investigated and the decision is logged in `DECISIONS.md`; work does not continue silently.
+ 3. **Data path:** verify what the encoder encodes, what the generator sees, and which representations the intervention passes through. The teacher code is produced from the solution; the generated code is produced conditioned on the puzzle.
+ 4. **Wrapper:** planned own interface: `forward_with_intervention()`. The name is a new implementation proposal, not a claim about an existing upstream API. It must support fixing the prefix, replacing a level, replaying the original suffix, and regenerating the suffix.
+-5. **Identity tests:** with hooks disabled, the original run must match; writing back the model's own code must leave the result unchanged; sham restart from the same level; RNG state preservation if a stochastic mode is used later.
+-6. **State saving:** make a separate copy of the full-length cumulative states. In the examined `idx_to_zhats` code, in-place updates combined with saving into a list create an aliasing risk that must be checked at runtime [7]. Modifying a later state must not overwrite previously saved states.
++5. **Identity tests:** with hooks disabled, the original run must match; writing back the model's own code must leave the result unchanged; sham restart from the same level; RNG state preservation if a stochastic mode is used later. All branches A–D of a puzzle run with identical batch size and batch composition, because deterministic algorithms guarantee repeatability only for identical shapes.
++6. **State saving:** upstream `idx_to_zhats` allocates one tensor, updates it in place, and appends the same object at every level, so all returned `z_hats` entries alias the final $Z_{\leq 12}$; the returned `z_levels` are downsampled, not full-length [7]. Full-length cumulative states $Z_{\leq\ell}$ are therefore computed in an own per-level loop that mirrors `idx_to_zhats` (same up-sampling and residual steps) and stores a clone after every level. G0 tests check distinct storage, that $Z_{\leq\ell}$ differs from $Z_{\leq 12}$ for $\ell<12$, and that the own $Z_{\leq 12}$ equals the upstream result exactly. Modifying a later state must not overwrite previously saved states.
+ 7. **Decoding path:** a shorter level representation is not automatically a full Sudoku reconstruction. The partial cumulative state must be brought to the full token length expected by the final decoder, otherwise the result must not be interpreted as a cell-level partial solution [7–9].
+ 8. **Validator:** test cases for a correct grid, altered clues, row/column/box repetition, truncated and over-long output, invalid characters, non-unique and unsatisfiable input. The parser must not silently repair model errors.
+ 9. **Running cost:** measure time, memory, and storage of the baseline, state saving, fixed suffix, and regenerated suffix. The work plan gets a time estimate only after this.
+@@ -87,7 +87,7 @@ Every puzzle gets a stable identifier, clue count, source identifier, solution c
+ 
+ **Grouping before splitting:** identical puzzles, known symmetric variants, clue masks derived from the same complete solution, and minimal counterfactual pairs go into the same top-level group. Splitting follows grouping, and augmentation comes only after that. Sudoku symmetries: digit permutation; row swap within a band; column swap within a stack; band and stack swap; transposition.
+ 
+-Orbit identification is ensured by verified canonicalization or by tracking the full generation provenance. If only partial duplicate detection is possible for an external dataset, the protocol reports this as partial protection and does not call the split provably orbit-independent. Fixing the probe split does not solve possible overlap with the pretrained model's training data; its discoverability is documented separately.
++Orbit identification is ensured by verified canonicalization or by tracking the full generation provenance. If only partial duplicate detection is possible for an external dataset, the protocol reports this as partial protection and does not call the split provably orbit-independent. For independently generated solutions, provenance records known ancestry only; it does not detect two independent draws in the same symmetry orbit, so fresh data uses provenance plus screening (Section 4.1) and is described as partial protection. Fixing the probe split does not solve possible overlap with the pretrained model's training data; its discoverability is documented separately.
+ 
+ | Subset | Task | Constraint |
+ |---|---|---|
+@@ -103,8 +103,8 @@ Subsets are disjoint at the group level. Shared use of TEST is allowed for pre-s
+ ### 4.1 Data sources
+ 
+ - **Released evaluation set:** `hazyresearch/ncm-datasets`, `sudoku/hard` (MIT): 2,000 boards with exactly 30 clues. The easy/medium/hard sets share the same 2,000 solutions with different clue masks. Used for the G0 reproduction and reported as a secondary "official distribution" stratum. The training data of the checkpoints is not released; it is most likely the synthetic S-FLM set (48k training puzzles, seed 42), which is unverified.
+-- **Fresh puzzles:** all CAL, PROBE-TRAIN, PROBE-VAL, SELECT, TEST and E4-TEST puzzles come from an own generator: a uniformly random complete solution, then clue removal to exactly 30 clues with a uniqueness check. The code is written from scratch (the S-FLM generator has no license). Because there are about $6.7\cdot10^{21}$ valid grids, overlap with the unreleased training data is negligible; generation provenance serves as the orbit identifier.
+-- **Distribution gate (on CAL, before TEST):** about 500 fresh puzzles against the 2,000 released boards with the hard checkpoint. The gate passes if the 95% interval of the solve-rate difference lies within ±5 percentage points; solver-depth distributions are reported alongside. If it fails, the generator is tuned against the depth distribution on CAL only, and every tuning step is logged in `DECISIONS.md`.
++- **Fresh puzzles:** all CAL, PROBE-TRAIN, PROBE-VAL, SELECT, TEST and E4-TEST puzzles come from an own generator, written from scratch (the S-FLM generator has no license). A complete solution is drawn by randomized backtracking with a shuffled digit order per cell (not proven uniform over grids). Clues are removed in one pass over a random cell order, a removal being kept only if the solution stays unique, until exactly 30 clues remain; an attempt that ends above 30 clues restarts with a new order on the same solution, up to a fixed attempt limit, and restart and discard counts are reported. With about $6.7\cdot10^{21}$ valid grids, overlap with the unreleased training data is expected to be negligible, conditional on the sampler being well dispersed and on the unverified training-data assumption. Exact duplicate solutions and a cheap symmetry-invariant signature are screened across all subsets; generation provenance is recorded but is only partial orbit protection.
++- **Distribution gate (before any analysis subset is generated):** (1) generator development uses a separate development batch that is never reused; (2) the generator is frozen and its code hash recorded; (3) model-free gate: on a fresh validation batch, the solver-depth distribution (waves 1, 2, 3, at least 4, stuck) and the initial single counts are compared with the 2,000 released boards, with acceptance thresholds fixed before the batch is drawn; (4) model gate: equivalence of the hard-checkpoint solve rate within ±5 percentage points by two one-sided tests (90% interval), with the finite released benchmark as the comparison target; the batch size is chosen by simulating this procedure for at least 90% pass probability at zero true difference (planning value at least 1,000 puzzles). An interval that is only too wide is reported as inconclusive and leads to a larger batch, not to tuning; a detected mismatch leads to a new generator version, a new development batch, and a repeated gate. Every attempt is logged in `DECISIONS.md`. (5) CAL, PROBE-TRAIN, PROBE-VAL, SELECT, TEST and E4-TEST are generated only after the gate passes, from the frozen generator.
+ - **Solver checks:** the uniqueness checker and full solver are own code, cross-checked against an independent second implementation (DLX / Algorithm X) at least on a sample.
+ 
+ ## 5. Logical labels: candidate mask and inference depth
+@@ -168,7 +168,7 @@ $$
+ 
+ A positive value indicates more favorable adaptation relative to the fixed suffix. In a deterministic, correctly restarted run B=A; any difference is an instrumentation or numerical error signal. Branch C's residual codes do not necessarily fit the changed prefix, so improvement in D may be representational refitting. Because the puzzle prefix is available at every level, the result alone does not prove that the coarse code is an executable logical plan.
+ 
+-**Trained robustness.** NCM training includes corruption of earlier levels [1, App. H]; G0 records whether and how the Sudoku checkpoints were trained this way. A positive $	heta_{\mathrm{comp}}$ may therefore be a trained robustness property rather than spontaneous error handling. Generated codes may also be non-canonical [18]: a replaced code can be absorbed without a change in the decoded grid, so code-level Hamming is reported only next to cell-level change. The term "compensation" is related to, and kept distinct from, self-repair within a single forward pass [19].
++**Trained robustness.** NCM training includes corruption of earlier levels [1, App. F.3]; the upstream repository contains no generator training configuration, so G0 can record the Sudoku checkpoints' training regime only from checkpoint metadata, if present, or from the paper. A positive $\theta_{\mathrm{comp}}$ may therefore be a trained robustness property rather than spontaneous error handling. Generated codes may also be non-canonical [18]: a replaced code can be absorbed without a change in the decoded grid, so code-level Hamming is reported only next to cell-level change. The term "compensation" is related to, and kept distinct from, self-repair within a single forward pass [19].
+ 
+ ### 7.2 Two separate questions: edit cost and initial damage
+ 
+@@ -228,7 +228,7 @@ Residual level code, cumulative state, and transformer activation are separate e
+ | Label permutation control | The probe's capacity and memorization tendency | No transferred pairing across train/val/test; control task precisely documented |
+ | Teacher representation | Difference between solution content and puzzle state | Separate report; also checked with different clue masks of the same solution |
+ 
+-Null controls cannot be selected post hoc based on which is easiest to beat. The primary control for H1 is a probe retrained with the same procedure on representation–label pairs permuted across puzzles. Permutation is done on train and val data, independently of each other; the final comparison for both probes is on the untouched TEST pairs. Thus the control creates no new dependence among test puzzles. The raw-input and rule-based results appear in the same main table. A training-size curve is required to judge whether the difference is mainly explained by the readout's data requirements.
++Null controls cannot be selected post hoc based on which is easiest to beat. The primary control for H1 is a probe retrained with the same procedure on representation–label pairs permuted across puzzles. Permutation is done on train and val data, independently of each other; the final comparison for both probes is on the untouched TEST pairs. Thus the control creates no new dependence among test puzzles. The permuted-control probe selects its regularization and early-stopping point on its own independently permuted PROBE-VAL split, so weights on the representation can shrink to zero; the cell-position marginal Brier loss computed on PROBE-TRAIN is reported alongside. The raw-input and rule-based results appear in the same main table. A training-size curve is required to judge whether the difference is mainly explained by the readout's data requirements.
+ 
+ ### 8.3 Endpoints
+ 
+@@ -242,11 +242,11 @@ $$
+ 
+ where a positive value indicates better generated readout.
+ 
+-**Level choice.** $Z_{\leq\ell}$ is a deterministic function of the discrete codes of levels $1..\ell$, each with 16 values. $Z_{\leq 2}$ is built from 3 codes, i.e. at most 12 bits and 4,096 distinct states, far below the information in a full candidate mask; a probe on it can learn little beyond position-dependent priors. Level 6 (1+2+4+6+9+13 = 35 codes, at most 140 bits) is therefore the primary H1 level. The same $\theta_1$ at level 2 is reported as a pre-specified low-capacity control with an expected near-null effect; it is not part of the primary family. The primary level may be changed only after the pilot and before TEST is opened, with an entry in `DECISIONS.md`.
++**Level choice.** $Z_{\leq\ell}$ is a deterministic function of the discrete codes of levels $1..\ell$, each with 16 values. $Z_{\leq 2}$ is built from 3 codes, i.e. at most 12 bits and 4,096 distinct states, far below the information in a full candidate mask. Level 6 (1+2+4+6+9+13 = 35 codes, at most 140 bits) is therefore the primary H1 level. This is a pragmatic capacity choice; neither bound predicts readability, since partial information can improve the Brier loss at level 2 and 140 bits need not suffice at level 6. The same $\theta_1$ is reported at level 2 as a pre-specified low-capacity comparison and at level 12 (89 codes) as a secondary full-resolution comparison, because levels below 12 reach the 89 token positions only by interpolating $n_\ell$ points (13 at level 6). Neither is part of the primary family. The primary level may be changed only after the pilot and before TEST is opened, with an entry in `DECISIONS.md`.
+ 
+ The raw-input difference is a separate estimate; a positive H1 cannot be called an advantage over the raw input unless the latter comparison supports it.
+ 
+-**Secondary exploratory target:** unit–digit labels over the 27 units × 9 digits, comparable with [16], where unit-level probes reached perfect exact match while per-cell candidate probes did not. The exact label definition is aligned with [16] and fixed before PROBE-VAL. It is not part of the primary family.
++**Secondary exploratory target:** unit–digit labels over the 27 units × 9 digits, comparable with [16], where unit-level probes reached perfect exact match while per-cell candidate probes did not. The exact label definition and the readout mapping from the 89 token states to the 27 units are aligned with [16] and fixed before PROBE-VAL. It is not part of the primary family.
+ 
+ Secondary metrics: per-digit and macro F1; PR-AUC computed for the positive class; full candidate-mask match; candidate-count MAE; naked single derived from the mask; separate hidden single; depth breakdown. Every PR-AUC is accompanied by the positive label rate. If the positive or negative class is missing, the affected metric is not interpretable, not zero. The default probability threshold is 0.5; a different threshold may only be selected on PROBE-VAL and must be frozen.
+ 
+@@ -272,7 +272,7 @@ On a fixed input, the "naked single" label does not change under an internal pat
+ 
+ On the SELECT set we choose the region linked to the logical property and the corruption mode. On fresh E4-TEST puzzles we produce a clean and a corrupted run. Into the designated region of the corrupted run we copy back representation **from its own clean run**, then continue generation from the same point.
+ 
+-Control branches: clean baseline; corruption without patch; targeted restoring patch; restoring a control region of equal size and similar norm; a random or other-target pre-specified patch. For any intervention along a probe direction, a size- and norm-matched random-direction intervention is an additional mandatory control [17]. The target region and control are not chosen based on the final test effect. Copying the clean state into itself is only a no-op test, not a causal experiment.
++Control branches: clean baseline; corruption without patch; targeted restoring patch; restoring a control region of equal size and similar norm; a random or other-target pre-specified patch. For any intervention along a probe direction, a size- and norm-matched random-direction intervention is an additional mandatory control [17]. Two patch classes are distinguished: generator-mediated patches, where a continuous change to $Z_{\leq\ell}$ or $H_\ell$ reaches the output only through the argmax over downstream discrete codes (the upstream evaluation decodes from discrete codes), and decoder-input patches, where a continuous change is passed directly to the VQ-VAE decoder. Every continuous patch reports the Hamming distance of downstream codes. The single primary comparator is fixed per class on SELECT: the equal-size control region for region patches, and the mean over a pre-seeded set of $K$ norm-matched random directions, with fixed distribution and sign, for probe-direction patches; other controls are secondary. The target region and control are not chosen based on the final test effect. Copying the clean state into itself is only a no-op test, not a causal experiment.
+ 
+ The primary contrast is the difference between targeted and control restoration in target-cell correctness. If the number of target cells differs across puzzles, we first average within puzzle. The secondary endpoint is the decoder's digit-logit margin for the target cell:
+ 
+@@ -282,7 +282,7 @@ $$
+ 
+ where the set contains only the nine digits; the probability of non-digit outputs and format errors are measured separately. The generator's logits over 16 code categories are not the same as the final decoder's digit logits. The logit endpoint is usable only with a verified cell–token–digit mapping.
+ 
+-We measure changes in non-target cells, clue violations, valid-grid, solve, norms, and available distributional diagnostics. The clean–patched activation distance is reported for every patch, because interaction effects in patching grow with this distance [20]; large-distance patches are interpreted cautiously. These results are not used for post hoc exclusion of unfavorable test cases. A precisely localized ablation supports at most the causal relevance of that region; semantic mediation along a probe direction is a stronger claim.
++We measure changes in non-target cells, clue violations, valid-grid, solve, norms, and available distributional diagnostics. The clean–patched activation distance (site, tensor, norm, and normalization fixed on SELECT) is reported for every patch, because interaction effects in patching grow with this distance [20]; large-distance patches are interpreted cautiously. These results are not used for post hoc exclusion of unfavorable test cases. A precisely localized ablation supports at most the causal relevance of that region; semantic mediation along a probe direction is a stronger claim.
+ 
+ ### 9.3 E4b: minimal counterfactual puzzle pairs
+ 
+@@ -383,15 +383,15 @@ The values below are **proposed work-organization starting points**, not measure
+ 
+ | Item | Decision fixed in v3 | Still to be filled in before the confirmatory run |
+ |---|---|---|
+-| Model | Hard first; pinned code commit | Checkpoint revision, file hash, environment, and reproduction result |
+-| Data | Grouped split; unique solutions; released 2,000 hard boards for G0 and as a secondary stratum; own 30-clue generator for all other subsets (Section 4.1) | Data sources, licenses, group construction, split hash, and exact sample size |
++| Model | Hard first; pinned code commit; two-part G0 acceptance rule | Checkpoint revision, file hash, environment, and reproduction result against the rule |
++| Data | Grouped split; unique solutions; released 2,000 hard boards for G0 and as a secondary stratum; own 30-clue generator for all other subsets (Section 4.1) | Frozen generator hash, gate results, duplicate and orbit screening results, Data sources, licenses, group construction, split hash, and exact sample size |
+ | Logical label | Initial candidate mask; synchronous single waves secondarily | Labeler version, tests, prevalences, and stuck rate |
+ | E2 main contrast | Single-code replacement, level 2 vs. 11; compensation at level 2 | Frequency estimate, eligibility rule, seeds, validated wrapper |
+ | E2 dose curve | Initial C–A damage; common range only | Final doses, overlap diagnostics, integration rule |
+-| E3 main contrast | Generated cumulative state at level 6, shared linear probe, Brier; level 2 as low-capacity control | Token mapping, input dimensions, baseline architectures, training and regularization plan |
++| E3 main contrast | Generated cumulative state at level 6, shared linear probe, Brier; level 2 low-capacity and level 12 full-resolution comparisons | Unit–digit readout mapping, Token mapping, input dimensions, baseline architectures, training and regularization plan |
+ | Statistics | Paired, grouped analysis; three main contrasts | Practical effect thresholds, power, bootstrap variant, rare-event plan |
+ | Symmetry | Equivariance; augmented and non-augmented tests separate | Sampling and weighting of transformations, acceptable deviation |
+-| E4 | Conditional, separate fresh test set | Target variable, target region, corruption, controls, numerical gate, sample size |
++| E4 | Conditional, separate fresh test set | Target variable, target region, corruption, controls, patch class, random-direction distribution and $K$, distance definition, primary comparator per class, numerical gate, sample size |
+ | Report | All branches and negative results; exclusions logged | Final run register, table and figure schema |
+ 
+ Open fields deliberately receive no invented hash, power estimate, or result. A methodological change after the lock requires a new version and a deviation log (`DECISIONS.md`). The lock is an embargoed OSF registration citing the git tag hash of the locked plan. A new hypothesis arising from TEST data is exploratory and can be confirmed on fresh data.
+@@ -453,24 +453,6 @@ v3 distinguishes the teacher branch encoding the solution from the generated bra
+ 
+ Concrete directional decisions were thus made for v2's open agenda. Whatever requires run results — such as checkpoint hash, reproduction discrepancy, actual dose overlap, label prevalence, or sample size — remains an explicit lock task in Section 12.2. Without resolving these, v3 cannot be called a final confirmatory preregistration.
+ 
+-## 16. Changes from v3.0
+-
+-Rationale and dates for each item are in `DECISIONS.md`.
+-
+-1. The English document is authoritative; the Hungarian v3 and its English translation are frozen predecessors.
+-2. H1 primary level moved from 2 to 6; level 2 becomes a pre-specified low-capacity control (Sections 3, 8.3, 11.1, 12.2).
+-3. Data sources fixed: released 2,000 hard boards for G0 and as a secondary stratum; own 30-clue generator for every other subset, with a ±5 pp distribution gate and an independent solver cross-check (Section 4.1).
+-4. Numerical policy fixed: FP32, eager mode, deterministic algorithms, CPU first; optional BF16 comparison (Section 2.2, item 1).
+-5. Preregistration: embargoed OSF registration that cites the git tag hash of the locked plan.
+-
+-Changes in v3.2 (related-work review):
+-
+-6. Narrowed novelty claim with closest prior work and a dated hedge (Section 2.1).
+-7. Secondary exploratory unit–digit probe target (Section 8.3).
+-8. E4: random-direction control for probe-direction interventions; clean–patched distance reported (Section 9.2).
+-9. H3 interpretation against corruption training and non-canonical codes (Sections 7.1, 13).
+-10. References [16]–[21] added (Section 15).
+-
+ ## 15. Sources and references
+ 
+ Sources verified on 2026-11-08. Repository sources point to the pinned commit. Moving checkpoint links must be supplemented with revision and file hash at actual download. Methodological specifications are decisions of this research plan; the cited works do not validate the expected Sudoku results in advance.
+@@ -496,3 +478,32 @@ Sources verified on 2026-11-08. Repository sources point to the pinned commit. M
+ 19. Ahmad, Seth and Sankarapu (2026): [Every Ablation Is a Dose: Counterweights and the Semblance of Self-Repair](https://arxiv.org/abs/2610.02173).
+ 20. Vaidyanathan et al. (2026): [The Curse of Multiple Mediators: Hidden Interaction Effects in Activation Patching](https://arxiv.org/abs/2606.27510).
+ 21. Shah et al. (2024): [Causal Language Modeling Can Elicit Search and Reasoning Capabilities on Logic Puzzles](https://arxiv.org/abs/2409.10502). Candidate-set evidence there comes from forcing outputs and comparing top-k predictions with a solver, not from a learned probe.
++
++## 16. Changes from v3.0
++
++Rationale and dates for each item are in `DECISIONS.md`.
++
++1. The English document is authoritative; the Hungarian v3 and its English translation are frozen predecessors.
++2. H1 primary level moved from 2 to 6; level 2 becomes a pre-specified low-capacity control (Sections 3, 8.3, 11.1, 12.2).
++3. Data sources fixed: released 2,000 hard boards for G0 and as a secondary stratum; own 30-clue generator for every other subset, with a ±5 pp distribution gate and an independent solver cross-check (Section 4.1).
++4. Numerical policy fixed: FP32, eager mode, deterministic algorithms, CPU first; optional BF16 comparison (Section 2.2, item 1).
++5. Preregistration: embargoed OSF registration that cites the git tag hash of the locked plan.
++
++Changes in v3.2 (related-work review):
++
++6. Narrowed novelty claim with closest prior work and a dated hedge (Section 2.1).
++7. Secondary exploratory unit–digit probe target (Section 8.3).
++8. E4: random-direction control for probe-direction interventions; clean–patched distance reported (Section 9.2).
++9. H3 interpretation against corruption training and non-canonical codes (Sections 7.1, 13).
++10. References [16]–[21] added (Section 15).
++
++Changes in v3.3 (external review R1, `.reviews/plan-v3-2/decisions.md`):
++
++11. Upstream evaluation is FP32 eager; the planned difference is CPU vs CUDA; two-part G0 acceptance rule; identical batch composition across branches (Section 2.2, items 1, 2, 5).
++12. Cumulative states computed in an own per-level loop because upstream `idx_to_zhats` aliases its outputs (Section 2.2, item 6).
++13. Generator algorithm specified; provenance described as partial orbit protection with duplicate and invariant screening (Sections 4, 4.1).
++14. Distribution gate redesigned: frozen generator, model-free depth gate, simulated-size equivalence test, inconclusive vs mismatch, all subsets generated after the gate (Section 4.1).
++15. Level choice reworded; level 12 added as a secondary full-resolution comparison; unit–digit readout mapping fixed before PROBE-VAL (Sections 8.3, 12.2).
++16. Permuted null probe tuned on its own permuted PROBE-VAL; marginal-prior Brier reported (Section 8.2).
++17. E4 patch classes, primary comparator per class, and distance definition fixed on SELECT (Sections 9.2, 12.2).
++18. Corruption-training citation corrected to App. F.3; the training regime is recorded only from checkpoint metadata or the paper (Section 7.1).

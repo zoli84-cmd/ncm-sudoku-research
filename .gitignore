@@ -19,3 +19,6 @@ runs/
 
 # Third-party papers (redistribution license unclear; fetch from source)
 resources/*.pdf
+
+# Copilot review transcripts (large, regenerable from the CLI session)
+.reviews/**/transcript.*.md

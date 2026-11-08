@@ -4,7 +4,7 @@ DOX rules are inherited from `C:\Users\ako2bp\AGENTS.md`; this file is the proje
 
 ## Purpose
 
-Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.3.md](research_plan_v3.3.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
+Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.4.md](research_plan_v3.4.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
 
 ## Ownership
 
@@ -14,7 +14,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 ## Local Contracts
 
 - Language: every project file (code, docs, notes, protocols, AGENTS.md) is written in English; communication with the user is in Hungarian
-- Plan versions: `research_plan_v3.3.md` is authoritative; `research_plan_v3.2.md`, `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
+- Plan versions: `research_plan_v3.4.md` is authoritative; `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
 - Lock: the preregistration lock is a git tag plus an embargoed OSF registration citing the tag hash (plan §12.2, §16)
 - Never invent hashes, sample sizes, power estimates, or results; open items stay explicitly open
 - Claim boundaries follow plan §13: written artifacts keep the hedging and "does not follow" qualifiers; no compressed or caveman-style prose in project files
@@ -37,7 +37,8 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 
 ## Child DOX Index
 
-- [research_plan_v3.3.md](research_plan_v3.3.md): authoritative research plan
+- [research_plan_v3.4.md](research_plan_v3.4.md): authoritative research plan
+- [research_plan_v3.3.md](research_plan_v3.3.md): frozen plan v3.3 (after external review R1, before the final round)
 - [research_plan_v3.2.md](research_plan_v3.2.md): frozen plan v3.2 (related-work review, before external review R1)
 - [research_plan_v3.1.md](research_plan_v3.1.md): frozen plan v3.1 (setup decisions, before related-work review)
 - [DECISIONS.md](DECISIONS.md): decision log and post-lock deviation log
@@ -46,5 +47,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
+- [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
+- [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A Sudoku core)
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
 - [resources/](resources/): source materials; `2610.14162v1.pdf` is the NCM paper (arXiv:2610.14162), local only
