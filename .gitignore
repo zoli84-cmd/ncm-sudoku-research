@@ -1,0 +1,21 @@
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large or regenerable artifacts: checkpoints, datasets, run outputs
+checkpoints/
+data/
+runs/
+*.pt
+*.pickle
+
+# Secrets
+.env
+
+# Personal Claude Code overrides
+.claude/settings.local.json
+
+# Third-party papers (redistribution license unclear; fetch from source)
+resources/*.pdf
