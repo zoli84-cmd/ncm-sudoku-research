@@ -1,11 +1,13 @@
 """E2 pilot on CAL (plan §7, §12.1; D38, D39). Non-confirmatory.
 
-Usage: uv run python scripts/wp1_pilot.py
+Usage: uv run python scripts/wp1_pilot.py [--report-only]
 Writes runs/wp1/pilot_records.jsonl, experiments/wp1/pilot_summary.json and
-experiments/wp1/pilot_report.md.
+experiments/wp1/pilot_report.md (UTF-8). --report-only rebuilds the report from the
+saved pilot_summary.json without rerunning the pilot.
 """
 
 import json
+import sys
 import time
 
 import numpy as np
@@ -18,7 +20,8 @@ from ncm_sudoku.subsets import generate_subset
 N_CAL = 300
 
 
-def _report(summary: dict, seconds: float) -> str:
+def _report(summary: dict) -> str:
+    seconds = summary["seconds"]
     t2, tc = summary["theta2"], summary["theta_comp_level2"]
     lines = [
         "# E2 pilot report",
@@ -41,7 +44,15 @@ def _report(summary: dict, seconds: float) -> str:
     return "\n".join(lines) + "\n"
 
 
+def write_report(summary: dict, path) -> None:
+    path.write_text(_report(summary), encoding="utf-8", newline="\n")
+
+
 def main() -> None:
+    out = ROOT / "experiments" / "wp1"
+    if "--report-only" in sys.argv:
+        write_report(json.loads((out / "pilot_summary.json").read_text(encoding="utf-8")), out / "pilot_report.md")
+        return
     batch = generate_subset("cal", N_CAL)
     puzzles = np.stack([g.puzzle for g in batch])
     solutions = np.stack([g.solution for g in batch])
@@ -55,11 +66,9 @@ def main() -> None:
     summary = summarize(records)
     summary.update({"date": time.strftime("%Y-%m-%d"), "n_cal": N_CAL, "seconds": round(seconds, 1),
                     "environment": environment_record()})
-    out = ROOT / "experiments" / "wp1"
     out.mkdir(parents=True, exist_ok=True)
     (out / "pilot_summary.json").write_text(json.dumps(summary, indent=2) + "\n", newline="\n")
-    (out / "pilot_report.md").write_text(_report(summary, seconds), newline="\n")
-    print(_report(summary, seconds))
+    write_report(summary, out / "pilot_report.md")
 
 
 if __name__ == "__main__":
