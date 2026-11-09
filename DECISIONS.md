@@ -55,7 +55,7 @@ One entry per decision: date, decision, rationale. Plan-affecting entries name t
 
 | ID | Decision | Rationale | Plan |
 |---|---|---|---|
-| D30 | Supersedes the WSL2 part of D07: the Python environment runs natively on Windows with `uv` (Python 3.12, CPU, FP32); plan §2.2 item 1 wording ("under WSL2") is updated in the next plan version | WSL cannot reach the network through the corporate proxy; Windows reaches PyPI through the local proxy; the Sudoku path needs no Linux-only kernels | v3.4 §2.2 item 1 (wording pending) |
+| D30 | Supersedes the WSL2 part of D07: the Python environment runs natively on Windows with `uv` (Python 3.12, CPU, FP32); plan §2.2 item 1 wording ("under WSL2") is updated in the next plan version | WSL cannot reach the network through the corporate proxy; Windows reaches PyPI through the local proxy; the Sudoku path needs no Linux-only kernels | v3.5 §2.2 item 1 |
 
 ## 2026-11-09 — G0 outcome
 

@@ -4,7 +4,7 @@ DOX rules are inherited from `C:\Users\ako2bp\AGENTS.md`; this file is the proje
 
 ## Purpose
 
-Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.4.md](research_plan_v3.4.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
+Personal research project on hierarchical sensitivity, error propagation, and logical representations in Next-Concept Modeling (NCM) Sudoku generation. The governing protocol is [research_plan_v3.5.md](research_plan_v3.5.md); work-package status and backlog are in [ROADMAP.md](ROADMAP.md); every decision and, after the lock, every deviation is logged in [DECISIONS.md](DECISIONS.md).
 
 ## Ownership
 
@@ -14,7 +14,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 ## Local Contracts
 
 - Language: every project file (code, docs, notes, protocols, AGENTS.md) is written in English; communication with the user is in Hungarian
-- Plan versions: `research_plan_v3.4.md` is authoritative; `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
+- Plan versions: `research_plan_v3.5.md` is authoritative; `research_plan_v3.4.md`, `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `NCM_Sudoku_kutatasi_terv_v3.md` (Hungarian original) and `research_plan_v3.md` (its translation) are frozen predecessors; never edit a released plan version in place, create a new version and log it in `DECISIONS.md`
 - Lock: the preregistration lock is a git tag plus an embargoed OSF registration citing the tag hash (plan §12.2, §16)
 - Never invent hashes, sample sizes, power estimates, or results; open items stay explicitly open
 - Claim boundaries follow plan §13: written artifacts keep the hedging and "does not follow" qualifiers; no compressed or caveman-style prose in project files
@@ -36,11 +36,14 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 ## Verification
 
 - From the project root on Windows (Git Bash or PowerShell): `uv run pytest -q`
-- Slow real-data checks, once the released data is downloaded: `uv run pytest -q -m slow`
+- Slow checks (need `data/released/` and `checkpoints/`, about 2 minutes): `uv run pytest -q -m slow`
+- G0 reproduction (about 45 minutes): `uv run python scripts/g0_reproduce.py`
 
 ## Child DOX Index
 
-- [research_plan_v3.4.md](research_plan_v3.4.md): authoritative research plan
+- [research_plan_v3.5.md](research_plan_v3.5.md): authoritative research plan
+- [ROADMAP.md](ROADMAP.md): work-package status, effort and compute estimates, backlog, open items
+- [research_plan_v3.4.md](research_plan_v3.4.md): frozen plan v3.4 (before WP0 implementation facts)
 - [research_plan_v3.3.md](research_plan_v3.3.md): frozen plan v3.3 (after external review R1, before the final round)
 - [research_plan_v3.2.md](research_plan_v3.2.md): frozen plan v3.2 (related-work review, before external review R1)
 - [research_plan_v3.1.md](research_plan_v3.1.md): frozen plan v3.1 (setup decisions, before related-work review)
@@ -51,9 +54,10 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
-- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set)
+- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set), `model.py` (safe checkpoint loading), `official.py` (upstream metric mirror), `runner.py` (generation, decoding, teacher codes), `states.py` (cumulative states, cell mapping), `intervene.py` (`forward_with_intervention`, branches A–D), `g0.py` (G0 rule, identity checks, reproduction)
 - [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures; `-m slow` runs real-data checks
-- [scripts/](scripts/): `fetch_released_data.py` downloads the released evaluation set into `data/released/` (git-ignored)
+- [scripts/](scripts/): `fetch_released_data.py`, `fetch_checkpoints.py` (downloads), `g0_reproduce.py`, `g0_cost.py` (G0)
+- [experiments/g0/](experiments/g0/): committed G0 results (`reproduction.json`, `cost.json`)
 - [experiments/provenance/](experiments/provenance/): `released_data.json` (dataset) and `checkpoints.json` (checkpoint revision, sizes, SHA-256, licenses, upstream commit)
 - [third_party/ncm/](third_party/ncm/): upstream HazyResearch/ncm as a git submodule at the pinned commit; never modified; imported via `ncm_sudoku.model.import_upstream`
 - `checkpoints/` (git-ignored): downloaded by `scripts/fetch_checkpoints.py`; load only through `ncm_sudoku.model.load_model` (weights_only=True)
