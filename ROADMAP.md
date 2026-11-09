@@ -21,6 +21,8 @@ Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`)
 
 - D26: E2 re-quantization diagnostic for geometric residual cancellation (after the pilot).
 - WP0-A deferred minors: full-contract asserts in Review Focus tests; side effect inside `assert` in `generate.random_solution`; float/bool tokens accepted as digits; fetch-script docstring path; `load_released` provenance hash check and protocol-4 unpickler test.
+- WP0-B deferred minors: cost per-step memory fields (lifetime peak, allocator-noise RSS deltas, no warm-up); batch-size effect checked on one puzzle and G0 batches differ from upstream's interleaved shards; prefix recomputation tested only at level 6; `assert`-based validation in `states.py` and no shape checks for `z_hat_override` / `prefix_tokens`; `import_upstream` inserts at `sys.path[0]`; `load_model` does not verify provenance hashes and refuses unsupported configs only at generation time; `.gitignore` duplicates `runs/`; AGENTS.md wording ("planned as" submodule, incomplete dependency list, plans entry).
+- Before E4: compare per-level logits (not only argmax codes) in identity checks; consider pinning `torch.set_num_threads`.
 - D16: unit–digit label definition and readout mapping aligned with Kniazev & Fijalkow (2026) before PROBE-VAL.
 
 ## Open items
