@@ -54,15 +54,16 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
-- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set), `model.py` (safe checkpoint loading), `official.py` (upstream metric mirror), `runner.py` (generation, decoding, teacher codes), `states.py` (cumulative states, cell mapping), `intervene.py` (`forward_with_intervention`, branches A–D), `g0.py` (G0 rule, identity checks, reproduction)
+- [src/ncm_sudoku/](src/ncm_sudoku/): own package; `grid.py` (grid conventions, NCM tokens), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set), `model.py` (safe checkpoint loading), `official.py` (upstream metric mirror), `runner.py` (generation, decoding, teacher codes), `states.py` (cumulative states, cell mapping), `intervene.py` (`forward_with_intervention`, branches A–D), `g0.py` (G0 rule, identity checks, reproduction), `subsets.py` (seed namespaces, generator freeze check, duplicate/signature screen), `gate.py` (distribution gate), `e1.py` (E1 summary), `perturb.py` (dose grid, code replacement), `e2.py` (E2 pilot runner, θ estimators, cluster bootstrap)
 - [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures; `-m slow` runs real-data checks
-- [scripts/](scripts/): `fetch_released_data.py`, `fetch_checkpoints.py` (downloads), `g0_reproduce.py`, `g0_cost.py` (G0)
+- [scripts/](scripts/): `fetch_released_data.py`, `fetch_checkpoints.py` (downloads), `g0_reproduce.py`, `g0_cost.py` (G0); `wp1_gate.py` (single-look gate; refuses to rerun), `wp1_e1.py --subset released|cal`, `wp1_pilot.py [--report-only]` (WP1)
 - [experiments/g0/](experiments/g0/): committed G0 results (`reproduction.json`, `cost.json`)
+- [experiments/wp1/](experiments/wp1/): committed WP1 results (`gate.json`, `e1_released.json`, `e1_cal.json`, `pilot_summary.json`, `pilot_report.md`); `gate.json` must never be regenerated
 - [experiments/provenance/](experiments/provenance/): `released_data.json` (dataset) and `checkpoints.json` (checkpoint revision, sizes, SHA-256, licenses, upstream commit)
 - [third_party/ncm/](third_party/ncm/): upstream HazyResearch/ncm as a git submodule at the pinned commit; never modified; imported via `ncm_sudoku.model.import_upstream`
 - `checkpoints/` (git-ignored): downloaded by `scripts/fetch_checkpoints.py`; load only through `ncm_sudoku.model.load_model` (weights_only=True)
 - `runs/` (git-ignored): per-puzzle raw run outputs
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
-- [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A Sudoku core)
+- [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans (WP0-A, WP0-B, WP1)
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
 - [resources/](resources/): source materials; `2610.14162v1.pdf` is the NCM paper (arXiv:2610.14162), local only
