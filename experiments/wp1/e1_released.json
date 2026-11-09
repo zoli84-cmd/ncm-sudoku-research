@@ -1,0 +1,120 @@
+{
+  "n": 2000,
+  "teacher": {
+    "exact_share": 1.0,
+    "cell_acc_all": 1.0
+  },
+  "generated": {
+    "well_formed": 0.9995,
+    "solve": 0.863,
+    "valid_grid": 0.863,
+    "all_clues_preserved": 0.999,
+    "cell_acc_all": 0.9835246913580247,
+    "cell_acc_empty": 0.9738529411764707
+  },
+  "per_level": [
+    {
+      "level": 1,
+      "code_agreement": 0.855,
+      "cell_acc_all": 0.14601234567901236,
+      "cell_acc_empty": 0.14301960784313725,
+      "solve": 0.0,
+      "format_error": 0.0115
+    },
+    {
+      "level": 2,
+      "code_agreement": 0.98575,
+      "cell_acc_all": 0.14564197530864198,
+      "cell_acc_empty": 0.14298039215686276,
+      "solve": 0.0,
+      "format_error": 0.0115
+    },
+    {
+      "level": 3,
+      "code_agreement": 0.93175,
+      "cell_acc_all": 0.16935802469135802,
+      "cell_acc_empty": 0.16699019607843138,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 4,
+      "code_agreement": 0.944166664622724,
+      "cell_acc_all": 0.2026975308641975,
+      "cell_acc_empty": 0.20049019607843138,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 5,
+      "code_agreement": 1.0,
+      "cell_acc_all": 0.20244444444444443,
+      "cell_acc_empty": 0.20001960784313727,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 6,
+      "code_agreement": 0.9346923114955425,
+      "cell_acc_all": 0.27848148148148144,
+      "cell_acc_empty": 0.2738235294117647,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 7,
+      "code_agreement": 0.9102777692526579,
+      "cell_acc_all": 0.3320432098765432,
+      "cell_acc_empty": 0.3273039215686274,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 8,
+      "code_agreement": 0.8820769147649408,
+      "cell_acc_all": 0.4548086419753087,
+      "cell_acc_empty": 0.4479705882352941,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 9,
+      "code_agreement": 0.8659324299544096,
+      "cell_acc_all": 0.6205555555555554,
+      "cell_acc_empty": 0.6133431372549019,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 10,
+      "code_agreement": 0.8010199960917235,
+      "cell_acc_all": 0.7607160493827161,
+      "cell_acc_empty": 0.7515882352941176,
+      "solve": 0.0,
+      "format_error": 0.0045
+    },
+    {
+      "level": 11,
+      "code_agreement": 0.7815447732657194,
+      "cell_acc_all": 0.8186296296296297,
+      "cell_acc_empty": 0.8096372549019609,
+      "solve": 0.0,
+      "format_error": 0.004
+    },
+    {
+      "level": 12,
+      "code_agreement": 0.9509550631046295,
+      "cell_acc_all": 0.9835246913580247,
+      "cell_acc_empty": 0.9738529411764707,
+      "solve": 0.863,
+      "format_error": 0.0005
+    }
+  ],
+  "hamming": {
+    "token_mean": 0.014994382069446147,
+    "cell_mean": 0.01647530864197531
+  },
+  "subset": "released",
+  "date": "2026-11-09",
+  "seconds": 3028.4
+}
