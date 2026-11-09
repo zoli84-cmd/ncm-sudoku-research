@@ -56,3 +56,9 @@ One entry per decision: date, decision, rationale. Plan-affecting entries name t
 | ID | Decision | Rationale | Plan |
 |---|---|---|---|
 | D30 | Supersedes the WSL2 part of D07: the Python environment runs natively on Windows with `uv` (Python 3.12, CPU, FP32); plan §2.2 item 1 wording ("under WSL2") is updated in the next plan version | WSL cannot reach the network through the corporate proxy; Windows reaches PyPI through the local proxy; the Sudoku path needs no Linux-only kernels | v3.4 §2.2 item 1 (wording pending) |
+
+## 2026-11-09 — G0 outcome
+
+| ID | Decision | Rationale | Plan |
+|---|---|---|---|
+| D31 | G0 passed: official solved 86.3% (1,726/2,000) vs published 86.1% (+0.2 pp, within ±1.0 pp); all 10 identity checks true; own validator solve 86.3%, well-formed 99.95%, clue preservation 99.9%. Cost per puzzle (CPU, FP32): generation 1.30 s; regeneration from level 2 / 6 / 11: 1.13 / 0.69 / 0.19 s; states and decoding 0.02 s. E2/E4 may use the validated intervention path | D20 two-part rule met; numbers in `experiments/g0/reproduction.json` and `experiments/g0/cost.json` | v3.5 §2.2 |
