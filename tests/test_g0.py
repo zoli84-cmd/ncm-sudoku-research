@@ -6,8 +6,13 @@ from ncm_sudoku.g0 import IDENTITY_KEYS, environment_record, g0_rule, identity_c
 ALL_TRUE = {k: True for k in IDENTITY_KEYS}
 
 
-def test_identity_keys_count():
-    assert len(IDENTITY_KEYS) == 10
+def test_identity_keys_non_vacuous():
+    # Every check must be able to fail: sham restarts at all levels 1..11 replace the
+    # model-free write-back, and the override must also be shown to take effect.
+    assert "writeback" not in IDENTITY_KEYS
+    assert {f"sham_{lv}" for lv in range(1, 12)} <= set(IDENTITY_KEYS)
+    assert "zhat_override_effective" in IDENTITY_KEYS
+    assert len(IDENTITY_KEYS) == 17
 
 
 def test_environment_record_keys():

@@ -37,8 +37,9 @@ def test_prefix_recomputation(model, codes):
 
 def test_level12_contribution_nonzero_then_unequal(model, codes):
     states = cumulative_states(model, codes)
-    if torch.linalg.norm(states[11] - states[10]) > 0:
-        assert not torch.equal(states[11], states[10])
+    # Fixture with a known nonzero level-12 contribution (D29): require it, then inequality.
+    assert torch.linalg.norm(states[11] - states[10]) > 0
+    assert not torch.equal(states[11], states[10])
 
 
 def test_decode_state_matches_runner(model, codes):

@@ -1,6 +1,8 @@
 """G0 reproduction on the 2,000 released hard boards (plan §2.2 items 1, 2, 5; D20).
 
-Usage: uv run python scripts/g0_reproduce.py
+Usage: uv run python scripts/g0_reproduce.py [--identity-only]
+--identity-only reruns only the identity checks and the rule, keeping the
+reproduction numbers already stored in experiments/g0/reproduction.json.
 Writes experiments/g0/reproduction.json (committed) and runs/g0/per_puzzle.json (ignored).
 """
 
@@ -10,6 +12,20 @@ import time
 from ncm_sudoku.g0 import environment_record, g0_rule, identity_checks, reproduce
 from ncm_sudoku.model import ROOT, load_model
 from ncm_sudoku.released import load_released
+
+
+def identity_only() -> None:
+    out = ROOT / "experiments" / "g0" / "reproduction.json"
+    summary = json.loads(out.read_text())
+    m = load_model(ROOT / "checkpoints" / "sudoku" / "hard")
+    puzzles, _ = load_released(ROOT / "data" / "released" / "sudoku" / "hard")
+    t0 = time.perf_counter()
+    summary["identity_checks"] = identity_checks(m, puzzles[:8])
+    summary["identity_seconds"] = round(time.perf_counter() - t0, 1)
+    summary["identity_date"] = time.strftime("%Y-%m-%d")
+    summary["rule"] = g0_rule(summary["reproduction"]["official"]["solved_pct"], summary["identity_checks"])
+    out.write_text(json.dumps(summary, indent=2) + "\n", newline="\n")
+    print(json.dumps({"rule": summary["rule"], "identity": summary["identity_checks"]}, indent=2))
 
 
 def main() -> None:
@@ -40,4 +56,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    identity_only() if "--identity-only" in sys.argv else main()

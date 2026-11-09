@@ -18,13 +18,13 @@ from ncm_sudoku.validate import evaluate, parse_output_tokens
 
 PUBLISHED_SOLVED_PCT = 86.1
 TOLERANCE_PP = 1.0
-SHAM_LEVELS = (1, 2, 6, 11)
+SHAM_LEVELS = tuple(range(1, 12))
 OVERRIDE_LEVELS = (2, 6)
 IDENTITY_KEYS = (
     "noop",
-    "writeback",
     *(f"sham_{lv}" for lv in SHAM_LEVELS),
     *(f"zhat_override_{lv}" for lv in OVERRIDE_LEVELS),
+    "zhat_override_effective",
     "final_state_parity",
     "state_storage_isolated",
 )
@@ -56,13 +56,14 @@ def identity_checks(m: NcmModel, puzzles: np.ndarray) -> dict[str, bool]:
     states = cumulative_states(m, clean)
     result = {
         "noop": torch.equal(continue_generation(m, prefix, None, 0), clean),
-        "writeback": torch.equal(continue_generation(m, prefix, clean, 12), clean),
     }
     for lv in SHAM_LEVELS:
         result[f"sham_{lv}"] = torch.equal(continue_generation(m, prefix, clean[:, : end[lv - 1]], lv), clean)
     for lv in OVERRIDE_LEVELS:
         out = continue_generation(m, prefix, clean[:, : end[lv - 1]], lv, z_hat_override=states[lv - 1])
         result[f"zhat_override_{lv}"] = torch.equal(out, clean)
+    shifted = continue_generation(m, prefix, clean[:, : end[1]], 2, z_hat_override=states[1] + 5.0)
+    result["zhat_override_effective"] = not torch.equal(shifted[:, end[1] :], clean[:, end[1] :])
     upstream_final = m.vqvae.vq.idx_to_zhats(clean, return_zlevels=False)[0][-1]
     result["final_state_parity"] = torch.equal(states[-1], upstream_final)
     before = states[5].clone()
