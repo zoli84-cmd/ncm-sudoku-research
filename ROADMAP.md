@@ -24,6 +24,8 @@ Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`)
 - WP0-B deferred minors: cost per-step memory fields (lifetime peak, allocator-noise RSS deltas, no warm-up); batch-size effect checked on one puzzle and G0 batches differ from upstream's interleaved shards; prefix recomputation tested only at level 6; `assert`-based validation in `states.py` and no shape checks for `z_hat_override` / `prefix_tokens`; `import_upstream` inserts at `sys.path[0]`; `load_model` does not verify provenance hashes and refuses unsupported configs only at generation time; `.gitignore` duplicates `runs/`; AGENTS.md wording ("planned as" submodule, incomplete dependency list, plans entry).
 - Before E4: compare per-level logits (not only argmax codes) in identity checks; consider pinning `torch.set_num_threads`.
 - Subset screening: the cycle-type signature collides within the released set (75 pairs), so it cannot flag symmetry equivalence; add a canonical-form check before PROBE/SELECT/TEST subsets are generated (D41).
+- Before reusing `e2.py` for the confirmatory E2: collision-free per-run seeds (current `1000*level + 100*dose + 10*seed + policy` collides for dose ≥ 10 across levels or ≥ 10 seeds); 10,000 bootstrap draws and a pre-specified small-sample interval (§11.1, §11.2); state the whole-puzzle exclusion rule for partially eligible seeds (§7.2); a rerun guard on `scripts/wp1_pilot.py`; inspect a few level-1 runs whose damage is exactly one cell.
+- Gate compares the project validator's solve rate with the official-metric 86.3%; identical on the released set (D31), note in the lock checklist.
 - D16: unit–digit label definition and readout mapping aligned with Kniazev & Fijalkow (2026) before PROBE-VAL.
 
 ## Open items

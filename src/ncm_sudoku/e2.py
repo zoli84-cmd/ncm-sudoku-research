@@ -110,6 +110,15 @@ def cluster_bootstrap(records, estimator, n_boot: int = 2000, seed: int = 0) -> 
     return float(lo), float(hi)
 
 
+def dose_overlap(ranges: dict):
+    """Overlap of median C–A damage ranges at levels 2 and 11; "degenerate" when all medians are zero."""
+    if 2 not in ranges or 11 not in ranges:
+        return None
+    if ranges[2] == ranges[11] == (0.0, 0.0):
+        return "degenerate"
+    return ranges[2][0] <= ranges[11][1] and ranges[11][0] <= ranges[2][1]
+
+
 def summarize(records, n_boot: int = 2000) -> dict:
     by_config = {}
     configs = sorted({(r["level"], r["policy"], r["dose"]) for r in records})
@@ -136,9 +145,7 @@ def summarize(records, n_boot: int = 2000) -> dict:
             "mean_downstream_changes_D": float(np.mean([r["downstream_changes_D"] for r in el])) if el else None,
         }
     ranges = {lv: (min(v), max(v)) for lv, v in medians.items()}
-    overlap = None
-    if 2 in ranges and 11 in ranges:
-        overlap = ranges[2][0] <= ranges[11][1] and ranges[11][0] <= ranges[2][1]
+    overlap = dose_overlap(ranges)
     t2, tc = theta2(records), theta_comp(records, 2)
     return {
         "non_confirmatory": True,

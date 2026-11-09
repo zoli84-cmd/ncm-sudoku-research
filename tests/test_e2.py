@@ -63,3 +63,10 @@ def test_run_pilot_small(model, released, monkeypatch):
     assert len(recs) == 2 * 1 * 3 * 2
     assert all(r["solve_B"] == r["solve_A"] for r in recs)
     assert {r["policy"] for r in recs} == {"frequency", "uniform"}
+
+
+def test_dose_overlap_degenerate_when_all_medians_zero():
+    assert e2.dose_overlap({2: (0.0, 0.0), 11: (0.0, 0.0)}) == "degenerate"
+    assert e2.dose_overlap({2: (0.0, 0.02), 11: (0.01, 0.03)}) is True
+    assert e2.dose_overlap({2: (0.0, 0.01), 11: (0.02, 0.03)}) is False
+    assert e2.dose_overlap({2: (0.0, 0.01)}) is None

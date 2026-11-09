@@ -685,7 +685,7 @@
         0.0
       ]
     },
-    "levels_2_11_overlap": true
+    "levels_2_11_overlap": "degenerate"
   },
   "date": "2026-11-09",
   "n_cal": 300,

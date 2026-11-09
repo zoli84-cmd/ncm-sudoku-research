@@ -5,7 +5,7 @@
 - CAL puzzles: 300; levels [1, 2, 6, 11]; policies ['frequency', 'uniform']; seeds 3; run time 2.36 h
 - θ₂ (level 2 vs 11, frequency, dose 1): 0.0011, 95% cluster-bootstrap -0.0089 to 0.0122, n=300
 - θ_comp (level 2, frequency, dose 1): 0.0011, 95% cluster-bootstrap -0.0089 to 0.0122, n=300
-- Dose overlap (median C–A cell Hamming, levels 2 vs 11): True
+- Dose overlap (median C–A cell Hamming, levels 2 vs 11): degenerate
 
 | Config | Excluded | Solve A | Solve B | Solve C | Solve D | Median C–A Hamming |
 |---|---|---|---|---|---|---|
