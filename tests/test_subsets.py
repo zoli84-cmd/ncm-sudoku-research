@@ -43,3 +43,13 @@ def test_screen_flags_duplicates():
     assert ("released-0", "gen-v1-2-1") not in result["signature_collisions"]
     result2 = screen({"cal": [p0, p1]}, released)
     assert ("released-0", "gen-v1-2-1") in result2["signature_collisions"]
+
+
+def test_assert_generator_frozen_checks_numpy(monkeypatch):
+    import pytest
+
+    import ncm_sudoku.subsets as subsets
+
+    monkeypatch.setattr(subsets.np, "__version__", "9.9.9")
+    with pytest.raises(RuntimeError):
+        assert_generator_frozen()

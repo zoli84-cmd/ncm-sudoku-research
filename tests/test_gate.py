@@ -68,3 +68,9 @@ def test_model_gate_outcomes():
     assert r["ci_pp"][0] < -MARGIN_PP < r["ci_pp"][1]
     assert r["diff_pp"] == pytest.approx(100 * k / 1000 - BENCHMARK_PCT)
     assert not math.isnan(r["fresh_pct"])
+
+
+def test_model_free_gate_records_thresholds():
+    prof = depth_profile([P, INKALA])
+    r = model_free_gate(prof, prof)
+    assert r["thresholds"] == {"tvd": 0.05, "stuck_pp": 5.0, "initial_singles": 1.0}

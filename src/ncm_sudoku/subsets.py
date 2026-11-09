@@ -9,6 +9,7 @@ from ncm_sudoku.generate import GeneratedPuzzle, generate_many
 
 SEEDS = {"gate": 1, "cal": 2, "probe_train": 3, "probe_val": 4, "select": 5, "test": 6, "e4_test": 7}
 DEV_SEED = 20261109
+FROZEN_NUMPY = "2.5.4"  # the generator RNG stream depends on numpy (D33)
 FROZEN_SHA256 = {
     "generate.py": "57a8bfe55767c3e0be450307d5a09a390e13fa5aabe884ed826e200276d2a2ec",
     "solve.py": "9f3e6df5ca6e0c91c448c459cb164c398ada77c462308d9bc2e07043948c0e5e",
@@ -17,6 +18,8 @@ _PKG = Path(__file__).resolve().parent
 
 
 def assert_generator_frozen() -> None:
+    if np.__version__ != FROZEN_NUMPY:
+        raise RuntimeError(f"numpy {np.__version__} != frozen {FROZEN_NUMPY} (D33)")
     for name, expected in FROZEN_SHA256.items():
         actual = hashlib.sha256((_PKG / name).read_bytes()).hexdigest()
         if actual != expected:

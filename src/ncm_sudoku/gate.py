@@ -43,8 +43,9 @@ def model_free_gate(fresh: dict, released: dict) -> dict:
         "stuck_share_ok": abs(stuck_pp) <= STUCK_SHARE_MAX_PP,
         "initial_singles_ok": abs(singles) <= INITIAL_SINGLES_MAX,
     }
+    thresholds = {"tvd": TVD_MAX, "stuck_pp": STUCK_SHARE_MAX_PP, "initial_singles": INITIAL_SINGLES_MAX}
     return {"tvd": tvd, "stuck_share_diff_pp": stuck_pp, "initial_singles_diff": singles, **checks,
-            "passed": all(checks.values())}
+            "thresholds": thresholds, "passed": all(checks.values())}
 
 
 def wilson_interval(k: int, n: int, level: float) -> tuple[float, float]:
