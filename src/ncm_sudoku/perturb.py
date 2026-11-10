@@ -1,5 +1,6 @@
 """Discrete code perturbations for E2 (plan §7.2-§7.3, D38)."""
 
+import hashlib
 import math
 
 import torch
@@ -8,11 +9,25 @@ from ncm_sudoku.model import level_slices
 
 N_CODES = 16
 
+DOSE_FRACTIONS_V35 = (0.05, 0.15, 0.30)
+DOSE_FRACTIONS_V36 = (0.05, 0.15, 0.30, 0.60, 1.0)
 
-def dose_grid(n_level: int) -> list[int]:
-    """Distinct values of {1, ceil(.05n), ceil(.15n), ceil(.30n)} within 1..n."""
-    vals = {1, math.ceil(0.05 * n_level), math.ceil(0.15 * n_level), math.ceil(0.30 * n_level)}
+
+def dose_grid(n_level: int, fractions=DOSE_FRACTIONS_V35) -> list[int]:
+    """Distinct values of {1, ceil(f*n) for f in fractions} within 1..n."""
+    vals = {1}
+    for f in fractions:
+        vals.add(math.ceil(f * n_level))
     return sorted(v for v in vals if 1 <= v <= n_level)
+
+
+def run_seed(level: int, policy: str, dose: int, seed: int) -> int:
+    """SHA-256 of f"{level}|{policy}|{dose}|{seed}", first 8 bytes as little-endian int, shifted right by 1."""
+    msg = f"{level}|{policy}|{dose}|{seed}"
+    hash_bytes = hashlib.sha256(msg.encode()).digest()[:8]
+    # Convert first 8 bytes to little-endian int
+    val = int.from_bytes(hash_bytes, byteorder='little')
+    return val >> 1
 
 
 def code_frequencies(codes: torch.Tensor, levels) -> list[torch.Tensor]:
@@ -54,3 +69,36 @@ def perturb_level(
             for pos, v in values:
                 new[b, pos] = v
     return new, eligible
+
+
+def level1_weights(a: torch.Tensor, freqs: torch.Tensor, policy: str) -> torch.Tensor:
+    """Weights for perturbing level-1 codes, or all zeros if ineligible.
+
+    For frequency policy:
+    - If a[i] == 0: remove freqs[0] mass and renormalize; ineligible if remaining sum is 0.
+    - If a[i] > 0: remove freqs[a[i]] mass and renormalize; ineligible if remaining sum is 0.
+
+    For uniform policy:
+    - If a[i] == 0: uniform over indices 1..15 (skip 0).
+    - If a[i] > 0: uniform over all indices except a[i].
+    """
+    B = a.shape[0]
+    weights = torch.zeros(B, N_CODES, dtype=torch.double)
+
+    for b in range(B):
+        orig_idx = int(a[b])
+
+        if policy == "frequency":
+            w = freqs.clone().double()
+            w[orig_idx] = 0.0
+            if w.sum() > 0:
+                weights[b] = w / w.sum()
+            # else: all zeros (ineligible)
+        elif policy == "uniform":
+            w = torch.ones(N_CODES, dtype=torch.double)
+            w[orig_idx] = 0.0
+            weights[b] = w / w.sum()  # Always eligible: 15 non-zero entries
+        else:
+            raise ValueError(f"Unknown policy: {policy}")
+
+    return weights
