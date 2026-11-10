@@ -10,8 +10,9 @@ Single place for work-package status, backlog, and open items. Decisions live in
 | WP0-B | Safe loading, official-metric mirror, runner, cumulative states, `forward_with_intervention`, G0 reproduction, cost | done (2026-11-09); G0 passed: 86.3% vs 86.1% (D31) | G0 run ≈ 45 min | — |
 | WP1 | Generator freeze + terminal distribution gate (D27); E1 tokenizer/generator split; E2 level sensitivity, four-branch compensation, dose calibration | done (2026-11-09): gate passed (D41); E1 on released and CAL; E2 pilot (D42, non-confirmatory) | measured: gate 20 min; E1 on CAL 5 min; E2 pilot (300 × levels 1/2/6/11 × 2 policies × doses × 3 seeds) 2.36 h | 1 session |
 | E2 pilot 2 | Plan v3.6 (D43–D50): review, implementation (TV damage, level-1 enumeration, extended doses, diagnostics), second pilot on CAL | next | estimate 3–4 h CPU | 1–2 sessions |
-| Lock | Sample-size simulation from pilot 2, §12.2 checklist, OSF embargoed registration with git tag hash | after pilot 2 | minutes (simulation) | 1–2 sessions |
-| WP2 | E3 labels, probes, control matrix, depth, equivariance | after lock | state extraction 0.02 s/puzzle; probes minutes–hours | 3–5 sessions |
+| E3 preparation | Solver waves, labels and depth on PROBE subsets; probe and baseline training-size curves; H1 sample size (plan §12.1) | after pilot 2 | probes minutes–hours | 2–3 sessions |
+| Lock | Sample-size simulation (E2 and H1 → one TEST size), §12.2 checklist, OSF embargoed registration with git tag hash | after E3 preparation | minutes (simulation) | 1–2 sessions |
+| WP2 | E3 confirmatory evaluation on TEST: probes, control matrix, depth, equivariance | after lock | state extraction 0.02 s/puzzle; probes minutes–hours | 3–5 sessions |
 | WP3 | E4a / E4b targeted patching (conditional on the E4 gate) | conditional | depends on E4-TEST size | 3–6 sessions or dropped |
 | WP4 | Integrated analysis, figures, manuscript | after WP2 (and WP3) | minutes | 4–8 sessions |
 | E5 | Optional extension (other checkpoint, retraining, other task) | not planned | — | needs a new protocol |

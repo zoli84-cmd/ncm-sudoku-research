@@ -1,0 +1,153 @@
+diff --git a/research_plan_v3.5.md b/research_plan_v3.6.md
+index 51ffd35..bf29ee4 100644
+--- a/research_plan_v3.5.md
++++ b/research_plan_v3.6.md
+@@ -1,8 +1,8 @@
+ # NCM–Sudoku: hierarchical sensitivity, error propagation, and logical representations
+ 
+-**Research plan v3.5 — v3.4 plus WP0 implementation facts of 2026-11-09**  
+-**Date:** 2026-11-08  
+-**Predecessors:** `research_plan_v3.4.md`, `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `research_plan_v3.md` (English translation of the Hungarian `NCM_Sudoku_kutatasi_terv_v3.md`); all remain unchanged.  
++**Research plan v3.6 — v3.5 plus the E2 redesign after the WP1 pilot**  
++**Date:** 2026-11-10  
++**Predecessors:** `research_plan_v3.5.md`, `research_plan_v3.4.md`, `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `research_plan_v3.md` (English translation of the Hungarian `NCM_Sudoku_kutatasi_terv_v3.md`); all remain unchanged.  
+ **Status:** pilot protocol prepared for execution. Source verification is done; running the model, numerically reproducing the checkpoints, and validating the intervention infrastructure are not. Preregistration of the confirmatory study can be finalized after G0 and a separate pilot.  
+ **Versioning:** the English document is authoritative from v3.1 on. Every change from v3.0 is listed in Section 16 and justified in `DECISIONS.md`.
+ 
+@@ -74,8 +74,8 @@ A code index is categorical: its numerical order has no self-evident geometric m
+ | Hypothesis | Testable claim | Primary or conditional evaluation |
+ |---|---|---|
+ | H1: readability | A fixed-capacity probe reads the logical label from the generated representation better than the corresponding null control | E3 candidate-mask Brier improvement at level 6; level 2 is a pre-specified low-capacity control; the raw-input control is a separate mandatory comparison |
+-| H2: level sensitivity | At an identical, precisely defined discrete edit cost, early and late interventions differ in their solve effect | E2 paired contrast of single-code interventions at levels 2 and 11 |
+-| H3: adaptation | Regenerating the suffix modifies the perturbation effect relative to a fixed suffix | E2 four-branch interaction; primarily at level 2 with a single-code replacement |
++| H2: level sensitivity | At an identical, precisely defined discrete edit cost, early and late interventions differ in their solve effect | E2 paired contrast of single-code interventions at levels 1 and 11; levels 2 vs. 11 secondary with an equivalence range |
++| H3: adaptation | Regenerating the suffix modifies the perturbation effect relative to a fixed suffix | E2 four-branch interaction; primarily at level 1 with a single-code replacement |
+ | H4: generalization | Read-out labels follow the expected transformation under symmetries and on new puzzle families | Separate E3 equivariance and family-holdout results |
+ | H5: causal relevance | A preselected intervention causes a more specific change in the target cell than a matched control | Conditional E4a; for E4b a separate counterfactual protocol |
+ 
+@@ -172,29 +172,41 @@ A positive value indicates more favorable adaptation relative to the fixed suffi
+ 
+ ### 7.2 Two separate questions: edit cost and initial damage
+ 
+-**Primary, equal-cost study:** uniform selection of one code position and its replacement according to the level's generated code frequency estimated on CAL, excluding the original value. Contrast of levels 2 and 11 of the hard checkpoint:
++**Primary, equal-cost study:** uniform selection of one code position and its replacement according to the level's generated code frequency estimated on CAL, excluding the original value. Contrast of levels 1 and 11 of the hard checkpoint:
+ 
+ $$
+-\theta_2=E[(Y_{D,2}-Y_A)-(Y_{D,11}-Y_A)].
++\theta_2=E[(Y_{D,1}-Y_A)-(Y_{D,11}-Y_A)].
+ $$
+ 
++Level 1 has a single code position, so the replacement is not sampled: all 15 alternative values are run and weighted by their CAL frequency, which gives the exact expectation over the policy without intervention-seed noise. At level 11 a position and a value are drawn with three intervention seeds. The same contrast at levels 2 and 11, $\theta_2'=E[(Y_{D,2}-Y_A)-(Y_{D,11}-Y_A)]$, is secondary and is assessed against an equivalence range of ±3 pp (Section 11.4).
++
++**Why level 1 (v3.6).** In the WP1 pilot on CAL (D42) single-code replacement at levels 2, 6 and 11 changed solve rates by at most about 1 pp, and at level 2 branch C never differed from A in solve outcome; level 1 lowered the solve rate from 0.850 to 0.756. The primary contrast was moved before the lock, on CAL data only, so that H2 tests the earliest level at the same edit cost; TEST is untouched. The change and its reason are logged in `DECISIONS.md`.
++
+ A negative value means greater degradation at the early level. This is an equal number of discrete edits, **not equal semantic effect strength**. We report the differing vector norm, frequency, and conditional probability. If the frequency distribution has no alternative value, the case is not replaceable under this policy: we do not silently substitute uniform replacement. The level contrast runs on a common, predefined eligible population; the dropout proportion and the full population are shown separately.
+ 
+-**Secondary study matched on initial damage:** the direct decoded change is measured between C and A, before regeneration. For well-formed outputs:
++**Secondary study matched on initial damage:** the direct decoded change is measured between C and A, before regeneration. The primary damage measure is the mean cell-wise total variation distance between the decoder's digit distributions:
++
++$$
++d_{i,\ell,r}=\frac{1}{81}\sum_{c=1}^{81}\operatorname{TV}\!\left(p^C_{i,c},\,p^A_{i,c}\right),
++$$
++
++where $p_{i,c}$ is the softmax (temperature 1) of the decoder logits over the nine digits for cell $c$. It is continuous and bounded in $[0,1]$. The WP1 pilot showed why the cell Hamming distance cannot carry the matching: at levels 2–11 it was zero in at least 98% of perturbed runs (D42). The cell Hamming distance is still reported for well-formed outputs:
+ 
+ $$
+ h_{i,\ell,r}=\frac{1}{81}\sum_{c=1}^{81}\mathbf{1}\{\widehat S^C_{i,c}\ne\widehat S^A_{i,c}\}.
+ $$
+ 
+-This is the cell Hamming distance from the clean generated output, not the error relative to the reference solution. The analogous distance measured on the teacher reconstruction may serve as a separate tokenizer control. With a format error the distance gets a separate status; the failed run stays in the solve denominator and does not automatically count as "low damage".
++Both are also reported over originally empty cells only. A latent diagnostic, $\lVert z^C-z^A\rVert_2/\lVert z^A\rVert_2$ on the final cumulative state, is recorded next to them. A re-quantization diagnostic (D26) records, per perturbation, the norm of the replaced codebook-vector difference relative to $\lVert z^A\rVert_2$ and whether re-quantizing the perturbed cumulative state returns the original codes; it serves the interpretation of insensitive levels and is not an outcome.
++
++The Hamming value is the cell Hamming distance from the clean generated output, not the error relative to the reference solution. The analogous distance measured on the teacher reconstruction may serve as a separate tokenizer control. With a format error the distance gets a separate status; the failed run stays in the solve denominator and does not automatically count as "low damage".
+ 
+-Perturbation policies and doses are chosen on CAL data, then the choice is frozen. The final TEST solve outcome cannot be used for fitting. Initial damage is a post-intervention variable, so the result conditioned on it is a **calibrated descriptive comparison**, not automatically a controlled direct causal effect. We compare not only the mean Hamming but the full distribution and the format error rate.
++Perturbation policies and doses are chosen on CAL data, then the choice is frozen. The final TEST solve outcome cannot be used for fitting. Initial damage is a post-intervention variable, so the result conditioned on it is a **calibrated descriptive comparison**, not automatically a controlled direct causal effect. We compare not only the mean damage but the full distribution and the format error rate.
+ 
+ ### 7.3 Dose curves and lack of overlap
+ 
+-The dose is the number of positions replaced at a level. The pilot's candidate grid, with duplicates removed: $0,1,\lceil0.05n_\ell\rceil,\lceil0.15n_\ell\rceil,\lceil0.30n_\ell\rceil$, where $n_\ell$ is the level's code length. On short coarse levels, four to five distinct nonzero doses therefore do not necessarily exist. Replacing the single code of level 1 is a separate sensitivity experiment.
++The dose is the number of positions replaced at a level. The first pilot's candidate grid, with duplicates removed, was $0,1,\lceil0.05n_\ell\rceil,\lceil0.15n_\ell\rceil,\lceil0.30n_\ell\rceil$, where $n_\ell$ is the level's code length. Because levels 2–11 were insensitive up to 30% of positions (D42), the grid from v3.6 on is $0,1,\lceil0.05n_\ell\rceil,\lceil0.15n_\ell\rceil,\lceil0.30n_\ell\rceil,\lceil0.60n_\ell\rceil,n_\ell$ (level 6: 1, 2, 4, 8, 13; level 11: 1, 4, 11, 21, 41, 67; level 2: 1, 2; level 1: 1). On short coarse levels, four to five distinct nonzero doses therefore do not necessarily exist. Replacing the single code of level 1 is a separate sensitivity experiment.
+ 
+-Per level we plot the solve change as a function of edit count and initial Hamming. Areas under the curve are comparable only over a **common range pre-specified on CAL and checked with diagnostics on TEST**, with identical integration rule and weighting. For AUC we state the range and normalization. No extrapolation to unobserved small coarse perturbations. Without overlap we publish separate sensitivity curves; the equal-damage level contrast is not estimable. Slope can only be a local, secondary summary.
++Per level we plot the solve change as a function of edit count and of initial damage $d$. Areas under the curve are comparable only over a **common range pre-specified on CAL and checked with diagnostics on TEST**, with identical integration rule and weighting. The rule (v3.6): the common range is the intersection, across the compared levels, of the 5th–95th percentile ranges of $d$ on CAL; the area is computed with the trapezoidal rule, equal weights, over that range, and normalized by its width. The range values are filled in from the second CAL pilot before the lock. An empty intersection means no AUC comparison. No extrapolation to unobserved small coarse perturbations. Without overlap we publish separate sensitivity curves; the equal-damage level contrast is not estimable. Slope can only be a local, secondary summary.
+ 
+ Further perturbations: uniform code replacement; equal numbers of contiguous or scattered positions, where topology justifies it; validated donor policy. Matching the marginal code frequency or vector norm does not guarantee that the replacement remains natural given the puzzle and prefix.
+ 
+@@ -324,10 +336,10 @@ The main estimand is the average paired effect in the selected puzzle population
+ The primary interval procedure is a cluster bootstrap with 10,000 resamples that keeps related branches, pairs, and repetitions together. The bootstrap also preserves stratified sampling. Alongside the reported two-sided individual 95% intervals, for the three contrasts of the primary family we give Bonferroni intervals targeting 5% family-wise error control, each with 98.33% nominal coverage:
+ 
+ 1. H1: $\theta_1$, the level-6 initial candidate-mask Brier improvement relative to the fixed null control.
+-2. H2: $\theta_2$, the solve contrast of single-code perturbation at levels 2 and 11.
+-3. H3: $\theta_{\mathrm{comp}}$, the four-branch interaction of the level-2 single-code perturbation.
++2. H2: $\theta_2$, the solve contrast of single-code perturbation at levels 1 and 11.
++3. H3: $\theta_{\mathrm{comp}}$, the four-branch interaction of the level-1 single-code perturbation.
+ 
+-The concrete bootstrap interval variant and handling of rare events are fixed based on the pilot, before TEST. Limitations of approximate coverage with few clusters are reported. Other levels, doses, probes, and labels are secondary/exploratory; they will not be turned into primary positive results post hoc. H4 estimates performance and deviation; it does not test a universal invariance theorem. E4 gets its own primary contrast examined on fresh data.
++The interval variant is the percentile cluster bootstrap with 10,000 resamples (fixed in v3.6 from the pilot); rare events follow the rule in Section 11.2. Limitations of approximate coverage with few clusters are reported. Other levels, doses, probes, and labels are secondary/exploratory; they will not be turned into primary positive results post hoc. H4 estimates performance and deviation; it does not test a universal invariance theorem. E4 gets its own primary contrast examined on fresh data.
+ 
+ ### 11.2 Paired binary outcomes
+ 
+@@ -346,7 +358,7 @@ $$
+ \operatorname{Var}(\widehat\delta)=\frac{q-\delta^2}{n}.
+ $$
+ 
+-This is not applied unchanged to grouped, multi-repetition data. With zero or very few discordant pairs the usual bootstrap can degenerate. In that case we report the discordance count and an uncertainty bound; a pre-selected small-sample interval procedure is required. We do not claim equivalence based on a zero-width empirical bootstrap interval.
++This is not applied unchanged to grouped, multi-repetition data. With zero or very few discordant pairs the usual bootstrap can degenerate. In that case we report the discordance count and an uncertainty bound; a pre-selected small-sample interval procedure is required. **Rule (v3.6):** when fewer than 20 puzzles have a nonzero puzzle-level difference in a contrast, the bootstrap interval is replaced by the conservative bound $|\delta|\le q$, with $q$ the share of puzzles with a nonzero difference and its Clopper–Pearson upper limit at the family's nominal level. The bound always holds and never has zero width. We do not claim equivalence based on a zero-width empirical bootstrap interval.
+ 
+ ### 11.3 GLMM: supplementary analysis
+ 
+@@ -358,7 +370,9 @@ The model formula, reference categories, and simplification order are fixed in a
+ 
+ A few hundred independent pilot puzzles can provide planning data, but are not proven sufficient. The confirmatory sample size is determined from the desired minimal practical effect, the expected interval width, the discordance and family dependence measured in the pilot, preferably by simulating the entire planned procedure. The different endpoints of E3 and E4 require separate calculations.
+ 
+-The calculation must include multiple comparisons, the expected eligible target cells, the number of perturbation repetitions, and any loss in counterfactual pair construction. No outcome-dependent early stopping or repeated testing without a new rule. A non-significant result is limited evidence; claiming absence of a practical effect requires a pre-specified equivalence range and adequate precision.
++The calculation must include multiple comparisons, the expected eligible target cells, the number of perturbation repetitions, and any loss in counterfactual pair construction. **Thresholds and calculation (v3.6).** Minimal practical effects: 5 pp for H2 ($\theta_2$), 3 pp for H3 ($\theta_{\mathrm{comp}}$); the secondary levels 2 vs. 11 contrast uses an equivalence range of ±3 pp. The TEST size is found by resampling puzzle-level outcomes from the second CAL pilot and simulating the whole procedure (estimators, percentile cluster bootstrap, Bonferroni intervals, rare-event rule). Targets: 90% power for H2 at 5 pp; an H3 interval half-width of at most 3 pp; 80% power for the levels 2 vs. 11 equivalence claim. The largest requirement, rounded up to a multiple of 100, sets the TEST size. H1 stays in the family; its sample size is computed separately in WP2.
++
++No outcome-dependent early stopping or repeated testing without a new rule. A non-significant result is limited evidence; claiming absence of a practical effect requires a pre-specified equivalence range and adequate precision.
+ 
+ ## 12. Execution plan and lock points
+ 
+@@ -373,6 +387,7 @@ The values below are **proposed work-organization starting points**, not measure
+ | E1–E2 pilot | About 300 puzzles, one from each independent group; levels 2, 6, and 11; single-code replacement first | A/B/C/D branches and paired contrasts |
+ | Perturbation repetition | Initially 3 intervention seeds | Variance of position and replacement choice; with argmax there is no artificial generation-seed variance |
+ | Dose calibration | Available discrete doses on CAL; frequency-based, then uniform policy | Overlap range or its absence; cost |
++| Second E2 pilot (v3.6) | Same 300 CAL puzzles; levels 1, 2, 6 and 11; extended dose grid; TV damage, latent and re-quantization diagnostics; level-1 enumeration | Puzzle-level outcomes for the sample-size simulation; common damage range |
+ | E3 preparation | Solver waves, label and depth collection; probe and baseline training-size curves | Label prevalence, ceiling effect, final readout and sample size |
+ | Confirmatory lock | Every item of the next table filled in | Dated protocol and untouched TEST |
+ | E4 pilot | Only after the gate is met, on SELECT | Concrete target, region, control, margin, and new sample size |
+@@ -386,10 +401,10 @@ The values below are **proposed work-organization starting points**, not measure
+ | Model | Hard first; pinned code commit; two-part G0 acceptance rule | Checkpoint revision, file hash, environment, and reproduction result against the rule |
+ | Data | Grouped split; unique solutions; released 2,000 hard boards for G0 and as a secondary stratum; own 30-clue generator for all other subsets (Section 4.1) | Frozen generator hash, gate results, duplicate and orbit screening results, Data sources, licenses, group construction, split hash, and exact sample size |
+ | Logical label | Initial candidate mask; synchronous single waves secondarily | Labeler version, tests, prevalences, and stuck rate |
+-| E2 main contrast | Single-code replacement, level 2 vs. 11; compensation at level 2 | Frequency estimate, eligibility rule, seeds, validated wrapper |
+-| E2 dose curve | Initial C–A damage; common range only | Final doses, overlap diagnostics, integration rule |
++| E2 main contrast | Single-code replacement, level 1 vs. 11 (level 2 vs. 11 secondary, ±3 pp equivalence); compensation at level 1; level-1 enumeration weighted by CAL frequency | Frequency estimate, eligibility rule, seeds, validated wrapper |
++| E2 dose curve | Initial C–A damage as mean cell TV; common range rule (Section 7.3) | Final doses, overlap diagnostics, common range values |
+ | E3 main contrast | Generated cumulative state at level 6, shared linear probe, Brier; level 2 low-capacity and level 12 full-resolution comparisons | Unit–digit readout mapping, Token mapping, input dimensions, baseline architectures, training and regularization plan |
+-| Statistics | Paired, grouped analysis; three main contrasts | Practical effect thresholds, power, bootstrap variant, rare-event plan |
++| Statistics | Paired, grouped analysis; three main contrasts; thresholds 5 pp (H2) and 3 pp (H3); percentile cluster bootstrap with 10,000 resamples; rare-event rule (Section 11.2) | Simulated power and TEST size |
+ | Symmetry | Equivariance; augmented and non-augmented tests separate | Sampling and weighting of transformations, acceptable deviation |
+ | E4 | Conditional, separate fresh test set | Target variable, target region, corruption, controls, patch route and geometry, the single primary route × geometry combination and its comparator, random-direction distribution and $K$, distance definition, numerical gate, sample size |
+ | Report | All branches and negative results; exclusions logged | Final run register, table and figure schema |
+@@ -422,6 +437,7 @@ There is no well-founded 1–2 day commitment for WP0: it depends on the checkpo
+ | Equivariance and family holdout succeed | More stable, generalizable readout | General reasoning ability is proven |
+ | Specific restoring patch effect | The given representational region is relevant to the designated output | The full semantic mechanism named by the probe is proven |
+ | Even a minimal donor patch degrades valid-grid | The consequence and consistency limit of the hybrid state are measurable | The logical hypothesis is refuted by itself |
++| Levels 2 vs. 11 interval inside ±3 pp with adequate precision | No practically relevant solve difference between levels 2 and 11 under the given policy | Level 2 carries no information or has no causal role |
+ | Non-significant result | The given design provides insufficient evidence for the designated effect | The effect or the logical representation is certainly absent |
+ 
+ Results are stated conditionally on checkpoint and intervention policy. The main risks — distribution shift after code replacement, teacher/generated conflation, data overlap, readout capacity, format errors, and post hoc target selection — appear in the final report together with their assigned controls. No single diagnostic proves in general that a patch is "in-distribution".
+@@ -518,3 +534,12 @@ Changes in v3.5 (WP0 implementation facts):
+ 
+ 22. Execution environment is native Windows instead of WSL2 (Section 2.2, item 1; D30).
+ 23. The released checkpoints contain no training metadata; the training regime is cited from the paper only (Section 7.1).
++
++Changes in v3.6 (E2 redesign after the WP1 pilot, D43–D50):
++
++24. H2 primary contrast moved to levels 1 vs. 11; levels 2 vs. 11 secondary with a ±3 pp equivalence range; level-1 replacement enumerated over all alternatives weighted by CAL frequency (Sections 3, 7.2, 11.1).
++25. H3 moved to level 1, where branch C has initial damage (Sections 3, 7.2, 11.1).
++26. Primary damage measure is the mean cell-wise total variation distance of decoder digit distributions; cell Hamming, latent and re-quantization diagnostics reported (Section 7.2; D26).
++27. Dose grid extended to 60% and 100% of a level's positions; common-range and integration rule fixed (Section 7.3).
++28. Percentile cluster bootstrap with 10,000 resamples and a rare-event rule; practical thresholds and a simulation-based sample-size method (Sections 11.1, 11.2, 11.4).
++29. Second E2 pilot on the same CAL puzzles before the lock (Section 12.1).
