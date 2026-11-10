@@ -241,6 +241,17 @@ def _quantiles(rows, key):
     return np.quantile(vals, QUANTILES).tolist() if vals else None
 
 
+def _level1_weighted(level1, policy, key, pids) -> list[dict]:
+    """Per eligible puzzle: {key: sum_v w d / sum_v w} over records with a non-None value (plan §7.2 weights)."""
+    acc = defaultdict(lambda: [0.0, 0.0])
+    for r in level1:
+        if r["puzzle_id"] in pids and r[key] is not None:
+            w, t = r[f"w_{policy}"], acc[r["puzzle_id"]]
+            t[0] += w * r[key]
+            t[1] += w
+    return [{key: num / den} for num, den in acc.values() if den > 0]
+
+
 def _mean(vals):
     return float(np.mean(vals)) if len(vals) else None
 
@@ -294,7 +305,7 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
                            "B1": _mean([base[p]["solve_B1"] for p in pids]),
                            "C": _mean([t[1] for t in elig]), "D": _mean([t[2] for t in elig])},
             "format_error_share": {"C": _mean([t[3] for t in elig]), "D": _mean([t[4] for t in elig])},
-            "quantiles": {k: _quantiles([r for r in out["level1"] if r[f"w_{policy}"] > 0], k)
+            "quantiles": {k: _quantiles(_level1_weighted(out["level1"], policy, k, set(pids)), k)
                           for k in DAMAGE_KEYS},
         }
 

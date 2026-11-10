@@ -125,3 +125,17 @@ def test_summarize2_toy():
     assert cfg["quantiles"]["tv"][2] == pytest.approx(1.1)
     assert s["level1"]["frequency"]["solve_mean"]["D"] == pytest.approx((0.25 + 1) / 2)
     assert set(s["auc"]) == {"6-11", "2-11"}
+
+
+def test_summarize2_level1_damage_is_weighted():
+    out = _toy_out()
+    tvs = {("p1", 1): 0.1, ("p1", 2): 0.5, ("p2", 1): 0.3}
+    hams = {("p1", 1): 2, ("p1", 2): None, ("p2", 1): 6}
+    out["level1"] = [dict(r, tv=tvs[r["puzzle_id"], r["value"]], hamming_CA=hams[r["puzzle_id"], r["value"]],
+                          w_uniform=0.5 if r["puzzle_id"] == "p1" else 1.0) for r in out["level1"]]
+    s = summarize2(out, n_boot=100)["level1"]
+    # frequency: p1 = .75*.1 + .25*.5 = .2, p2 = .3; uniform: p1 = .3, p2 = .3
+    assert s["frequency"]["quantiles"]["tv"] == pytest.approx([0.2, 0.225, 0.25, 0.275, 0.3])
+    assert s["uniform"]["quantiles"]["tv"] == pytest.approx([0.3] * 5)
+    # hamming renormalized over non-None values: p1 = 2, p2 = 6
+    assert s["frequency"]["quantiles"]["hamming_CA"] == pytest.approx([2, 3, 4, 5, 6])
