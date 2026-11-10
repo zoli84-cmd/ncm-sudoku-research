@@ -5,4 +5,4 @@ Tier: medium — set by user decision (D50); methodology document, primary hypot
 | Step | Reviewers | Scope | Status | Accepted blocker/major |
 |---|---|---|---|---|
 | R1 | sol,carbon | changed sections | done 2026-11-10 (all 10 findings accepted, fixes applied) | 5 |
-| Final | astra | changed sections | next | |
+| Final | astra | changed sections | done 2026-11-10 (attempt 1 failed on an out-of-repo read; attempt 2 ok) | 2 |
