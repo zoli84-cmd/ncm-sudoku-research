@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -23,20 +25,25 @@ def test_run_pilot2_small(model, released, monkeypatch):
     assert len(out["records"]) == 6 * 2 * 1 * 2
     assert all(0.0 <= r["tv"] <= 1.0 for r in out["records"] + out["level1"])
     assert all(r["solve_B"] == r["solve_A"] for r in out["records"])
+    for r in out["records"] + out["level1"]:
+        assert math.isfinite(r["tv"]) and 0.0 <= r["tv"] <= 1.0
+        assert "hamming_CA_empty" in r and (r["hamming_CA_empty"] is None) == (r["hamming_CA"] is None)
+        if not r["well_formed_C"]:  # hamming needs both C and A well formed
+            assert r["hamming_CA"] is None
 
 
 def _rec(pid, level, dose, seed, D, eligible=True, policy="frequency"):
     return {"puzzle_id": pid, "level": level, "policy": policy, "dose": dose, "seed": seed,
             "eligible": eligible, "solve_A": 1, "solve_B": 1, "solve_C": 1, "solve_D": D,
             "well_formed_C": True, "well_formed_D": True, "tv": 0.1 * level, "tv_empty": 0.1,
-            "hamming_CA": 0, "latent": 0.5, "codebook_rms": 1.0, "requant_ratio": 0.2,
+            "hamming_CA": 0, "hamming_CA_empty": 0, "latent": 0.5, "codebook_rms": 1.0, "requant_ratio": 0.2,
             "downstream_changes_D": 0}
 
 
 def _l1(pid, v, w, C, D):
     return {"puzzle_id": pid, "value": v, "w_frequency": w, "w_uniform": w, "solve_C": C, "solve_D": D,
             "well_formed_C": True, "well_formed_D": True, "tv": 0.01, "tv_empty": 0.01, "hamming_CA": 0,
-            "latent": 0.1, "codebook_rms": 1.0, "requant_ratio": 0.1, "downstream_changes_D": 0}
+            "hamming_CA_empty": 0, "latent": 0.1, "codebook_rms": 1.0, "requant_ratio": 0.1, "downstream_changes_D": 0}
 
 
 def _toy_out():
@@ -139,3 +146,21 @@ def test_summarize2_level1_damage_is_weighted():
     assert s["uniform"]["quantiles"]["tv"] == pytest.approx([0.3] * 5)
     # hamming renormalized over non-None values: p1 = 2, p2 = 6
     assert s["frequency"]["quantiles"]["hamming_CA"] == pytest.approx([2, 3, 4, 5, 6])
+
+
+def test_interval_treats_float_noise_as_zero():
+    r = interval(np.full(300, 1e-16), 0.95)
+    assert r["n_nonzero"] == 0 and r["method"] == "bound"
+
+
+def test_summarize2_reports_hamming_empty_and_sham_mismatch():
+    out = _toy_out()
+    out["base"][1]["solve_B1"] = 0  # p2: B1 != A
+    for r in out["records"]:
+        if r["puzzle_id"] == "p1" and r["level"] == 2:
+            r["solve_B"] = 0  # p1: B != A at level 2 (every policy/dose/seed record)
+    s = summarize2(out, n_boot=100)
+    assert s["sham_mismatch"] == {"level1_B1": 1, "levels_B": {"2": 1, "11": 0}}
+    cfg = s["configurations"][0]
+    assert cfg["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)
+    assert s["level1"]["frequency"]["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)

@@ -27,7 +27,7 @@ SEEDS_P2 = (0, 1, 2)
 FAMILY_LEVEL = 1 - 0.05 / 3  # Bonferroni over the three E2 contrasts
 TOST_MARGIN = 0.03
 QUANTILES = (0.0, 0.25, 0.5, 0.75, 1.0)
-DAMAGE_KEYS = ("tv", "tv_empty", "hamming_CA", "latent", "codebook_rms", "requant_ratio")
+DAMAGE_KEYS = ("tv", "tv_empty", "hamming_CA", "hamming_CA_empty", "latent", "codebook_rms", "requant_ratio")
 
 
 @torch.no_grad()
@@ -67,11 +67,14 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
         out = []
         for j, i in enumerate(idx.tolist()):
             both_ok = met_C[j].well_formed and met_A[i].well_formed
+            empty_cells = np.flatnonzero(np.asarray(puzzles[i]).reshape(-1) == 0)
             out.append({
                 "solve_C": int(met_C[j].solve), "solve_D": int(met_D[j].solve),
                 "well_formed_C": bool(met_C[j].well_formed), "well_formed_D": bool(met_D[j].well_formed),
                 "tv": tv[j], "tv_empty": tv_e[j],
                 "hamming_CA": cell_hamming(parsed_C[j].cells, parsed_A[i].cells) if both_ok else None,
+                "hamming_CA_empty": (cell_hamming(parsed_C[j].cells, parsed_A[i].cells, empty_cells)
+                                     if both_ok else None),
                 "latent": lat[j], "codebook_rms": rms[j], "requant_ratio": ratio[j],
                 "downstream_changes_D": int(changes[j]),
             })
@@ -186,7 +189,7 @@ def interval(values: np.ndarray, level: float, n_boot: int = 10000, seed: int = 
              min_nonzero: int = 20) -> dict:
     """Percentile cluster bootstrap over puzzles, or the rare-event bound |delta| <= q (plan §11.2)."""
     v = np.asarray(values, dtype=float)
-    n, nz = len(v), int(np.count_nonzero(v))
+    n, nz = len(v), int(np.sum(np.abs(v) > 1e-12))  # weights summing to 1 +- eps leave ~1e-16 noise
     est = float(v.mean()) if n else None
     if nz < min_nonzero:
         q = cp_upper(nz, n, level)
@@ -309,8 +312,17 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
                           for k in DAMAGE_KEYS},
         }
 
+    # Instrumentation check: the sham B must reproduce A; otherwise theta_comp can leave [-1, 1]
+    sham = {
+        "level1_B1": sum(b["solve_B1"] != b["solve_A"] for b in out["base"]),
+        "levels_B": {str(level): len({r["puzzle_id"] for r in out["records"]
+                                      if r["level"] == level and r["solve_B"] != r["solve_A"]})
+                     for level in sorted({r["level"] for r in out["records"]})},
+    }
+
     return {
         "non_confirmatory": True,
+        "sham_mismatch": sham,
         "freqs_level1": out["freqs_level1"],
         "contrasts": contrasts,
         "equivalence_tost": bool(-TOST_MARGIN < tost["ci"][0] and tost["ci"][1] < TOST_MARGIN),

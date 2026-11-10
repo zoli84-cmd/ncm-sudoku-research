@@ -18,14 +18,14 @@ def _rec(pid, level, dose, seed, D, eligible=True, policy="frequency"):
     return {"puzzle_id": pid, "level": level, "policy": policy, "dose": dose, "seed": seed,
             "eligible": eligible, "solve_A": 1, "solve_B": 1, "solve_C": 1, "solve_D": D,
             "well_formed_C": True, "well_formed_D": True, "tv": 0.1 * level, "tv_empty": 0.1,
-            "hamming_CA": 0, "latent": 0.5, "codebook_rms": 1.0, "requant_ratio": 0.2,
+            "hamming_CA": 0, "hamming_CA_empty": 0, "latent": 0.5, "codebook_rms": 1.0, "requant_ratio": 0.2,
             "downstream_changes_D": 0}
 
 
 def _l1(pid, v, w, C, D):
     return {"puzzle_id": pid, "value": v, "w_frequency": w, "w_uniform": w, "solve_C": C, "solve_D": D,
             "well_formed_C": True, "well_formed_D": True, "tv": 0.01, "tv_empty": 0.01, "hamming_CA": 0,
-            "latent": 0.1, "codebook_rms": 1.0, "requant_ratio": 0.1, "downstream_changes_D": 0}
+            "hamming_CA_empty": 0, "latent": 0.1, "codebook_rms": 1.0, "requant_ratio": 0.1, "downstream_changes_D": 0}
 
 
 def _toy_pilot2_out():
@@ -66,6 +66,7 @@ def _minimal_summary():
                                           "tost90": _ci(lo=-0.02, hi=0.02)}},
         },
         "equivalence_tost": True,
+        "sham_mismatch": {"level1_B1": 1, "levels_B": {"2": 0, "6": 0, "11": 2}},
         "auc": {
             "6-11": {"auc_a": 0.1, "auc_b": 0.2, "range": (0.0, 1.0), "reason": None},
             "2-11": {"auc_a": None, "auc_b": None, "range": None, "reason": "fewer than two distinct damage values"},
@@ -93,6 +94,27 @@ def test_write_report_utf8(tmp_path):
     mod.write_report(_minimal_summary(), tmp_path / "r.md")
     text = (tmp_path / "r.md").read_bytes().decode("utf-8")
     assert "θ₂" in text and "Non-confirmatory" in text
+    assert "Sham mismatch" in text and "B1≠A 1" in text and "L11 2" in text
+
+
+def test_from_raw_rebuilds_summary_and_respects_guard(tmp_path, monkeypatch):
+    mod = _load("e2_pilot2")
+    raw = dict(_toy_pilot2_out(), date="2026-11-10", n_cal=2, seconds=7200.0, environment={"git": "x"})
+    (tmp_path / "pilot2.json").write_text(json.dumps(raw))
+    monkeypatch.setattr(mod, "RAW", tmp_path / "pilot2.json")
+    monkeypatch.setattr(mod, "OUT", tmp_path / "out")
+    for name in ("environment_record", "assert_generator_frozen", "generate_subset", "load_model", "run_pilot2"):
+        monkeypatch.setattr(mod, name, lambda *a, _n=name, **k: pytest.fail(f"--from-raw must not call {_n}"))
+    monkeypatch.setattr(mod.sys, "argv", ["e2_pilot2.py", "--from-raw"])
+    mod.main()
+    s = json.loads((tmp_path / "out" / "summary.json").read_text(encoding="utf-8"))
+    assert s["seconds"] == 7200.0 and s["n_cal"] == 2 and s["environment"] == {"git": "x"}
+    assert s["date"] == "2026-11-10" and "contrasts" in s
+    assert "Non-confirmatory" in (tmp_path / "out" / "report.md").read_text(encoding="utf-8")
+    with pytest.raises(SystemExit):
+        mod.main()
+    monkeypatch.setattr(mod.sys, "argv", ["e2_pilot2.py", "--from-raw", "--force"])
+    mod.main()
 
 
 def test_e2_sample_size_reads_pilot2_and_writes_output(tmp_path, monkeypatch):

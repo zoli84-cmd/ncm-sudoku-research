@@ -4,6 +4,7 @@ import torch
 from conftest import needs_model
 from ncm_sudoku.damage import codebook_rms, latent_distance, requantize, tv_damage
 from ncm_sudoku.grid import CELL_TOKEN_INDICES
+from ncm_sudoku.states import cumulative_states
 
 
 def test_tv_known_values():
@@ -45,6 +46,17 @@ def test_requantize_matches_upstream_from_level_1(model):
     # nor return_zlevels is set, unlike idx_to_zhats which always returns a tuple;
     # compare directly rather than indexing [0] (that would select batch row 0).
     assert torch.equal(codes, model.vqvae.vq.z_to_idx(z))
+
+
+@needs_model
+@pytest.mark.slow
+def test_requantize_from_level_3_on_nonzero_residual(model):
+    z = torch.randn(3, model.levels[-1], model.vqvae.embed_dim, generator=torch.Generator().manual_seed(1))
+    codes_full = model.vqvae.vq.z_to_idx(z)
+    z_le2 = cumulative_states(model, codes_full)[1]
+    codes, ratio = requantize(model, z - z_le2, 3)
+    assert torch.equal(codes, codes_full[:, sum(model.levels[:2]):])
+    assert (ratio > 0).all()
 
 
 @needs_model
