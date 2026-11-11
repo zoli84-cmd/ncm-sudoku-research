@@ -94,3 +94,10 @@ Abstracts read but not tabled (judged not relevant enough): 2601.20363, 2604.049
 |---|---|---|
 | S1 | arXiv:2610.14162 (NCM) | 0 citing papers |
 | S2 | arXiv:2605.18847 (Kniazev & Fijalkow) | 0 citing papers |
+
+## Follow-up deep dive, 2026-11-11: Kniazev & Fijalkow (2605.18847) unit-level probe protocol
+
+| # | Tool | Target | Purpose | Kept |
+|---|---|---|---|---|
+| H5 | arXiv HTML (`https://arxiv.org/html/2605.18847`, raw download + stdlib HTML-to-text) | full paper text incl. Appendices A–D | Pin down the exact substructure-probe label, readout position, probe form/training, metrics, and per-cell candidate definition for `literature/kniazev_fijalkow_2026_unit_probe.md` | 1 (full text) |
+| G1 | GitHub REST API (`api.github.com/repos/kameronton/sudoku-residual`, tree + raw file fetch, unauthenticated) | `sudoku/probes/modes.py`, `sudoku/probes/probing.py`, `sudoku/probes/activations.py`, `sudoku/probes/session.py`, `plots/scripts/fig_probe_acc_by_layer.py` at commit `a9b206955bfd1089a7253511fa9371066ecca570` | Verify the paper's probe-protocol prose against the actual probe code (label construction, activation extraction position, probe fitting, exact-match/AUC metric definitions) | 1 (code repo linked from the paper, confirmed via HTML `href` around "Code is available at the link") |
