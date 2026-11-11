@@ -6,7 +6,19 @@ import numpy as np
 import pytest
 import torch
 
-from ncm_sudoku.wholelayer import fit_pca, project, raw_whole, raw_whole_features, whole_layer_features
+from ncm_sudoku.e3data import raw_features
+from ncm_sudoku.grid import PEERS
+from ncm_sudoku.wholelayer import (
+    PEER_IDX,
+    cell_variance_share,
+    fit_cell_pca,
+    fit_pca,
+    peer_states,
+    project,
+    raw_projected_features,
+    variance_share,
+    whole_layer_features,
+)
 from test_e3_scripts import FAST, _toy_runs
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,25 +31,40 @@ def _low_rank(n=60, d=40, r=5, seed=0):
 
 def test_fit_pca_recovers_low_rank_structure():
     x = _low_rank()
-    pca = fit_pca(x, k=8)
-    assert pca["components"].shape == (8, 40) and pca["mean"].shape == (40,)
+    pca = fit_pca(x, k=5)
+    assert pca["components"].shape == (5, 40) and pca["mean"].shape == (40,)
     assert pca["explained_variance_share"] == pytest.approx(1.0, abs=1e-9)
-    z = project(x, pca)
-    assert z.shape == (60, 8) and z.dtype == np.float32
+    z = project(x, pca, whiten=False)
+    assert z.shape == (60, 5) and z.dtype == np.float32
     recon = z.astype(np.float64) @ pca["components"] + pca["mean"]
-    assert np.allclose(recon, x, atol=1e-4)
-    assert np.allclose(z[:, 5:], 0.0, atol=1e-4)  # rank 5: the rest carries no variance
+    assert np.allclose(recon, x, atol=1e-3)
 
 
-def test_fit_pca_partial_share_and_padding():
+def test_chunked_covariance_pca_matches_direct_svd():
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((200, 12)) @ rng.standard_normal((12, 12))
+    pca = fit_pca(x, k=6, chunk=17)  # chunk size does not divide n
+    xc = x - x.mean(axis=0)
+    _, s, vt = np.linalg.svd(xc, full_matrices=False)
+    assert np.allclose(pca["mean"], x.mean(axis=0))
+    # same subspace and, after the sign rule, the same vectors
+    signs = np.sign(vt[np.arange(12), np.abs(vt).argmax(axis=1)])
+    assert np.allclose(pca["components"], (vt * signs[:, None])[:6], atol=1e-8)
+    assert pca["explained_variance_share"] == pytest.approx((s[:6] ** 2).sum() / (s**2).sum())
+
+
+def test_whitening_gives_unit_train_std_and_padding():
     rng = np.random.default_rng(1)
-    x = rng.standard_normal((10, 30))
-    share = fit_pca(x, k=3)["explained_variance_share"]
-    assert 0.0 < share < 1.0
-    pca = fit_pca(x, k=16)  # more components than samples: zero-padded to width k
-    assert pca["components"].shape == (16, 30) and pca["n_components_fitted"] == 10
-    assert np.all(pca["components"][10:] == 0.0)
-    assert project(x, pca).shape == (10, 16)
+    x = rng.standard_normal((500, 8)) * np.arange(1, 9)
+    pca = fit_pca(x, k=8)
+    z = project(x, pca)
+    assert np.allclose(z.std(axis=0), 1.0, atol=1e-4)
+    padded = fit_pca(x, k=12)  # more components than dimensions: zero rows, scale 1
+    assert padded["components"].shape == (12, 8) and padded["n_components_fitted"] == 8
+    assert np.all(padded["components"][8:] == 0.0) and np.all(padded["scale"][8:] == 1.0)
+    assert np.allclose(project(x, padded)[:, 8:], 0.0)
+    const = np.ones((10, 3))  # zero variance everywhere: scale 1, no division by zero
+    assert np.all(fit_pca(const, k=2)["scale"] == 1.0)
 
 
 def test_fit_pca_deterministic_sign():
@@ -45,45 +72,75 @@ def test_fit_pca_deterministic_sign():
     a, b = fit_pca(x, k=5), fit_pca(x.copy(), k=5)
     assert np.array_equal(a["components"], b["components"])
     comp = a["components"]
-    idx = np.abs(comp).argmax(axis=1)
-    assert np.all(comp[np.arange(5), idx] > 0)
-    flipped = fit_pca(-x, k=5)["components"]  # sign convention survives a sign flip of the data
-    assert np.allclose(np.abs(flipped), np.abs(comp), atol=1e-8)
-    assert np.all(flipped[np.arange(5), np.abs(flipped).argmax(axis=1)] > 0)
+    assert np.all(comp[np.arange(5), np.abs(comp).argmax(axis=1)] > 0)
+    flipped = fit_pca(-x, k=5)["components"]
+    assert np.allclose(flipped, comp, atol=1e-8)
 
 
-def test_whole_layer_features_layout():
+def test_variance_share_on_val():
+    rng = np.random.default_rng(4)
+    basis = rng.standard_normal((2, 10))
+    tr = rng.standard_normal((300, 2)) @ basis
+    pca = fit_pca(tr, k=2)
+    in_span = rng.standard_normal((50, 2)) @ basis
+    assert variance_share(in_span, pca) == pytest.approx(1.0, abs=1e-9)
+    off = rng.standard_normal((50, 10))
+    share = variance_share(off, pca)
+    assert 0.0 < share < 1.0
+    xc = off - pca["mean"]
+    exp = ((xc @ pca["components"].T) ** 2).sum() / (xc**2).sum()
+    assert share == pytest.approx(exp)
+
+
+def test_peer_layout():
+    assert PEER_IDX.shape == (81, 21)
+    for c in (0, 40, 80):
+        assert PEER_IDX[c, 0] == c and list(PEER_IDX[c, 1:]) == list(PEERS[c])
     rng = np.random.default_rng(0)
-    states = rng.standard_normal((6, 81, 4)).astype(np.float32)
-    pca = fit_pca(states.reshape(6, -1), k=3)
-    f = whole_layer_features(states, pca)
-    assert f.shape == (6, 81, 3 + 4) and f.dtype == np.float32
-    glob = project(states.reshape(6, -1), pca)
-    assert np.allclose(f[:, :, :3], glob[:, None, :])
-    assert np.all(f[:, :1, :3] == f[:, :, :3])  # same global part in every cell
-    assert np.array_equal(f[:, :, 3:], states)
+    states = rng.standard_normal((2, 81, 3)).astype(np.float32)
+    ps = peer_states(states)
+    assert ps.shape == (2, 81, 21 * 3)
+    assert np.array_equal(ps[1, 5].reshape(21, 3), states[1, PEER_IDX[5]])
+    c = 0
+    peer, non_peer = list(PEERS[c])[0], next(j for j in range(81) if j != c and j not in PEERS[c])
+    moved = states.copy(); moved[0, peer] += 1.0
+    assert not np.array_equal(peer_states(moved)[0, c], ps[0, c])
+    moved = states.copy(); moved[0, non_peer] += 1.0
+    assert np.array_equal(peer_states(moved)[0, c], ps[0, c])
 
 
-def test_raw_whole_one_hot():
-    p = np.zeros((2, 81), np.int64)
-    p[0, 0], p[0, 80], p[1, 40] = 5, 9, 1
-    r = raw_whole(p)
-    assert r.shape == (2, 810) and r.dtype == np.float32
-    assert np.all(r.reshape(2, 81, 10).sum(axis=2) == 1)
-    assert r[0, 5] == 1 and r[0, 80 * 10 + 9] == 1 and r[1, 40 * 10 + 1] == 1 and r[1, 0] == 1
+def _toy_states(n=12, f=3, seed=0):
+    rng = np.random.default_rng(seed)
+    states = rng.standard_normal((n, 81, f)).astype(np.float32)
+    empty = rng.random((n, 81)) < 0.6
+    return states, empty
 
 
-def test_raw_whole_features_widths():
+def test_cell_pca_fits_empty_rows_only_and_features():
+    states, empty = _toy_states()
+    pca = fit_cell_pca(states, empty, k=10, batch=5)
+    rows = peer_states(states)[empty]
+    direct = fit_pca(rows, k=10)
+    assert np.allclose(pca["components"], direct["components"], atol=1e-8)
+    assert np.allclose(pca["scale"], direct["scale"])
+    f = whole_layer_features(states, pca, batch=5)
+    assert f.shape == (12, 81, 10 + 3) and f.dtype == np.float32
+    assert np.allclose(f[..., :10], project(peer_states(states).reshape(-1, 63), pca).reshape(12, 81, 10), atol=1e-5)
+    assert np.array_equal(f[..., 10:], states)
+    assert np.allclose(f[empty][:, :10].std(axis=0), 1.0, atol=1e-4)  # whitened on train empty rows
+    assert cell_variance_share(states, empty, pca, batch=5) == pytest.approx(pca["explained_variance_share"])
+
+
+def test_raw_projected_features():
     rng = np.random.default_rng(0)
-    p = rng.integers(0, 10, (300, 81))
-    un = raw_whole_features(p, None)
-    assert un.shape == (300, 81, 810 + 10)
-    assert np.array_equal(un[:, 7, :810], raw_whole(p)) and np.array_equal(un[:, 7, 810:], np.eye(10)[p[:, 7]])
-    pca = fit_pca(raw_whole(p), k=256)
-    pr = raw_whole_features(p, pca)
-    assert pr.shape == (300, 81, 256 + 10) and pr.dtype == np.float32
-    assert np.allclose(pr[:, 3, :256], project(raw_whole(p), pca))
-    assert np.array_equal(pr[:, :, 256:], np.eye(10, dtype=np.float32)[p])
+    p = rng.integers(0, 10, (40, 81))
+    empty = p == 0
+    rows = raw_features(p)[empty]
+    pca = fit_pca(rows, k=min(256, *rows.shape))  # k = min(256, number of components)
+    assert pca["components"].shape[0] == 210
+    f = raw_projected_features(p, pca)
+    assert f.shape == (40, 81, 210) and f.dtype == np.float32
+    assert np.allclose(f, project(raw_features(p).reshape(-1, 210), pca).reshape(40, 81, 210))
 
 
 def _load():
@@ -91,6 +148,24 @@ def _load():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+CODE = {"commit": "abc", "dirty": False, "diff_sha256": None}
+
+
+def _setup(tmp_path, monkeypatch, probes: dict | None = None):
+    runs, out = tmp_path / "runs", tmp_path / "exp"
+    _toy_runs(runs)
+    if probes is not None:
+        out.mkdir(parents=True)
+        (out / "probes.json").write_text(json.dumps(probes), encoding="utf-8")
+    mod = _load()
+    for k, v in dict(RUNS=runs, OUT=out, KW=FAST, K=6).items():
+        monkeypatch.setattr(mod, k, v)
+    monkeypatch.setattr(mod, "environment_record", lambda: {"deterministic": torch.are_deterministic_algorithms_enabled()})
+    monkeypatch.setattr(mod, "code_state", lambda: CODE)
+    monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py"])
+    return mod, runs, out
 
 
 def test_e3_wholelayer_guard(tmp_path, monkeypatch):
@@ -102,27 +177,31 @@ def test_e3_wholelayer_guard(tmp_path, monkeypatch):
     mod.guard(force=True)
 
 
+def _ref(b):
+    return {"val_brier_mean": b}
+
+
+PROBES = {"val_ids": [f"probe_val-{i}" for i in range(4)], "stages": {
+    "L06_linear": _ref(0.20), "L12_linear": _ref(0.21), "L12_permuted_linear": _ref(0.24),
+    "controls": {"permuted_linear": _ref(0.23), "surface_linear": _ref(0.22), "raw_linear": _ref(0.19)}}}
+
+
 def test_e3_wholelayer_end_to_end(tmp_path, monkeypatch):
-    runs, out = tmp_path / "runs", tmp_path / "exp"
-    _toy_runs(runs)
-    mod = _load()
-    for k, v in dict(RUNS=runs, OUT=out, KW=FAST, K=6).items():
-        monkeypatch.setattr(mod, k, v)
-    monkeypatch.setattr(mod, "environment_record", lambda: {"deterministic": torch.are_deterministic_algorithms_enabled()})
-    monkeypatch.setattr(mod, "code_state", lambda: {"commit": "abc", "dirty": False, "diff_sha256": None})
-    monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py"])
+    mod, runs, out = _setup(tmp_path, monkeypatch, PROBES)
     torch.use_deterministic_algorithms(False)
     mod.main()
     r = json.loads((out / "wholelayer.json").read_text(encoding="utf-8"))
     assert "non-confirmatory" in r["note"] and r["environment"]["deterministic"] is True
-    assert r["code"]["commit"] == "abc" and r["n_train"] == 8 and r["n_val"] == 4 and r["k"] == 6
+    assert r["code"] == CODE and r["n_train"] == 8 and r["n_val"] == 4 and r["k"] == 6
     st = r["stages"]
     assert set(st) == {"L06", "L12", "teacher_L12", "raw_projected", "raw_unprojected"}
     val_ids = [f"probe_val-{i}" for i in range(4)]
     for tag in ("L06", "L12"):
         s = st[tag]
         assert {"pca", "generated_linear", "permuted_linear", "h1"} <= set(s)
+        assert s["pca"]["input_dim"] == 21 * 4
         assert 0.0 < s["pca"]["explained_variance_share"] <= 1.0 + 1e-9
+        assert 0.0 < s["pca"]["explained_variance_share_val"] <= 1.0 + 1e-9
         g, p = s["generated_linear"], s["permuted_linear"]
         assert g["budget"]["n_params"] == (6 + 4 + 81) * 9 + 9
         assert p["val_brier_mean"] == pytest.approx(np.nanmean(p["per_puzzle"])) and "tune_brier_mean" in p
@@ -136,11 +215,78 @@ def test_e3_wholelayer_end_to_end(tmp_path, monkeypatch):
     tg = t["teacher_minus_generated"]
     exp = np.subtract(t["teacher_linear"]["per_puzzle"], st["L12"]["generated_linear"]["per_puzzle"])
     assert tg["ids"] == val_ids and np.allclose(tg["diffs"], exp) and tg["mean_diff"] == pytest.approx(np.nanmean(exp))
-    assert st["raw_projected"]["linear"]["budget"]["n_params"] == (6 + 10 + 81) * 9 + 9
-    assert "explained_variance_share" in st["raw_projected"]["pca"]
-    assert st["raw_unprojected"]["linear"]["budget"]["n_params"] == (810 + 10 + 81) * 9 + 9
+    k_raw = st["raw_projected"]["pca"]["k"]
+    assert k_raw == 6 and st["raw_projected"]["linear"]["budget"]["n_params"] == (k_raw + 81) * 9 + 9
+    assert "explained_variance_share_val" in st["raw_projected"]["pca"]
+    assert st["raw_unprojected"]["linear"]["budget"]["n_params"] == (210 + 81) * 9 + 9
     assert set(r["seconds"]) == set(st)
+    ref = r["references"]
+    assert ref["available"] is True and ref["val_ids_match"] is True
+    assert ref["rows"] == {"L06_linear": 0.20, "L12_linear": 0.21, "L06_permuted_linear": 0.23,
+                           "L12_permuted_linear": 0.24, "surface_linear": 0.22, "raw_linear": 0.19}
+    for tag, b in (("L06", 0.20), ("L12", 0.21)):
+        assert r["whole_minus_per_cell"][tag] == pytest.approx(st[tag]["generated_linear"]["val_brier_mean"] - b)
     report = (out / "wholelayer_report.md").read_text(encoding="utf-8")
     assert "Non-confirmatory" in report and "relative improvement" in report and "unprojected" in report
+    assert "per-cell" in report and "surface" in report
+    assert not list(out.glob("*.tmp"))
     with pytest.raises(SystemExit):
+        mod.main()
+
+
+def test_e3_wholelayer_missing_probes_json(tmp_path, monkeypatch):
+    mod, runs, out = _setup(tmp_path, monkeypatch, None)
+    monkeypatch.setattr(mod, "STAGES", mod.STAGES[:1])  # L06 only
+    mod.main()
+    r = json.loads((out / "wholelayer.json").read_text(encoding="utf-8"))
+    assert r["references"]["available"] is False and r["whole_minus_per_cell"]["L06"] is None
+    assert "n/a" in (out / "wholelayer_report.md").read_text(encoding="utf-8")
+
+
+def test_relative_improvement_zero_denominator():
+    mod = _load()
+    d = mod._diff([0.0, 0.0], [0.0, 0.0], ["a", "b"], "q")
+    assert d["relative_improvement"] is None and d["mean_diff"] == 0.0
+
+
+def test_e3_wholelayer_resume_skips_finished_stages(tmp_path, monkeypatch):
+    mod, runs, out = _setup(tmp_path, monkeypatch, PROBES)
+    full = mod.STAGES
+    monkeypatch.setattr(mod, "STAGES", full[:1])
+    mod.main()
+    monkeypatch.setattr(mod, "STAGES", full[:2])
+    monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py", "--resume"])
+    real_fit = mod.fit_cell_pca
+    calls = []
+    monkeypatch.setattr(mod, "fit_cell_pca", lambda *a, **k: calls.append(1) or real_fit(*a, **k))
+    mod.main()
+    assert len(calls) == 1  # only L12 ran
+    r = json.loads((out / "wholelayer.json").read_text(encoding="utf-8"))
+    assert set(r["stages"]) == {"L06", "L12"}
+
+
+@pytest.mark.parametrize("change", ["val_ids", "budget", "commit", "dirty"])
+def test_e3_wholelayer_resume_mismatch_exits(tmp_path, monkeypatch, change):
+    mod, runs, out = _setup(tmp_path, monkeypatch, None)
+    monkeypatch.setattr(mod, "STAGES", mod.STAGES[:1])
+    mod.main()
+    monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py", "--resume"])
+    mod.main()  # unchanged: accepted
+    if change == "val_ids":
+        (runs / "probe_val" / "ids.json").write_text(json.dumps([f"other-{i}" for i in range(4)]))
+    elif change == "budget":
+        monkeypatch.setattr(mod, "KW", dict(epochs=2, min_steps=1))
+    elif change == "commit":
+        monkeypatch.setattr(mod, "code_state", lambda: {**CODE, "commit": "def"})
+    else:
+        monkeypatch.setattr(mod, "code_state", lambda: {**CODE, "dirty": True, "diff_sha256": "x"})
+    with pytest.raises(SystemExit, match="resume"):
+        mod.main()
+
+
+def test_e3_wholelayer_force_and_resume_rejected(tmp_path, monkeypatch):
+    mod = _load()
+    monkeypatch.setattr(mod, "OUT", tmp_path)
+    monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py", "--force", "--resume"])
+    with pytest.raises(SystemExit, match="--force"):
         mod.main()
