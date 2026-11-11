@@ -13,14 +13,28 @@ and reports the seed-averaged Brier/predictions at that configuration.
 
 `fit_selected` deviation from the brief's literal signature: the brief lists
 `fit_selected(features_tr, lab_tr, features_va, lab_va, kind, train_va=None)`, but
-per-puzzle Brier aggregation (§8.3) needs a puzzle index for whichever validation
-set is used, same as `train_probe`'s `va_puzzle`. This module therefore adds an
-explicit `va_puzzle` parameter, and `train_va` (when given) is a 3-tuple
-`(features, labels, puzzle_idx)` rather than a bare `(features, labels)` pair, for
-the same reason. `train_va` stands in for (features_va, lab_va, va_puzzle) only
-during grid/epoch selection; `per_puzzle` and `preds` are always computed on the
-given (features_va, lab_va, va_puzzle) triple, e.g. the unpermuted PROBE-VAL for
-the permuted-representation control (D55, §8.2 item 4).
+per-puzzle Brier aggregation (§8.3) needs a puzzle index -- and an explicit puzzle
+*count* (D63 review round: never inferred from `max(index) + 1`, which silently
+drops trailing puzzles with no empty cells) -- for whichever validation set is
+used, same as `train_probe`'s `va_puzzle`/`n_va_puzzles`. This module therefore
+adds explicit `va_puzzle`/`n_va_puzzles` parameters, and `train_va` (when given) is
+a 4-tuple `(features, labels, puzzle_idx, n_puzzles)` rather than a bare
+`(features, labels)` pair, for the same reason. `train_va` stands in for
+(features_va, lab_va, va_puzzle, n_va_puzzles) only during grid/epoch selection;
+`per_puzzle` and `preds` are always computed on the given (features_va, lab_va,
+va_puzzle, n_va_puzzles) quadruple, e.g. the unpermuted PROBE-VAL for the
+permuted-representation control (D55, §8.2 item 4).
+
+Training budget (D63, amending D55): every probe trains for at least `min_steps`
+gradient steps (default 2000, every `train_probe`/`fit_selected` call), so small
+training sets do not get a silently smaller step budget than large ones --
+`effective_epochs = max(epochs, ceil(min_steps / ceil(n / batch)))`; early stopping
+on PROBE-VAL Brier is unaffected, it only runs over more epochs when `n` is small
+relative to `batch`. `train_probe` records and returns the realized budget
+(`best_epoch`, `epochs_run`, `n_steps`, `hit_cap`) and the trainable parameter
+count (`n_params`) alongside the model and Brier; `fit_selected` surfaces these for
+every (configuration, seed) pair in its `budget` output field (§8.1: the training
+budget is documented for every comparison).
 """
 
 import copy
@@ -71,39 +85,59 @@ def _make_model(kind: str, in_dim: int) -> torch.nn.Module:
     raise ValueError(f"unknown probe kind: {kind!r}")
 
 
+def _ceil_div(a: int, b: int) -> int:
+    return -(-a // b)
+
+
 def train_probe(
     Xtr: torch.Tensor,
     Ytr: torch.Tensor,
     Xva: torch.Tensor,
     Yva: torch.Tensor,
     va_puzzle: np.ndarray,
+    n_va_puzzles: int,
     kind: str,
     wd: float,
     lr: float,
     seed: int,
     epochs: int = 50,
     batch: int = 4096,
-) -> tuple[torch.nn.Module, float]:
+    min_steps: int = 2000,
+) -> tuple[torch.nn.Module, float, dict]:
     """Trains one (kind, wd, lr, seed) configuration with AdamW, BCE loss, minibatch
-    `batch`; keeps the epoch with the best PROBE-VAL Brier (D55). Returns that model
-    (in eval mode) and its Brier.
+    `batch`; keeps the epoch with the best PROBE-VAL Brier (D55). `n_va_puzzles` is
+    the puzzle count for `va_puzzle` (passed explicitly, not inferred, so trailing
+    puzzles with no empty cells are not silently dropped).
+
+    Training runs for `effective_epochs = max(epochs, ceil(min_steps / steps_per_epoch))`
+    full epochs (D63), so small training sets still get at least `min_steps`
+    gradient steps; early stopping on PROBE-VAL Brier still picks the best epoch
+    within that budget.
+
+    Returns (model in eval mode, its Brier, budget dict with `best_epoch`,
+    `epochs_run`, `n_steps`, `hit_cap` (best epoch was the last one run) and
+    `n_params` (trainable parameter count)).
     """
     torch.use_deterministic_algorithms(True)
     torch.manual_seed(seed)
     Xtr, Ytr = Xtr.float(), Ytr.float()
     Xva, Yva = Xva.float(), Yva.float()
     va_puzzle = np.asarray(va_puzzle)
-    n_va_puzzles = int(va_puzzle.max()) + 1 if len(va_puzzle) else 0
+    n = Xtr.shape[0]
+    steps_per_epoch = _ceil_div(n, batch)
+    epochs_run = max(epochs, _ceil_div(min_steps, steps_per_epoch))
+    n_steps = epochs_run * steps_per_epoch
 
     model = _make_model(kind, Xtr.shape[1])
+    n_params = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
     loss_fn = torch.nn.BCELoss()
     gen = torch.Generator().manual_seed(seed)
-    n = Xtr.shape[0]
 
     best_brier = float("inf")
     best_state = copy.deepcopy(model.state_dict())
-    for _ in range(epochs):
+    best_epoch = -1
+    for epoch in range(epochs_run):
         model.train()
         perm = torch.randperm(n, generator=gen)
         for i in range(0, n, batch):
@@ -120,22 +154,35 @@ def train_probe(
         if brier < best_brier:
             best_brier = brier
             best_state = copy.deepcopy(model.state_dict())
+            best_epoch = epoch
 
     model.load_state_dict(best_state)
     model.eval()
-    return model, best_brier
+    info = {
+        "best_epoch": best_epoch,
+        "epochs_run": epochs_run,
+        "n_steps": n_steps,
+        "hit_cap": best_epoch == epochs_run - 1,
+        "n_params": n_params,
+    }
+    return model, best_brier, info
 
 
 def select(results: dict) -> tuple[float, float]:
     """Configuration with the lowest mean val Brier over seeds; ties go to the
-    earliest GRID entry."""
+    earliest GRID entry. Raises ValueError if no configuration has a usable
+    (present, non-empty, non-NaN) mean Brier."""
     best_cfg, best_mean = None, float("inf")
     for cfg in GRID:
-        if cfg not in results:
+        if cfg not in results or len(results[cfg]) == 0:
             continue
         mean_brier = float(np.mean(results[cfg]))
+        if np.isnan(mean_brier):
+            continue
         if mean_brier < best_mean:
             best_mean, best_cfg = mean_brier, cfg
+    if best_cfg is None:
+        raise ValueError("select: no configuration has a usable (non-NaN) validation Brier")
     return best_cfg
 
 
@@ -145,43 +192,66 @@ def fit_selected(
     features_va: torch.Tensor,
     lab_va: torch.Tensor,
     va_puzzle: np.ndarray,
+    n_va_puzzles: int,
     kind: str,
-    train_va: tuple[torch.Tensor, torch.Tensor, np.ndarray] | None = None,
+    train_va: tuple[torch.Tensor, torch.Tensor, np.ndarray, int] | None = None,
     epochs: int = 50,
     batch: int = 4096,
+    min_steps: int = 2000,
 ) -> dict:
-    """Runs the GRID x SEEDS sweep (D55) and the selection.
+    """Runs the GRID x SEEDS sweep (D55, D63) and the selection.
 
     `features_tr`/`lab_tr`: built (X, Y) training examples (output of `build_inputs`
     plus the matching label rows, e.g. `mask[empty]`).
-    `features_va`/`lab_va`/`va_puzzle`: the primary validation triple that
-    `per_puzzle` and `preds` are reported on (always the given, unpermuted PROBE-VAL
-    for the permuted-representation control).
-    `train_va`: optional (features, labels, puzzle_idx) triple used instead of
-    (features_va, lab_va, va_puzzle) for model selection (grid config and
-    early-stopping epoch) -- the permuted control's own permuted PROBE-VAL.
+    `features_va`/`lab_va`/`va_puzzle`/`n_va_puzzles`: the primary validation
+    quadruple that `per_puzzle` and `preds` are reported on (always the given,
+    unpermuted PROBE-VAL for the permuted-representation control). `n_va_puzzles`
+    is passed explicitly, not inferred, so trailing puzzles with no empty cells
+    still get a (NaN) row in `per_puzzle`.
+    `train_va`: optional (features, labels, puzzle_idx, n_puzzles) quadruple used
+    instead of (features_va, lab_va, va_puzzle, n_va_puzzles) for model selection
+    (grid config and early-stopping epoch) -- the permuted control's own permuted
+    PROBE-VAL.
 
     Returns dict with `config`, `val_brier_mean` (selection-set mean over seeds),
     `per_puzzle` (per-puzzle Brier on features_va, averaged over the 3 seed models
-    at the selected config) and `preds` (seed-averaged val predictions).
+    at the selected config), `preds` (seed-averaged val predictions) and `budget`
+    (dict keyed by (wd, lr, seed), one training-budget dict per `train_probe` call,
+    §8.1: the training budget is documented for every comparison).
     """
-    tune_X, tune_Y, tune_puzzle = train_va if train_va is not None else (features_va, lab_va, va_puzzle)
+    if train_va is not None:
+        tune_X, tune_Y, tune_puzzle, tune_n_puzzles = train_va
+    else:
+        tune_X, tune_Y, tune_puzzle, tune_n_puzzles = features_va, lab_va, va_puzzle, n_va_puzzles
 
     results: dict[tuple[float, float], list[float]] = {cfg: [] for cfg in GRID}
     models: dict[tuple[float, float, int], torch.nn.Module] = {}
+    budget: dict[tuple[float, float, int], dict] = {}
     for wd, lr in GRID:
         for seed in SEEDS:
-            model, brier = train_probe(
-                features_tr, lab_tr, tune_X, tune_Y, tune_puzzle, kind, wd, lr, seed, epochs=epochs, batch=batch
+            model, brier, info = train_probe(
+                features_tr,
+                lab_tr,
+                tune_X,
+                tune_Y,
+                tune_puzzle,
+                tune_n_puzzles,
+                kind,
+                wd,
+                lr,
+                seed,
+                epochs=epochs,
+                batch=batch,
+                min_steps=min_steps,
             )
             results[(wd, lr)].append(brier)
             models[(wd, lr, seed)] = model
+            budget[(wd, lr, seed)] = info
 
     cfg = select(results)
     val_brier_mean = float(np.mean(results[cfg]))
 
     va_puzzle_arr = np.asarray(va_puzzle)
-    n_va_puzzles = int(va_puzzle_arr.max()) + 1 if len(va_puzzle_arr) else 0
     features_va = features_va.float()
     lab_va_np = lab_va.numpy() if isinstance(lab_va, torch.Tensor) else np.asarray(lab_va)
 
@@ -200,4 +270,5 @@ def fit_selected(
         "val_brier_mean": val_brier_mean,
         "per_puzzle": per_puzzle_sum / len(SEEDS),
         "preds": preds_sum / len(SEEDS),
+        "budget": budget,
     }
