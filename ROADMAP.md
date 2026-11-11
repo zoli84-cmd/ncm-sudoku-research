@@ -9,8 +9,8 @@ Single place for work-package status, backlog, and open items. Decisions live in
 | WP0-A | Sudoku core: serialization, validator, solvers, labeler, generator, released-data loader | done (2026-11-08) | — | — |
 | WP0-B | Safe loading, official-metric mirror, runner, cumulative states, `forward_with_intervention`, G0 reproduction, cost | done (2026-11-09); G0 passed: 86.3% vs 86.1% (D31) | G0 run ≈ 45 min | — |
 | WP1 | Generator freeze + terminal distribution gate (D27); E1 tokenizer/generator split; E2 level sensitivity, four-branch compensation, dose calibration | done (2026-11-09): gate passed (D41); E1 on released and CAL; E2 pilot (D42, non-confirmatory) | measured: gate 20 min; E1 on CAL 5 min; E2 pilot (300 × levels 1/2/6/11 × 2 policies × doses × 3 seeds) 2.36 h | 1 session |
-| E2 pilot 2 | Plan v3.6 (D43–D50): review, implementation (TV damage, level-1 enumeration, extended doses, diagnostics), second pilot on CAL | next | estimate 3–4 h CPU | 1–2 sessions |
-| E3 preparation | Solver waves, labels and depth on PROBE subsets; probe and baseline training-size curves; H1 sample size (plan §12.1) | after pilot 2 | probes minutes–hours | 2–3 sessions |
+| E2 pilot 2 | Plan v3.6 (D43–D52): review, implementation (TV damage, level-1 enumeration, extended doses, diagnostics), second pilot on CAL | done (2026-11-11): D53; E2 TEST requirement 600 | measured: pilot 3.91 h; sample-size simulation about 15 min | 1 session |
+| E3 preparation | Solver waves, labels and depth on PROBE subsets; probe and baseline training-size curves; H1 sample size (plan §12.1) | next | probes minutes–hours | 2–3 sessions |
 | Lock | Sample-size simulation (E2 and H1 → one TEST size), §12.2 checklist, OSF embargoed registration with git tag hash | after E3 preparation | minutes (simulation) | 1–2 sessions |
 | WP2 | E3 confirmatory evaluation on TEST: probes, control matrix, depth, equivariance | after lock | state extraction 0.02 s/puzzle; probes minutes–hours | 3–5 sessions |
 | WP3 | E4a / E4b targeted patching (conditional on the E4 gate) | conditional | depends on E4-TEST size | 3–6 sessions or dropped |
@@ -27,6 +27,8 @@ Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`)
 - Subset screening: the cycle-type signature collides within the released set (75 pairs), so it cannot flag symmetry equivalence; add a canonical-form check before PROBE/SELECT/TEST subsets are generated (D41).
 - Before reusing `e2.py` for the confirmatory E2: collision-free per-run seeds (current `1000*level + 100*dose + 10*seed + policy` collides for dose ≥ 10 across levels or ≥ 10 seeds); 10,000 bootstrap draws and a pre-specified small-sample interval (§11.1, §11.2); state the whole-puzzle exclusion rule for partially eligible seeds (§7.2); a rerun guard on `scripts/wp1_pilot.py`; inspect a few level-1 runs whose damage is exactly one cell.
 - Gate compares the project validator's solve rate with the official-metric 86.3%; identical on the released set (D31), note in the lock checklist.
+- Lock checklist (D53): the boundary error-rate check of the equivalence rule was infeasible by sign-mixing; decide an alternative check (for example shifting puzzle-level values) before the lock. E2 TEST requirement is 600; final TEST size = max with H1.
+- E2 pilot-2 deferred minors: see the e2-redesign final review (guards for zero-norm/empty-mask/no-empty-cell edge cases; vectorize level1_weights; a few test-precision items).
 - D16: unit–digit label definition and readout mapping aligned with Kniazev & Fijalkow (2026) before PROBE-VAL.
 
 ## Open items
