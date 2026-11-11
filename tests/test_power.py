@@ -99,3 +99,82 @@ def test_h1_sample_size_is_directional(monkeypatch):
 def test_h1_sample_size_shortfall_flag():
     r = h1_sample_size(np.full(50, 0.001) + np.linspace(-0.01, 0.01, 50), reps=5, n_boot_sim=50, ns=range(100, 101))
     assert r["shortfall"] is True and r["observed_mean"] == pytest.approx(0.001)
+
+
+# --- lock preparation (D70) ---
+
+from ncm_sudoku.power import equivalence_boundary_error, equivalence_ok, h1_tost, inject  # noqa: E402
+
+
+@pytest.mark.parametrize("target", [0.03, -0.03])
+def test_inject_hits_target_and_keeps_nonzero(target):
+    rng = np.random.default_rng(0); x = np.r_[np.full(5, 1.0), np.full(5, -1.0), np.full(10, 0.5), np.zeros(280)]
+    assert np.mean([inject(x, target, rng).mean() for _ in range(2000)]) == pytest.approx(target, abs=0.002)
+    y = inject(x, target, rng)
+    assert (y[x != 0] == x[x != 0]).all()
+    assert set(np.unique(y[x == 0])) <= {0.0, float(np.sign(target))}
+    big = inject(x, target, rng, size=200000)
+    assert big.shape == (200000,) and big.mean() == pytest.approx(target, abs=0.002)
+
+
+def test_inject_infeasible_raises():
+    rng = np.random.default_rng(0)
+    with pytest.raises(ValueError):
+        inject(np.ones(10), 0.03, rng)                              # z = 0
+    with pytest.raises(ValueError):
+        inject(np.r_[np.full(10, 1.0), np.zeros(90)], 0.03, rng)    # mean 0.1 > 0.03: p < 0
+    with pytest.raises(ValueError):
+        inject(np.r_[np.full(99, 1.0), np.zeros(1)], -0.5, rng)     # p > 1
+
+
+def test_equivalence_ok_matches_tost_rule(monkeypatch):
+    from ncm_sudoku import power
+    calls = []
+
+    def fake(a, level, n_boot):
+        calls.append(level)
+        return {"method": "bound", "ci": (-0.01, 0.01)} if level == 0.90 else {"method": "bound", "ci": (-0.04, 0.04)}
+    monkeypatch.setattr(power, "interval", fake)
+    assert equivalence_ok(np.zeros(5), 10) is False and calls == [0.90, 0.95]
+    monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"method": "bootstrap", "ci": (-0.02, 0.02)})
+    assert equivalence_ok(np.zeros(5), 10) is True
+
+
+def test_equivalence_boundary_error_toy():
+    x = np.r_[np.full(3, 1.0), np.full(3, -1.0), np.zeros(294)]
+    r = equivalence_boundary_error(x, n=300, reps=20, n_boot_sim=100, seed=0)
+    for k in ("+0.03", "-0.03"):
+        assert 0.0 <= r["error"][k] <= 1.0
+    assert r["planning_parameters"]["n"] == 300 and r["planning_parameters"]["margin"] == 0.03
+    again = equivalence_boundary_error(x, n=300, reps=20, n_boot_sim=100, seed=0)
+    assert again["error"] == r["error"]
+
+
+def test_equivalence_boundary_error_infeasible_is_none():
+    r = equivalence_boundary_error(np.ones(100), n=100, reps=5, n_boot_sim=50)
+    assert r["error"] == {"+0.03": None, "-0.03": None} and "+0.03" in r["notes"]
+
+
+def test_h1_tost_toy():
+    rng = np.random.default_rng(0); d = rng.normal(0.003, 0.004, 500)
+    r = h1_tost(d, n=600, reps=40, n_boot_sim=200, seed=0)
+    assert r["power_at_zero"] >= 0.9 and r["power_at_observed"] >= 0.9
+    assert r["false_equivalence"]["+0.01"] <= 0.2 and r["false_equivalence"]["-0.01"] <= 0.2
+    assert r["excludes_zero_at_observed"] >= 0.9
+    assert r["observed_mean"] == pytest.approx(d.mean())
+    assert r["planning_parameters"]["tost_level"] == pytest.approx(1 - 2 * 0.05 / 3)
+
+
+def test_h1_tost_uses_two_sided_family_level(monkeypatch):
+    from ncm_sudoku import power
+    levels = []
+
+    def fake(a, level, n_boot):
+        levels.append(level)
+        return {"method": "bootstrap", "ci": (0.001, 0.009)}
+    monkeypatch.setattr(power, "interval", fake)
+    r = h1_tost(np.full(50, 0.003), n=100, reps=3, n_boot_sim=20)
+    assert sorted(set(levels)) == pytest.approx([1 - 2 * 0.05 / 3, 1 - 0.05 / 3])
+    assert r["power_at_zero"] == 1.0 and r["excludes_zero_at_observed"] == 1.0
+    monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"method": "bootstrap", "ci": (-0.02, 0.0)})
+    assert h1_tost(np.full(50, 0.003), n=100, reps=3, n_boot_sim=20)["power_at_zero"] == 0.0
