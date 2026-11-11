@@ -81,3 +81,32 @@ def test_model_predict_fn_applies_probe_and_caches(monkeypatch):
     x = torch.cat([torch.ones(81, 4), torch.eye(81)], dim=1)
     with torch.no_grad():
         assert np.allclose(a[0], probe(x).numpy(), atol=1e-6)
+
+
+def test_model_predict_fn_level_and_feature_builder(monkeypatch):
+    calls = []
+
+    def fake_level_states(m, puzzles, level, batch=50):
+        calls.append((len(puzzles), level))
+        return np.ones((len(puzzles), 81, 4), np.float32)
+
+    monkeypatch.setattr(e3equiv, "cell_level_states", fake_level_states)
+    monkeypatch.setattr(e3equiv, "level6_states", lambda *a, **k: pytest.fail("level 12 must not use level 6"))
+    feats = lambda s: np.concatenate([s, 2 * s], axis=2)  # noqa: E731  [b, 81, 4] -> [b, 81, 8]
+    probe = torch.nn.Sequential(torch.nn.Linear(8 + 81, 9), torch.nn.Sigmoid())
+    cache = {}
+    fns = [model_predict_fn(None, probe, cache, level=12, features=feats) for _ in range(2)]
+    pz = np.asarray([P, P])
+    a, b = fns[0](pz), fns[1](pz)
+    assert a.shape == (2, 81, 9) and np.allclose(a, b) and calls == [(2, 12)]
+    X = np.concatenate([np.ones((162, 4)), 2 * np.ones((162, 4)), np.tile(np.eye(81), (2, 1))], axis=1)
+    with torch.no_grad():
+        expect = probe(torch.from_numpy(X.astype(np.float32))).numpy().reshape(2, 81, 9)
+    assert np.allclose(a, expect)
+
+
+def test_level6_states_delegates_to_cell_level_states(monkeypatch):
+    seen = []
+    monkeypatch.setattr(e3equiv, "cell_level_states", lambda m, pz, level, batch=50: seen.append((level, batch)) or 0)
+    e3equiv.level6_states(None, np.asarray([P]), batch=7)
+    assert seen == [(6, 7)]

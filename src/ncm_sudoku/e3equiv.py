@@ -1,8 +1,9 @@
 """E3 equivariance pilot (plan v3.6 §8.4; D59). Non-confirmatory planning code.
 
 Each predictor maps puzzles [b, 81] to candidate probabilities [b, 81, 9]; the
-script passes one predictor per selected level-6 linear seed probe
-(`model_predict_fn`), tests pass exact predictors.
+scripts pass one predictor per seed probe (`model_predict_fn`: level-6 per-cell
+probes in `scripts/e3_equiv_power.py`, level-12 whole-layer probes in
+`scripts/lock_equiv_l12.py`), tests pass exact predictors.
 
 Per puzzle i (first `n`), one `np.random.default_rng(seed)` stream draws, in this
 fixed order: `k` elements of the full group, then 2 digit-only, then 2
@@ -98,27 +99,41 @@ def equivariance_pilot(
     }
 
 
-def level6_states(m: NcmModel, puzzles: np.ndarray, batch: int = 50) -> np.ndarray:
-    """Generated-branch cumulative state Z_{<=6} at the cell tokens, [b, 81, 256]."""
+def cell_level_states(m: NcmModel, puzzles: np.ndarray, level: int, batch: int = 50) -> np.ndarray:
+    """Generated-branch cumulative state Z_{<=level} at the cell tokens, [b, 81, 256]."""
     out = []
     for i in range(0, len(puzzles), batch):
         codes = generate_codes(m, puzzles[i : i + batch], batch_size=batch)
-        out.append(cell_states(cumulative_states(m, codes, upto=LEVEL)[LEVEL - 1]).numpy())
+        out.append(cell_states(cumulative_states(m, codes, upto=level)[level - 1]).numpy())
     return np.concatenate(out)
 
 
-def model_predict_fn(m: NcmModel, probe: torch.nn.Module, cache: dict | None = None) -> Callable:
-    """Default predictor: generate -> level-6 cell states -> probe on all 81 cells.
-    Predictors sharing `cache` run the model once per puzzle batch."""
+def level6_states(m: NcmModel, puzzles: np.ndarray, batch: int = 50) -> np.ndarray:
+    """Generated-branch cumulative state Z_{<=6} at the cell tokens, [b, 81, 256]."""
+    return cell_level_states(m, puzzles, LEVEL, batch)
+
+
+def model_predict_fn(
+    m: NcmModel,
+    probe: torch.nn.Module,
+    cache: dict | None = None,
+    level: int = LEVEL,
+    features: Callable[[np.ndarray], np.ndarray] | None = None,
+) -> Callable:
+    """Default predictor: generate -> level-`level` cell states -> `features` (e.g. the
+    D66 whole-layer features; identity when None) -> probe on all 81 cells.
+    Predictors sharing `cache` (and the same `level` and `features` object) run the
+    model and the feature builder once per puzzle batch."""
     cache = {} if cache is None else cache
 
     def predict(puzzles: np.ndarray) -> np.ndarray:
         puzzles = np.ascontiguousarray(puzzles)
-        key = puzzles.tobytes()
+        key = (level, features, puzzles.tobytes())
         if key not in cache:
-            cache[key] = level6_states(m, puzzles)
-        states = cache[key]
-        X, _, _ = build_inputs(states, np.ones(states.shape[:2], bool))
+            states = level6_states(m, puzzles) if level == LEVEL else cell_level_states(m, puzzles, level)
+            cache[key] = states if features is None else features(states)
+        feats = cache[key]
+        X, _, _ = build_inputs(feats, np.ones(feats.shape[:2], bool))
         with torch.no_grad():
             return probe(X).numpy().reshape(len(puzzles), 81, 9)
 
