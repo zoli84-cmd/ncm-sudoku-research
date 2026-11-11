@@ -16,12 +16,17 @@ Writes experiments/e3prep/probes.json after every stage (atomic), the report
 experiments/e3prep/probes_report.md (UTF-8), and experiments/e3prep/h1_diffs.json (per
 PROBE-VAL puzzle, B_permuted - B_generated at level 6, linear, aligned with the ids).
 Refuses to run if probes.json exists, unless --force (start over) or --resume (skip the
-stages already in probes.json).
+stages already in probes.json). --resume exits with an error unless n_train, n_val,
+val_ids, the budget overrides and the code state (git commit, dirty flag and diff hash
+over src/, scripts/, pyproject.toml, uv.lock) all match the stored run; every stage
+records its own environment and code state in `stage_environment`.
 """
 
 import gc
+import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 
@@ -80,6 +85,30 @@ def depth_breakdown(preds: np.ndarray, mask: np.ndarray, empty: np.ndarray, dept
     return out
 
 
+CODE_PATHS = ("src", "scripts", "pyproject.toml", "uv.lock")
+
+
+def code_state() -> dict:
+    """Repository commit, whether the code paths differ from it, and a hash of that diff."""
+    git = lambda *a: subprocess.check_output(["git", "-C", str(ROOT), *a], text=True)  # noqa: E731
+    dirty = bool(git("status", "--porcelain", "--", *CODE_PATHS).strip())
+    diff = git("diff", "HEAD", "--", *CODE_PATHS)
+    return {"commit": git("rev-parse", "HEAD").strip(), "dirty": dirty,
+            "diff_sha256": hashlib.sha256(diff.encode()).hexdigest() if dirty else None}
+
+
+def depth_breakdown_seeds(preds: list, mask: np.ndarray, empty: np.ndarray, depth: np.ndarray) -> dict:
+    """`depth_breakdown` per seed model, then the mean of the per-seed Briers (the scale of
+    every headline Brier: mean over seeds, not the Brier of the seed-averaged prediction)."""
+    per = [depth_breakdown(p, mask, empty, depth) for p in preds]
+    out = {}
+    for c in DEPTH_CLASSES:
+        b = [x[c]["brier"] for x in per]
+        out[c] = {"brier": None if None in b else float(np.mean(b)), "brier_per_seed": b,
+                  "n_cells": per[0][c]["n_cells"], "n_puzzles": per[0][c]["n_puzzles"]}
+    return out
+
+
 def _subset(name: str) -> dict:
     d = RUNS / name
     return {
@@ -96,34 +125,48 @@ def _permuted(tag: str):
     return lambda tr, va, st: {f"{tag}_permuted_linear": summarize_fit(permuted_control(tr["rep"], va["rep"], tr, va, **KW))}
 
 
+def _seed_models(f_tr, f_va, tr, va, cfg) -> tuple[list, list, int]:
+    """Retrains the three seed linear probes at `cfg` (deterministic, identical to the
+    grid run) and returns (models, per-seed PROBE-VAL predictions, input width)."""
+    Xtr, _, _ = build_inputs(f_tr, tr["empty"])
+    Ytr = torch.from_numpy(np.asarray(tr["mask"])[tr["empty"]].astype(np.float32))
+    Xva, pz, _ = build_inputs(f_va, va["empty"])
+    Yva = torch.from_numpy(np.asarray(va["mask"])[va["empty"]].astype(np.float32))
+    models, preds = [], []
+    for seed in SEEDS:
+        model, _, _ = train_probe(Xtr, Ytr, Xva, Yva, pz.numpy(), len(va["empty"]), "linear", *cfg, seed, **KW)
+        with torch.no_grad():
+            preds.append(model(Xva).numpy())
+        models.append(model)
+    return models, preds, int(Xtr.shape[1])
+
+
 def _h1_level(tr, va, st) -> dict:
     """Level-6 linear probe, its depth breakdown vs. the raw-input linear probe, and the
     selected seed models (retrained deterministically at the selected config)."""
     fit = fit_cells(tr["rep"], va["rep"], tr, va, "linear", **KW)
-    raw = fit_cells(raw_features(tr["puzzles"]), raw_features(va["puzzles"]), tr, va, "linear", **KW)
-    depth = {
-        "generated_linear": depth_breakdown(fit["preds"], va["mask"], va["empty"], va["depth"]),
-        "raw_linear": depth_breakdown(raw["preds"], va["mask"], va["empty"], va["depth"]),
-    }
-    del raw
-
-    wd, lr = fit["config"]
-    Xtr, _, _ = build_inputs(tr["rep"], tr["empty"])
-    Ytr = torch.from_numpy(np.asarray(tr["mask"])[tr["empty"]].astype(np.float32))
-    Xva, pz, _ = build_inputs(va["rep"], va["empty"])
-    Yva = torch.from_numpy(np.asarray(va["mask"])[va["empty"]].astype(np.float32))
-    n_va = len(va["empty"])
     MODELS.mkdir(parents=True, exist_ok=True)
-    files, per = [], []
-    for seed in SEEDS:
-        model, _, _ = train_probe(Xtr, Ytr, Xva, Yva, pz.numpy(), n_va, "linear", wd, lr, seed, **KW)
+    gen_models, gen_preds, in_dim = _seed_models(tr["rep"], va["rep"], tr, va, fit["config"])
+    files = []
+    for seed, model in zip(SEEDS, gen_models):
         path = MODELS / f"L{H1_LEVEL:02d}_linear_seed{seed}.pt"
         torch.save(model.state_dict(), path)
         files.append(path.name)
-        with torch.no_grad():
-            per.append(brier_per_puzzle(model(Xva).numpy(), Yva.numpy(), pz.numpy(), n_va))
+    raw_tr, raw_va = raw_features(tr["puzzles"]), raw_features(va["puzzles"])
+    raw_cfg = fit_cells(raw_tr, raw_va, tr, va, "linear", **KW)["config"]
+    _, raw_preds, _ = _seed_models(raw_tr, raw_va, tr, va, raw_cfg)
+    del raw_tr, raw_va
+    depth = {
+        "aggregation": "per seed model, then mean of the per-seed Briers",
+        "generated_linear": depth_breakdown_seeds(gen_preds, va["mask"], va["empty"], va["depth"]),
+        "raw_linear": depth_breakdown_seeds(raw_preds, va["mask"], va["empty"], va["depth"]),
+    }
+    e_va = np.asarray(va["empty"], bool)
+    pz, _ = np.nonzero(e_va)
+    y_va = np.asarray(va["mask"])[e_va]
+    per = [brier_per_puzzle(p, y_va, pz, len(e_va)) for p in gen_preds]
     meta = {
-        "level": H1_LEVEL, "kind": "linear", "config": [wd, lr], "in_dim": int(Xtr.shape[1]),
+        "level": H1_LEVEL, "kind": "linear", "config": list(fit["config"]), "in_dim": in_dim,
         "seeds": list(SEEDS), "files": files,
         "retrain_matches": bool(np.allclose(np.mean(per, axis=0), fit["per_puzzle"], equal_nan=True)),
     }
@@ -172,15 +215,19 @@ def _h1_diffs(results: dict, val_ids: list) -> None:
     diffs = np.subtract(st["controls"]["permuted_linear"]["per_puzzle"], st[f"L{H1_LEVEL:02d}_linear"]["per_puzzle"])
     out = {"note": NOTE, "quantity": "B_permuted - B_generated, level 6, linear, mean over 3 seeds",
            "ids": val_ids, "diffs": diffs.tolist()}
-    (OUT / "h1_diffs.json").write_text(json.dumps(out) + "\n", newline="\n")
+    _atomic(OUT / "h1_diffs.json", json.dumps(out) + "\n")
     results["h1"] = {"mean_diff": float(np.nanmean(diffs)), "n": int(len(diffs)), "path": "experiments/e3prep/h1_diffs.json"}
 
 
-def _write(results: dict) -> None:
+def _atomic(path, text: str) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    tmp = OUT / "probes.tmp"
-    tmp.write_text(json.dumps(results, indent=2) + "\n", newline="\n")
-    os.replace(tmp, OUT / "probes.json")
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
+
+
+def _write(results: dict) -> None:
+    _atomic(OUT / "probes.json", json.dumps(results, indent=2) + "\n")
     (OUT / "probes_report.md").write_text(report(results), encoding="utf-8", newline="\n")
 
 
@@ -254,17 +301,30 @@ def report(results: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _check_resume(results: dict, current: dict) -> None:
+    """Exits unless the stored run matches the current data, budget and code (no override)."""
+    bad = [k for k, v in current.items() if results.get(k) != v]
+    if bad:
+        sys.exit(f"--resume refused: stored probes.json differs from the current run in {bad}; "
+                 "rerun from scratch with --force")
+
+
 def main() -> None:
-    resume = "--resume" in sys.argv
-    guard(force="--force" in sys.argv or resume)
+    resume, force = "--resume" in sys.argv, "--force" in sys.argv
+    if resume and force:
+        sys.exit("--force and --resume are mutually exclusive")
+    guard(force=force or resume)
     tr0, va0 = _subset("probe_train"), _subset("probe_val")
     path = OUT / "probes.json"
+    code = code_state()
+    current = {"n_train": len(tr0["ids"]), "n_val": len(va0["ids"]), "val_ids": va0["ids"],
+               "budget_overrides": json.loads(json.dumps(KW)), "code": code}
     if resume and path.exists():
         results = json.loads(path.read_text(encoding="utf-8"))
+        _check_resume(results, current)
     else:
         results = {"note": NOTE, "date": time.strftime("%Y-%m-%d"), "environment": environment_record(),
-                   "n_train": len(tr0["ids"]), "n_val": len(va0["ids"]), "val_ids": va0["ids"],
-                   "budget_overrides": KW, "stages": {}, "seconds": {}}
+                   **current, "stages": {}, "seconds": {}, "stage_environment": {}}
     st = results["stages"]
     for lv in LEVELS:
         jobs = [(names, fn) for names, fn in _jobs(lv) if not all(n in st for n in names)]
@@ -279,6 +339,9 @@ def main() -> None:
             t0 = time.perf_counter()
             st.update(fn(train, val, st))
             results["seconds"][names[0]] = round(time.perf_counter() - t0, 1)
+            for n in names:
+                results["stage_environment"][n] = {"date": time.strftime("%Y-%m-%d"),
+                                                   "environment": environment_record(), "code": code}
             _h1_diffs(results, va0["ids"])
             _write(results)
         del train, val  # one level in memory at a time

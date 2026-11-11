@@ -66,6 +66,9 @@ def equivariance() -> None:
     torch.use_deterministic_algorithms(True)
     environment = environment_record()
     meta, probes = _probes()
+    if not meta.get("retrain_matches"):
+        print("WARNING: the saved level-6 seed models do not reproduce the selected grid fit "
+              f"(retrain_matches={meta.get('retrain_matches')}); equivariance uses the saved models")
     puzzles = np.load(RUNS / "probe_val" / "puzzles.npy")[:N_EQUIV]
     ids = json.loads((RUNS / "probe_val" / "ids.json").read_text(encoding="utf-8"))[:N_EQUIV]
     m = load_model(ROOT / "checkpoints" / "sudoku" / "hard")
@@ -74,7 +77,7 @@ def equivariance() -> None:
     r = equivariance_pilot(puzzles, [model_predict_fn(m, p, cache) for p in probes], n=N_EQUIV)
     out = {
         "note": NOTE, "date": time.strftime("%Y-%m-%d"), "environment": environment,
-        "probe": {k: meta[k] for k in ("level", "kind", "config", "files")}, "ids": ids,
+        "probe": meta, "ids": ids,
         **{k: r[k] for k in ("n", "k", "seed", "n_predictors", "acceptable", "share_within", "mean_deviation")},
         "elements_per_puzzle": {"all": r["k"], "digit": 2, "geometric": 2},
         "deviation": {k: np.asarray(v).tolist() for k, v in r["deviation"].items()},

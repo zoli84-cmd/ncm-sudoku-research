@@ -68,6 +68,7 @@ def test_e3_probes_and_equiv_power_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "RUNS", runs); monkeypatch.setattr(mod, "OUT", out)
     monkeypatch.setattr(mod, "MODELS", runs / "models"); monkeypatch.setattr(mod, "KW", FAST)
     monkeypatch.setattr(mod, "SIZES", (4, 8)); monkeypatch.setattr(mod, "environment_record", lambda: {"git": "x"})
+    monkeypatch.setattr(mod, "code_state", lambda: {"commit": "abc", "dirty": False, "diff_sha256": None})
     monkeypatch.setattr(mod.sys, "argv", ["e3_probes.py"])
     mod.main()
     r = json.loads((out / "probes.json").read_text(encoding="utf-8"))
@@ -76,8 +77,11 @@ def test_e3_probes_and_equiv_power_end_to_end(tmp_path, monkeypatch):
     assert {"L02_mlp", "L06_mlp", "L12_mlp", "L02_permuted_linear", "L12_permuted_linear", "controls",
             "unit_digit", "training_size", "depth_L06", "models_L06"} <= set(st)
     assert set(st["training_size"]) == {"4", "8"} and st["training_size"]["8"]["reused"] is True
-    assert set(st["depth_L06"]) == {"generated_linear", "raw_linear"}
+    assert set(st["depth_L06"]) == {"aggregation", "generated_linear", "raw_linear"}
     assert st["models_L06"]["retrain_matches"] is True
+    assert set(r["stage_environment"]) >= {"L01_linear", "controls"}
+    assert r["stage_environment"]["controls"]["code"]["commit"] == "abc"
+    assert len(st["depth_L06"]["generated_linear"]["1"]["brier_per_seed"]) == 3
     assert len(list((runs / "models").glob("L06_linear_seed*.pt"))) == 3
     h1 = json.loads((out / "h1_diffs.json").read_text(encoding="utf-8"))
     assert h1["ids"] == [f"probe_val-{i}" for i in range(4)] and len(h1["diffs"]) == 4
@@ -104,6 +108,7 @@ def test_e3_probes_and_equiv_power_end_to_end(tmp_path, monkeypatch):
     eq.main()
     e = json.loads((out / "equivariance.json").read_text(encoding="utf-8"))
     assert e["acceptable"] == 0.0 and len(e["deviation"]["all"]) == 2 and "non-confirmatory" in e["note"]
+    assert e["probe"]["retrain_matches"] is True and e["probe"]["in_dim"] == 4 + 81
     s = json.loads((out / "sample_size_h1.json").read_text(encoding="utf-8"))
     assert "test_size" in s and "shortfall" in s and "non-confirmatory" in s["note"]
     with pytest.raises(SystemExit):
@@ -111,3 +116,60 @@ def test_e3_probes_and_equiv_power_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(eq, "load_model", lambda path: pytest.fail("--power-only must not load the model"))
     monkeypatch.setattr(eq.sys, "argv", ["e3_equiv_power.py", "--power-only"])
     eq.main()
+
+
+def test_depth_breakdown_seeds_is_mean_of_per_seed():
+    mod = _load("e3_probes")
+    rng = np.random.default_rng(0)
+    empty = rng.random((3, 81)) < 0.6
+    depth = np.where(empty, rng.integers(1, 6, (3, 81)), 0).astype(np.int16)
+    mask = rng.integers(0, 2, (3, 81, 9)).astype(np.uint8)
+    preds = [rng.random((int(empty.sum()), 9)) for _ in range(3)]
+    out = mod.depth_breakdown_seeds(preds, mask, empty, depth)
+    per = [mod.depth_breakdown(p, mask, empty, depth) for p in preds]
+    for c in ("1", "2", "3", ">=4"):
+        assert out[c]["brier"] == pytest.approx(np.mean([x[c]["brier"] for x in per]))
+        assert out[c]["brier_per_seed"] == [x[c]["brier"] for x in per]
+        assert out[c]["n_cells"] == per[0][c]["n_cells"]
+    assert out["stuck"]["brier"] is None
+
+
+def _resume_setup(tmp_path, monkeypatch):
+    runs, out = tmp_path / "runs", tmp_path / "exp"
+    _toy_runs(runs)
+    mod = _load("e3_probes")
+    for k, v in dict(RUNS=runs, OUT=out, MODELS=runs / "models", KW=FAST, SIZES=(4, 8)).items():
+        monkeypatch.setattr(mod, k, v)
+    monkeypatch.setattr(mod, "environment_record", lambda: {})
+    monkeypatch.setattr(mod, "code_state", lambda: {"commit": "abc", "dirty": False, "diff_sha256": None})
+    monkeypatch.setattr(mod, "LEVELS", range(1, 2))  # one cheap stage
+    monkeypatch.setattr(mod.sys, "argv", ["e3_probes.py"])
+    mod.main()
+    monkeypatch.setattr(mod.sys, "argv", ["e3_probes.py", "--resume"])
+    return mod, runs
+
+
+@pytest.mark.parametrize("change", ["n_val", "val_ids", "budget", "commit", "dirty"])
+def test_resume_mismatch_exits(tmp_path, monkeypatch, change):
+    mod, runs = _resume_setup(tmp_path, monkeypatch)
+    mod.main()  # unchanged: resume is accepted
+    if change == "n_val":
+        _toy_runs(runs, n_va=5)
+    elif change == "val_ids":
+        ids = runs / "probe_val" / "ids.json"
+        ids.write_text(json.dumps([f"other-{i}" for i in range(4)]))
+    elif change == "budget":
+        monkeypatch.setattr(mod, "KW", dict(epochs=2, min_steps=1))
+    elif change == "commit":
+        monkeypatch.setattr(mod, "code_state", lambda: {"commit": "def", "dirty": False, "diff_sha256": None})
+    else:
+        monkeypatch.setattr(mod, "code_state", lambda: {"commit": "abc", "dirty": True, "diff_sha256": "x"})
+    with pytest.raises(SystemExit, match="resume"):
+        mod.main()
+
+
+def test_force_and_resume_rejected(tmp_path, monkeypatch):
+    mod = _load("e3_probes"); monkeypatch.setattr(mod, "OUT", tmp_path)
+    monkeypatch.setattr(mod.sys, "argv", ["e3_probes.py", "--force", "--resume"])
+    with pytest.raises(SystemExit, match="--force"):
+        mod.main()
