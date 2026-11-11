@@ -140,15 +140,15 @@ def shift_to(x: np.ndarray, target: float) -> np.ndarray:
 
 def h1_sample_size(diffs, reps=500, n_boot_sim=1000, seed=0, ns=NS) -> dict:
     """Smallest TEST n at which the family-level interval of the shifted PROBE-VAL H1
-    differences (B_permuted - B_generated, mean moved to 0.01) excludes 0 with 90%
-    power (D60). Always shifted; `shortfall` flags an observed mean below 0.01."""
+    differences (B_permuted - B_generated, mean moved to 0.01) lies above 0 with 90%
+    power (D60; H1 is directional). Always shifted; `shortfall` flags an observed
+    mean below 0.01."""
     x = np.asarray(diffs, dtype=float)
     x = x[~np.isnan(x)]
     y = shift_to(x, H1_TARGET)
 
     def ok(a):
-        lo, hi = interval(a, FAMILY_LEVEL, n_boot_sim)["ci"]
-        return lo > 0 or hi < 0
+        return interval(a, FAMILY_LEVEL, n_boot_sim)["ci"][0] > 0
 
     observed = float(x.mean())
     return {

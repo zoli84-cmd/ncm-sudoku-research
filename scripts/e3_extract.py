@@ -5,21 +5,24 @@ Generates PROBE-TRAIN (2,000) and PROBE-VAL (500) from the frozen generator, ext
 generated and teacher cell states (12/3 levels) plus logical labels, and streams them to
 runs/e3prep/<name>/ (ids.json, puzzles.npy, solutions.npy, solve.npy, mask.npy, empty.npy,
 depth.npy, L01.npy..L12.npy, T02.npy, T06.npy, T12.npy). Writes a summary to
-experiments/e3prep/extract.json.
+experiments/e3prep/extract.json (environment, code state, SHA-256 of
+src/ncm_sudoku/labels.py as the labeler version, plan §12.2).
 
 Usage: uv run python scripts/e3_extract.py [--force]
 Refuses to run if runs/e3prep/probe_val/L12.npy already exists, unless --force.
 """
 
+import hashlib
 import json
 import os
 import sys
 import time
 
 import numpy as np
+import torch
 
 from ncm_sudoku.e3data import TEACHER_LEVELS, extract_streamed, labels, save_subset
-from ncm_sudoku.g0 import environment_record
+from ncm_sudoku.g0 import code_state, environment_record
 from ncm_sudoku.labels import CENSORED, STUCK
 from ncm_sudoku.model import ROOT, load_model
 from ncm_sudoku.subsets import SEEDS, assert_generator_frozen, generate_subset
@@ -68,7 +71,10 @@ def main() -> None:
     guard(force="--force" in sys.argv)
     assert_generator_frozen()
     t0 = time.perf_counter()
+    torch.use_deterministic_algorithms(True)  # before environment_record(), so it records True
     environment = environment_record()  # before the long run, so a late failure loses nothing
+    code = code_state()
+    labels_sha256 = hashlib.sha256((ROOT / "src" / "ncm_sudoku" / "labels.py").read_bytes()).hexdigest()
     m = load_model(ROOT / "checkpoints" / "sudoku" / "hard")
     stats = {}
     for name, n in SUBSETS.items():
@@ -84,6 +90,8 @@ def main() -> None:
         "note": "non-confirmatory planning output",
         "date": time.strftime("%Y-%m-%d"),
         "environment": environment,
+        "code": code,
+        "labels_sha256": labels_sha256,
         "seed_namespaces": {name: SEEDS[name] for name in SUBSETS},
         "levels": list(range(1, 13)),
         "teacher_levels": list(TEACHER_LEVELS),

@@ -13,7 +13,9 @@ with these keys (arrays may be read-only memmaps from `e3data.load_level`):
 
 Each trained control goes through `probes.fit_selected` (same GRID x SEEDS and D63
 budget as the primary probe); the per-control summary holds `config`,
-`val_brier_mean`, `per_puzzle` (list, PROBE-VAL) and a `budget` summary.
+`val_brier_mean` (scored: nanmean of `per_puzzle`), `tune_brier_mean` (selection
+set; differs from the scored value only for the permuted control), `per_puzzle`
+(list, PROBE-VAL) and a `budget` summary.
 """
 
 import numpy as np
@@ -91,12 +93,13 @@ def roc_auc(scores: np.ndarray, labels: np.ndarray) -> float:
 
 def unit_metrics(pred: np.ndarray, y: np.ndarray, puzzle_idx: np.ndarray, n_puzzles: int) -> dict:
     """Exact match (all 9 digits correct at threshold 0.5) over (puzzle, unit) rows,
-    pooled ROC-AUC over units x digits, and Brier with the §8.3 aggregation."""
+    pooled ROC-AUC over units x digits, and `brier_ensemble` (§8.3 aggregation) of
+    the given (seed-averaged) predictions."""
     pred, y = np.asarray(pred), np.asarray(y)
     return {
         "exact_match": float(((pred >= 0.5) == (y >= 0.5)).all(axis=1).mean()),
         "roc_auc": roc_auc(pred, y),
-        "brier": float(np.nanmean(brier_per_puzzle(pred, y, puzzle_idx, n_puzzles))),
+        "brier_ensemble": float(np.nanmean(brier_per_puzzle(pred, y, puzzle_idx, n_puzzles))),
     }
 
 
@@ -117,6 +120,7 @@ def summarize_fit(fit: dict) -> dict:
     return {
         "config": list(fit["config"]),
         "val_brier_mean": float(fit["val_brier_mean"]),
+        "tune_brier_mean": float(fit["tune_brier_mean"]),
         "per_puzzle": np.asarray(fit["per_puzzle"], np.float64).tolist(),
         "budget": _budget_summary(fit),
     }
@@ -224,7 +228,10 @@ def _fit_unit(f_tr, f_va, p_tr, p_va, **kw) -> dict:
     Ytr = torch.from_numpy(unit_digit_labels(p_tr).reshape(-1, 9).astype(np.float32))
     y_va = unit_digit_labels(p_va).reshape(-1, 9).astype(np.float32)
     fit = fit_selected(Xtr, Ytr, Xva, torch.from_numpy(y_va), pz.numpy(), len(p_va), "linear", **kw)
-    return {**summarize_fit(fit), **unit_metrics(fit["preds"], y_va, pz.numpy(), len(p_va))}
+    # "brier" = mean of the per-seed Briers (scale of every other Brier); exact match,
+    # ROC-AUC and brier_ensemble use the seed-averaged predictions.
+    return {**summarize_fit(fit), **unit_metrics(fit["preds"], y_va, pz.numpy(), len(p_va)),
+            "brier": float(fit["val_brier_mean"])}
 
 
 def run_unit_digit(train: dict, val: dict, epochs: int = 50, batch: int = 4096, min_steps: int = 2000) -> dict:

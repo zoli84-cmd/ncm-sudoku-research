@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import needs_model
-from ncm_sudoku.g0 import IDENTITY_KEYS, environment_record, g0_rule, identity_checks, reproduce
+from ncm_sudoku.g0 import IDENTITY_KEYS, code_state, environment_record, g0_rule, identity_checks, reproduce
 
 ALL_TRUE = {k: True for k in IDENTITY_KEYS}
 
@@ -19,6 +19,12 @@ def test_environment_record_keys():
     rec = environment_record()
     for key in ("python", "torch", "numpy", "platform", "torch_threads", "deterministic", "upstream_commit", "checkpoints"):
         assert key in rec
+
+
+def test_code_state_shared_record():
+    rec = code_state()
+    assert set(rec) == {"commit", "dirty", "diff_sha256"} and len(rec["commit"]) == 40
+    assert (rec["diff_sha256"] is None) == (not rec["dirty"])
 
 
 @pytest.mark.parametrize(

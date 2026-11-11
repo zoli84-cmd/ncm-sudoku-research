@@ -87,6 +87,15 @@ def test_h1_sample_size_toy():
     assert r["planning_parameters"]["reps"] == 100 and r["planning_parameters"]["h1_shift_target"] == 0.01
 
 
+def test_h1_sample_size_is_directional(monkeypatch):
+    # F7: H1 succeeds only when the interval lies above 0; an interval below 0 is a failure
+    from ncm_sudoku import power
+    monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"ci": (-0.2, -0.1)})
+    assert h1_sample_size(np.full(50, 0.02), reps=5, n_boot_sim=20, ns=range(100, 201, 100))["h1"] is None
+    monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"ci": (0.1, 0.2)})
+    assert h1_sample_size(np.full(50, 0.02), reps=5, n_boot_sim=20, ns=range(100, 201, 100))["h1"] == 100
+
+
 def test_h1_sample_size_shortfall_flag():
     r = h1_sample_size(np.full(50, 0.001) + np.linspace(-0.01, 0.01, 50), reps=5, n_boot_sim=50, ns=range(100, 101))
     assert r["shortfall"] is True and r["observed_mean"] == pytest.approx(0.001)

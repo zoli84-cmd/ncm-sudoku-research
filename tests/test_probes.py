@@ -188,6 +188,25 @@ def test_fit_selected_train_va_tunes_separately_from_reported_va():
     assert out["preds"].shape == (Xva.shape[0], 9)
 
 
+def test_fit_selected_reports_scored_and_tuning_brier_separately():
+    """Final review F1: `val_brier_mean` is the scored endpoint (mean of `per_puzzle`
+    on the given PROBE-VAL), `tune_brier_mean` the selection-set mean; with a
+    train_va whose labels are inverted the two must differ."""
+    rng = np.random.default_rng(5)
+    n_tr, n_va = 20, 6
+    feats_tr = rng.normal(size=(n_tr, 81, 4))
+    feats_va = rng.normal(size=(n_va, 81, 4))
+    y_tr = (feats_tr[..., :1] > 0).repeat(9, axis=2).astype(np.float32)
+    y_va = (feats_va[..., :1] > 0).repeat(9, axis=2).astype(np.float32)
+    Xtr, _, _ = build_inputs(feats_tr, np.ones((n_tr, 81), bool))
+    Xva, pz_va, _ = build_inputs(feats_va, np.ones((n_va, 81), bool))
+    Ytr, Yva = torch.tensor(y_tr.reshape(-1, 9)), torch.tensor(y_va.reshape(-1, 9))
+    out = fit_selected(Xtr, Ytr, Xva, Yva, pz_va, n_va, "linear", train_va=(Xva, 1 - Yva, pz_va, n_va),
+                       epochs=3, batch=512, min_steps=10)
+    assert out["val_brier_mean"] == pytest.approx(float(np.nanmean(out["per_puzzle"])))
+    assert out["tune_brier_mean"] > out["val_brier_mean"]  # inverted tuning labels score worse
+
+
 def test_fit_selected_explicit_puzzle_count_keeps_trailing_empty_puzzle():
     """D63 review fix: a trailing PROBE-VAL puzzle with no empty cells (e.g. would be
     dropped by max(puzzle_idx) + 1 inference) still gets a row in `per_puzzle` when

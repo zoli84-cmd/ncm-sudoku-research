@@ -22,6 +22,18 @@ def test_equivariance_exact_predictor_zero_deviation():
     assert len(r["seed_noise"]) == 2 and r["n"] == 2 and r["k"] == 3
 
 
+def test_equivariance_reports_brier_exact_and_constant():
+    # §8.4: predictive performance next to deviation; Brier against candidate_mask(original)
+    r = equivariance_pilot(np.asarray([P, P]), [_exact, _exact], n=2, k=3, seed=0)
+    assert all(np.allclose(r["brier"][kind], 0) for kind in ("all", "digit", "geometric"))
+    assert np.allclose(r["brier_original"], 0) and r["mean_brier"]["all"] == 0.0
+    half = lambda pz: np.full((len(pz), 81, 9), 0.5)  # noqa: E731
+    r = equivariance_pilot(np.asarray([P, P]), [half, half], n=2, k=3, seed=0)
+    assert all(np.allclose(r["brier"][kind], 0.25) for kind in ("all", "digit", "geometric"))
+    assert np.allclose(r["brier_original"], 0.25) and r["mean_brier_original"] == pytest.approx(0.25)
+    assert len(r["brier"]["all"]) == 2 and len(r["brier_original"]) == 2
+
+
 def test_equivariance_takes_first_n_and_counts_transforms():
     calls = []
 

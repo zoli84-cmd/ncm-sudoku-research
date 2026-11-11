@@ -11,6 +11,11 @@ PROBE-VAL Brier. `fit_selected` runs the full grid x seeds sweep (D55), selects 
 configuration with the lowest mean validation Brier (ties -> earliest GRID entry),
 and reports the seed-averaged Brier/predictions at that configuration.
 
+Endpoint: `per_puzzle` (per-puzzle Brier on the given PROBE-VAL, mean over the 3 seed
+models at the selected configuration) is the scored quantity, and `val_brier_mean`
+is its nanmean (= mean of the per-seed Briers). The selection-set value is kept
+separately as `tune_brier_mean`; the two differ only when `train_va` is given.
+
 `fit_selected` deviation from the brief's literal signature: the brief lists
 `fit_selected(features_tr, lab_tr, features_va, lab_va, kind, train_va=None)`, but
 per-puzzle Brier aggregation (§8.3) needs a puzzle index -- and an explicit puzzle
@@ -213,9 +218,10 @@ def fit_selected(
     (grid config and early-stopping epoch) -- the permuted control's own permuted
     PROBE-VAL.
 
-    Returns dict with `config`, `val_brier_mean` (selection-set mean over seeds),
+    Returns dict with `config`, `val_brier_mean` (the scored endpoint:
+    nanmean of `per_puzzle`), `tune_brier_mean` (selection-set mean over seeds),
     `per_puzzle` (per-puzzle Brier on features_va, averaged over the 3 seed models
-    at the selected config), `preds` (seed-averaged val predictions) and `budget`
+    at the selected config; the endpoint), `preds` (seed-averaged val predictions) and `budget`
     (dict keyed by (wd, lr, seed), one training-budget dict per `train_probe` call,
     §8.1: the training budget is documented for every comparison).
     """
@@ -249,7 +255,7 @@ def fit_selected(
             budget[(wd, lr, seed)] = info
 
     cfg = select(results)
-    val_brier_mean = float(np.mean(results[cfg]))
+    tune_brier_mean = float(np.mean(results[cfg]))
 
     va_puzzle_arr = np.asarray(va_puzzle)
     features_va = features_va.float()
@@ -265,10 +271,12 @@ def fit_selected(
         preds_sum = pred if preds_sum is None else preds_sum + pred
         per_puzzle_sum = pb if per_puzzle_sum is None else per_puzzle_sum + pb
 
+    per_puzzle = per_puzzle_sum / len(SEEDS)
     return {
         "config": cfg,
-        "val_brier_mean": val_brier_mean,
-        "per_puzzle": per_puzzle_sum / len(SEEDS),
+        "val_brier_mean": float(np.nanmean(per_puzzle)),
+        "tune_brier_mean": tune_brier_mean,
+        "per_puzzle": per_puzzle,
         "preds": preds_sum / len(SEEDS),
         "budget": budget,
     }

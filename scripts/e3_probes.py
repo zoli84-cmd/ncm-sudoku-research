@@ -14,7 +14,10 @@ representation level at a time, and runs:
   level-6 linear seed models (state dicts) saved to runs/e3prep/models/.
 Writes experiments/e3prep/probes.json after every stage (atomic), the report
 experiments/e3prep/probes_report.md (UTF-8), and experiments/e3prep/h1_diffs.json (per
-PROBE-VAL puzzle, B_permuted - B_generated at level 6, linear, aligned with the ids).
+PROBE-VAL puzzle, B_permuted - B_generated at level 6, linear, aligned with the ids; read
+by scripts/e3_equiv_power.py) plus the same preview at levels 2 and 12
+(h1_diffs_L02.json, h1_diffs_L12.json). Every Brier is the scored value on unpermuted
+PROBE-VAL (`val_brier_mean`); the permuted control's tuning value is `tune_brier_mean`.
 Refuses to run if probes.json exists, unless --force (start over) or --resume (skip the
 stages already in probes.json). --resume exits with an error unless n_train, n_val,
 val_ids, the budget overrides and the code state (git commit, dirty flag and diff hash
@@ -23,10 +26,8 @@ records its own environment and code state in `stage_environment`.
 """
 
 import gc
-import hashlib
 import json
 import os
-import subprocess
 import sys
 import time
 
@@ -35,7 +36,7 @@ import torch
 
 from ncm_sudoku.e3controls import fit_cells, permuted_control, run_controls, run_unit_digit, summarize_fit
 from ncm_sudoku.e3data import TEACHER_LEVELS, load_level, raw_features
-from ncm_sudoku.g0 import environment_record
+from ncm_sudoku.g0 import code_state, environment_record
 from ncm_sudoku.labels import CENSORED, STUCK
 from ncm_sudoku.model import ROOT
 from ncm_sudoku.probes import SEEDS, brier_per_puzzle, build_inputs, train_probe
@@ -83,18 +84,6 @@ def depth_breakdown(preds: np.ndarray, mask: np.ndarray, empty: np.ndarray, dept
             "n_puzzles": int(len(np.unique(pz[sel]))),
         }
     return out
-
-
-CODE_PATHS = ("src", "scripts", "pyproject.toml", "uv.lock")
-
-
-def code_state() -> dict:
-    """Repository commit, whether the code paths differ from it, and a hash of that diff."""
-    git = lambda *a: subprocess.check_output(["git", "-C", str(ROOT), *a], text=True)  # noqa: E731
-    dirty = bool(git("status", "--porcelain", "--", *CODE_PATHS).strip())
-    diff = git("diff", "HEAD", "--", *CODE_PATHS)
-    return {"commit": git("rev-parse", "HEAD").strip(), "dirty": dirty,
-            "diff_sha256": hashlib.sha256(diff.encode()).hexdigest() if dirty else None}
 
 
 def depth_breakdown_seeds(preds: list, mask: np.ndarray, empty: np.ndarray, depth: np.ndarray) -> dict:
@@ -209,14 +198,26 @@ def _jobs(lv: int) -> list:
 
 
 def _h1_diffs(results: dict, val_ids: list) -> None:
+    """θ1 preview per level in MLP_LEVELS: per-puzzle B_permuted - B_generated, its mean
+    and the relative improvement mean_diff / mean(B_permuted) (D60). The level-6 file
+    keeps the name h1_diffs.json (input of scripts/e3_equiv_power.py)."""
     st = results["stages"]
-    if f"L{H1_LEVEL:02d}_linear" not in st or "controls" not in st:
-        return
-    diffs = np.subtract(st["controls"]["permuted_linear"]["per_puzzle"], st[f"L{H1_LEVEL:02d}_linear"]["per_puzzle"])
-    out = {"note": NOTE, "quantity": "B_permuted - B_generated, level 6, linear, mean over 3 seeds",
-           "ids": val_ids, "diffs": diffs.tolist()}
-    _atomic(OUT / "h1_diffs.json", json.dumps(out) + "\n")
-    results["h1"] = {"mean_diff": float(np.nanmean(diffs)), "n": int(len(diffs)), "path": "experiments/e3prep/h1_diffs.json"}
+    h1 = {}
+    for lv in MLP_LEVELS:
+        tag = f"L{lv:02d}"
+        perm = st.get("controls", {}).get("permuted_linear") if lv == H1_LEVEL else st.get(f"{tag}_permuted_linear")
+        if f"{tag}_linear" not in st or perm is None:
+            continue
+        diffs = np.subtract(perm["per_puzzle"], st[f"{tag}_linear"]["per_puzzle"])
+        name = "h1_diffs.json" if lv == H1_LEVEL else f"h1_diffs_{tag}.json"
+        out = {"note": NOTE, "quantity": f"B_permuted - B_generated, level {lv}, linear, mean over 3 seeds",
+               "ids": val_ids, "diffs": diffs.tolist()}
+        _atomic(OUT / name, json.dumps(out) + "\n")
+        mean_diff, mean_perm = float(np.nanmean(diffs)), float(np.nanmean(perm["per_puzzle"]))
+        h1[tag] = {"mean_diff": mean_diff, "mean_permuted": mean_perm, "relative_improvement": mean_diff / mean_perm,
+                   "n": int(len(diffs)), "path": f"experiments/e3prep/{name}"}
+    if h1:
+        results["h1"] = h1
 
 
 def _atomic(path, text: str) -> None:
@@ -260,7 +261,9 @@ def report(results: dict) -> str:
         "",
         f"- PROBE-TRAIN {results['n_train']} puzzles, PROBE-VAL {results['n_val']} puzzles",
         "- Val Brier: per-puzzle mean over empty cells, then over puzzles (§8.3), at the selected "
-        "configuration, averaged over seeds 0-2; best epoch / steps / hit cap are the training budget "
+        "configuration, averaged over seeds 0-2, always scored on unpermuted PROBE-VAL (the permuted "
+        "control is tuned on its own permuted PROBE-VAL; that tuning value is `tune_brier_mean` in "
+        "probes.json, not shown here); best epoch / steps / hit cap are the training budget "
         "of the selected configuration's seeds (D63; hit cap is over the whole grid)",
         "",
         "## Representation levels (generated branch)",
@@ -273,12 +276,17 @@ def report(results: dict) -> str:
         lines += [row(k, v) for k, v in st["controls"].items()]
     if "unit_digit" in st:
         lines += ["", f"## Unit-digit target (level {H1_LEVEL}, linear; D62)", "",
+                  "Brier is the mean of the per-seed Briers (same scale as above); exact match and "
+                  "ROC-AUC use the seed-averaged predictions (their Brier is `brier_ensemble` in probes.json).", "",
                   "| Input | Exact match | ROC-AUC | Brier | Config | best epoch | steps | any hit cap | n_params |",
                   "|---|---|---|---|---|---|---|---|---|"]
         lines += [f"| {k} | {_fmt(v['exact_match'])} | {_fmt(v['roc_auc'])} | {_fmt(v['brier'])} | {_budget(v)} |"
                   for k, v in st["unit_digit"].items()]
     if "training_size" in st:
-        lines += ["", f"## Training-size curve (level {H1_LEVEL}, linear)", "", HEAD]
+        lines += ["", f"## Training-size curve (level {H1_LEVEL}, linear)", "",
+                  "The D63 minimum step count gives small-n fits more epochs and hence more early-stopping "
+                  "checkpoints on PROBE-VAL (e.g. 1,000 epochs at 125 puzzles vs. 80 at 2,000), a small "
+                  "optimistic selection bias at the small-n end of the curve.", "", HEAD]
         lines += [row(f"first {v['n_puzzles']} puzzles" + (" (reused)" if v["reused"] else ""), v)
                   for v in st["training_size"].values()]
     if f"depth_L{H1_LEVEL:02d}" in st:
@@ -289,10 +297,11 @@ def report(results: dict) -> str:
             g, r = d["generated_linear"][c], d["raw_linear"][c]
             lines.append(f"| {c} | {_fmt(g['brier'])} | {_fmt(r['brier'])} | {g['n_cells']} | {g['n_puzzles']} |")
     if "h1" in results:
-        h = results["h1"]
-        lines += ["", "## H1 planning quantity", "",
-                  f"- Mean per-puzzle B_permuted − B_generated (level {H1_LEVEL}, linear): "
-                  f"{_fmt(h['mean_diff'], 5)} over {h['n']} PROBE-VAL puzzles ({h['path']})"]
+        lines += ["", "## H1 planning quantity (θ1 preview)", ""]
+        for tag, h in sorted(results["h1"].items()):
+            lines.append(f"- Level {int(tag[1:])}, linear: mean per-puzzle B_permuted − B_generated "
+                         f"{_fmt(h['mean_diff'], 5)}, relative improvement (mean diff / mean B_permuted) "
+                         f"{_fmt(h['relative_improvement'], 4)}, over {h['n']} PROBE-VAL puzzles ({h['path']})")
     if f"models_L{H1_LEVEL:02d}" in st:
         mm = st[f"models_L{H1_LEVEL:02d}"]
         lines.append(f"- Saved level-{H1_LEVEL} seed models: {', '.join(mm['files'])} at config {mm['config']}; "
@@ -314,6 +323,7 @@ def main() -> None:
     if resume and force:
         sys.exit("--force and --resume are mutually exclusive")
     guard(force=force or resume)
+    torch.use_deterministic_algorithms(True)  # before any environment_record()
     tr0, va0 = _subset("probe_train"), _subset("probe_val")
     path = OUT / "probes.json"
     code = code_state()

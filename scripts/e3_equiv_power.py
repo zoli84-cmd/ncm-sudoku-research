@@ -5,7 +5,8 @@ Needs scripts/e3_probes.py output: the selected level-6 linear seed models
 (runs/e3prep/models/L06_linear*.{json,pt}) and experiments/e3prep/h1_diffs.json.
 - Equivariance: the first 200 PROBE-VAL puzzles (runs/e3prep/probe_val/puzzles.npy, id
   order), 4 full-group + 2 digit-only + 2 geometric-only elements each (seed 0), every
-  transformed puzzle re-run through the model; writes experiments/e3prep/equivariance.json.
+  transformed puzzle re-run through the model; deviation and Brier against the original's
+  candidate mask (plan §8.4); writes experiments/e3prep/equivariance.json.
   Rerun-guarded on that file (--force to overwrite).
 - H1 sample size: `power.h1_sample_size` on the per-puzzle differences; writes
   experiments/e3prep/sample_size_h1.json with test_size = ceil(max(h1, 600) / 100) * 100.
@@ -21,7 +22,7 @@ import numpy as np
 import torch
 
 from ncm_sudoku.e3equiv import equivariance_pilot, model_predict_fn
-from ncm_sudoku.g0 import environment_record
+from ncm_sudoku.g0 import code_state, environment_record
 from ncm_sudoku.model import ROOT, load_model
 from ncm_sudoku.power import h1_sample_size
 from ncm_sudoku.probes import _make_model
@@ -76,12 +77,15 @@ def equivariance() -> None:
     t0 = time.perf_counter()
     r = equivariance_pilot(puzzles, [model_predict_fn(m, p, cache) for p in probes], n=N_EQUIV)
     out = {
-        "note": NOTE, "date": time.strftime("%Y-%m-%d"), "environment": environment,
+        "note": NOTE, "date": time.strftime("%Y-%m-%d"), "environment": environment, "code": code_state(),
         "probe": meta, "ids": ids,
-        **{k: r[k] for k in ("n", "k", "seed", "n_predictors", "acceptable", "share_within", "mean_deviation")},
+        **{k: r[k] for k in ("n", "k", "seed", "n_predictors", "acceptable", "share_within", "mean_deviation",
+                             "mean_brier", "mean_brier_original")},
         "elements_per_puzzle": {"all": r["k"], "digit": 2, "geometric": 2},
         "deviation": {k: np.asarray(v).tolist() for k, v in r["deviation"].items()},
         "seed_noise": np.asarray(r["seed_noise"]).tolist(),
+        "brier": {k: np.asarray(v).tolist() for k, v in r["brier"].items()},
+        "brier_original": np.asarray(r["brier_original"]).tolist(),
         "seconds": round(time.perf_counter() - t0, 1),
     }
     _dump(OUT / "equivariance.json", out)
@@ -90,7 +94,8 @@ def equivariance() -> None:
 def sample_size() -> None:
     diffs = json.loads((OUT / "h1_diffs.json").read_text(encoding="utf-8"))["diffs"]
     r = h1_sample_size(np.asarray(diffs, dtype=float))
-    _dump(OUT / "sample_size_h1.json", {"note": NOTE, **r, "test_size": test_size(r["h1"]), "min_test": MIN_TEST})
+    _dump(OUT / "sample_size_h1.json", {"note": NOTE, "code": code_state(), **r, "test_size": test_size(r["h1"]),
+                                        "min_test": MIN_TEST})
 
 
 def main() -> None:

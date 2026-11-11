@@ -1,5 +1,7 @@
-"""G0 reproduction, identity checks and the D20 acceptance rule (plan §2.2 items 1, 2, 5)."""
+"""G0 reproduction, identity checks and the D20 acceptance rule (plan §2.2 items 1, 2, 5);
+shared run records `environment_record` and `code_state` (plan §12.2)."""
 
+import hashlib
 import json
 import platform
 import subprocess
@@ -46,6 +48,18 @@ def environment_record() -> dict:
         ).strip(),
         "checkpoints": json.loads(prov.read_text()) if prov.exists() else None,
     }
+
+
+CODE_PATHS = ("src", "scripts", "pyproject.toml", "uv.lock")
+
+
+def code_state() -> dict:
+    """Repository commit, whether the code paths differ from it, and a hash of that diff."""
+    git = lambda *a: subprocess.check_output(["git", "-C", str(ROOT), *a], text=True, encoding="utf-8")  # noqa: E731
+    dirty = bool(git("status", "--porcelain", "--", *CODE_PATHS).strip())
+    diff = git("diff", "HEAD", "--", *CODE_PATHS)
+    return {"commit": git("rev-parse", "HEAD").strip(), "dirty": dirty,
+            "diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest() if dirty else None}
 
 
 @torch.no_grad()

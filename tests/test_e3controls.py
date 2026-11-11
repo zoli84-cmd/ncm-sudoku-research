@@ -99,7 +99,7 @@ def test_unit_metrics():
     out = unit_metrics(pred, y, np.array([0, 0]), 1)
     assert out["exact_match"] == 0.5
     assert out["roc_auc"] == pytest.approx(roc_auc(pred, y))
-    assert out["brier"] == pytest.approx(((pred - y) ** 2).mean())
+    assert out["brier_ensemble"] == pytest.approx(((pred - y) ** 2).mean())
 
 
 def _subset(n, seed, dim=4):
@@ -143,6 +143,10 @@ def test_run_controls_outputs():
     assert np.isfinite(out["permuted_linear"]["val_brier_mean"])
     assert out["permuted_linear"]["budget"]["n_params"] == (4 + 81) * 9 + 9
     assert len(out["permuted_linear"]["budget"]["selected"]) == 3
+    # F1: the headline Brier is the scored (unpermuted PROBE-VAL) value, the tuning value is kept apart
+    pl = out["permuted_linear"]
+    assert pl["val_brier_mean"] == pytest.approx(np.nanmean(pl["per_puzzle"]))
+    assert "tune_brier_mean" in pl
 
 
 def test_permuted_control_tunes_on_permuted_and_reports_on_unpermuted(monkeypatch):
@@ -151,7 +155,8 @@ def test_permuted_control_tunes_on_permuted_and_reports_on_unpermuted(monkeypatc
 
     def fake_fit(Xtr, Ytr, Xva, Yva, va_puzzle, n_va, kind, train_va=None, **kw):
         calls.append((Xtr, Xva, train_va))
-        return {"config": (0, 1e-3), "val_brier_mean": 0.1, "per_puzzle": np.zeros(n_va), "preds": None, "budget": {}}
+        return {"config": (0, 1e-3), "val_brier_mean": 0.0, "tune_brier_mean": 0.1, "per_puzzle": np.zeros(n_va),
+                "preds": None, "budget": {}}
 
     monkeypatch.setattr(e3controls, "fit_selected", fake_fit)
     run_controls(tr, va, **FAST)
@@ -177,6 +182,10 @@ def test_run_unit_digit_outputs():
     out = run_unit_digit(tr, va, **FAST)
     assert set(out) == {"generated", "raw"}
     for r in out.values():
-        assert {"config", "val_brier_mean", "per_puzzle", "budget", "exact_match", "roc_auc", "brier"} <= set(r)
+        assert {"config", "val_brier_mean", "tune_brier_mean", "per_puzzle", "budget", "exact_match", "roc_auc",
+                "brier", "brier_ensemble"} <= set(r)
         assert len(r["per_puzzle"]) == 3
+        # F5: "brier" is the per-seed-mean Brier (same scale as every other Brier)
+        assert r["brier"] == pytest.approx(np.nanmean(r["per_puzzle"]))
+        assert r["brier"] == pytest.approx(r["val_brier_mean"])
         assert 0.0 <= r["exact_match"] <= 1.0
