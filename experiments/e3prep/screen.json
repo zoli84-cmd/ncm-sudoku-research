@@ -1,0 +1,19 @@
+{
+  "note": "non-confirmatory planning output",
+  "date": "2026-11-11",
+  "code": {
+    "commit": "8e6c6333d133912e80e120568bc9e5a6b9dbf81d",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "subsets": {
+    "gate": 1000,
+    "cal": 300,
+    "probe_train": 2000,
+    "probe_val": 500
+  },
+  "n_entries": 5800,
+  "classes": [],
+  "exact_duplicates": [],
+  "seconds": 162.9
+}
