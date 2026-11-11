@@ -1,4 +1,4 @@
-"""E2 sample-size simulation (plan v3.6 §11.4). Non-confirmatory planning from pilot-2 puzzle-level values.
+"""E2 and E3-H1 sample-size simulation (plan v3.6 §11.4; D60). Non-confirmatory planning from pilot puzzle-level values.
 
 Each simulated sample resamples n puzzle-level values (in [-1, 1]) from the pilot with replacement,
 applies the scenario transform per drawn value, and runs the real interval rule (`e2p2.interval`).
@@ -127,3 +127,39 @@ def e2_sample_size(values: dict[str, np.ndarray], reps=500, n_boot_sim=1000, see
         "non_confirmatory": True,
     }
     return out
+
+
+H1_TARGET = 0.01
+
+
+def shift_to(x: np.ndarray, target: float) -> np.ndarray:
+    """y = x - mean(x) + target, clipped to [-1, 1] (D60)."""
+    x = np.asarray(x, dtype=float)
+    return np.clip(x - x.mean() + target, -1.0, 1.0)
+
+
+def h1_sample_size(diffs, reps=500, n_boot_sim=1000, seed=0, ns=NS) -> dict:
+    """Smallest TEST n at which the family-level interval of the shifted PROBE-VAL H1
+    differences (B_permuted - B_generated, mean moved to 0.01) excludes 0 with 90%
+    power (D60). Always shifted; `shortfall` flags an observed mean below 0.01."""
+    x = np.asarray(diffs, dtype=float)
+    x = x[~np.isnan(x)]
+    y = shift_to(x, H1_TARGET)
+
+    def ok(a):
+        lo, hi = interval(a, FAMILY_LEVEL, n_boot_sim)["ci"]
+        return lo > 0 or hi < 0
+
+    observed = float(x.mean())
+    return {
+        "h1": required_n(lambda n, rng: _draw(y, rng, n), ok, ns, reps, seed, target=0.90),
+        "shortfall": observed < H1_TARGET,
+        "observed_mean": observed,
+        "n_pilot": int(len(x)),
+        "planning_parameters": {
+            "reps": reps, "n_boot_sim": n_boot_sim, "seed": seed, "ns": [int(n) for n in ns],
+            "h1_shift_target": H1_TARGET, "h1_power_target": 0.90, "h1_level": FAMILY_LEVEL,
+            "resampling": "per simulated sample: n draws with replacement from the shifted pilot values",
+            "non_confirmatory": True,
+        },
+    }

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ncm_sudoku.power import e2_sample_size, required_n, sign_flip, sign_mix, thin
+from ncm_sudoku.power import e2_sample_size, h1_sample_size, required_n, shift_to, sign_flip, sign_mix, thin
 
 
 def test_thin_hits_target_and_keeps_zeros():
@@ -69,3 +69,24 @@ def test_e2_sample_size_shortfall_uses_observed_values():
     out = e2_sample_size(values, reps=5, n_boot_sim=50, seed=0, ns=range(100, 101, 100))
     assert out["h2_shortfall"] is True
     assert out["h2_thinning"] is None and out["h2_sign_mix"] is None and out["max_rounded"] is None
+
+
+def test_shift_to_mean_and_range():
+    x = np.array([0.5, -0.2, 0.0, 0.1]); y = shift_to(x, 0.01)
+    assert y.mean() == pytest.approx(0.01) and (np.abs(y) <= 1).all()
+
+
+def test_shift_to_clips():
+    assert shift_to(np.array([1.0, -1.0, 0.9]), 0.5).max() == 1.0
+
+
+def test_h1_sample_size_toy():
+    rng = np.random.default_rng(0); d = rng.normal(0.05, 0.05, 500)
+    r = h1_sample_size(d, reps=100, n_boot_sim=200, ns=range(100, 501, 100))
+    assert r["h1"] is not None and r["shortfall"] is False
+    assert r["planning_parameters"]["reps"] == 100 and r["planning_parameters"]["h1_shift_target"] == 0.01
+
+
+def test_h1_sample_size_shortfall_flag():
+    r = h1_sample_size(np.full(50, 0.001) + np.linspace(-0.01, 0.01, 50), reps=5, n_boot_sim=50, ns=range(100, 101))
+    assert r["shortfall"] is True and r["observed_mean"] == pytest.approx(0.001)

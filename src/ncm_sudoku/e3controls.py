@@ -112,7 +112,8 @@ def _budget_summary(fit: dict) -> dict:
     }
 
 
-def _summary(fit: dict) -> dict:
+def summarize_fit(fit: dict) -> dict:
+    """JSON-ready summary of a `fit_selected` result (preds dropped)."""
     return {
         "config": list(fit["config"]),
         "val_brier_mean": float(fit["val_brier_mean"]),
@@ -121,7 +122,7 @@ def _summary(fit: dict) -> dict:
     }
 
 
-def _fit(f_tr, f_va, train, val, kind, mask_tr=None, f_tune=None, n_positions=81, **kw) -> dict:
+def fit_cells(f_tr, f_va, train, val, kind, mask_tr=None, f_tune=None, n_positions=81, **kw) -> dict:
     """Builds cell examples from [n, 81, F] features and runs `fit_selected`.
     `mask_tr` overrides the training labels; `f_tune` is the selection-set feature
     array (labels stay the true PROBE-VAL labels)."""
@@ -136,6 +137,22 @@ def _fit(f_tr, f_va, train, val, kind, mask_tr=None, f_tune=None, n_positions=81
         Xt, pz_t, _ = build_inputs(f_tune, val["empty"], n_positions)
         train_va = (Xt, Yva, pz_t.numpy(), n_va)
     return fit_selected(Xtr, Ytr, Xva, Yva, pz_va.numpy(), n_va, kind, train_va=train_va, **kw)
+
+
+def permuted_control(rep_tr, rep_va, train, val, **kw) -> dict:
+    """Permuted-representation linear probe (§8.2 item 4): whole grids permuted with
+    independent train/val seeds, tuned on permuted val, scored on unpermuted val.
+    Returns the raw `fit_selected` dict (used by `run_controls` at the H1 level and
+    by the probe-suite script at levels 2 and 12)."""
+    return fit_cells(
+        permute_puzzles(rep_tr, PERMUTE_SEED_TRAIN),
+        rep_va,
+        train,
+        val,
+        "linear",
+        f_tune=permute_puzzles(rep_va, PERMUTE_SEED_VAL),
+        **kw,
+    )
 
 
 def _clue_count(puzzles) -> int:
@@ -159,50 +176,40 @@ def run_controls(train: dict, val: dict, epochs: int = 50, batch: int = 4096, mi
     # 1. Raw puzzle: own one-hot || 20 peers' one-hots (|| position, added by build_inputs).
     raw_tr, raw_va = raw_features(p_tr), raw_features(p_va)
     for kind in ("linear", "mlp"):
-        out[f"raw_{kind}"] = _summary(_fit(raw_tr, raw_va, train, val, kind, **kw))
+        out[f"raw_{kind}"] = summarize_fit(fit_cells(raw_tr, raw_va, train, val, kind, **kw))
     del raw_tr, raw_va
 
     # 2. Peer digit counts, and the exact candidate_mask rule (count == 0) as the ceiling.
     pc_tr, pc_va = peer_counts(p_tr), peer_counts(p_va)
-    out["peer_counts_linear"] = _summary(_fit(pc_tr, pc_va, train, val, "linear", **kw))
+    out["peer_counts_linear"] = summarize_fit(fit_cells(pc_tr, pc_va, train, val, "linear", **kw))
     e_va = np.asarray(val["empty"], bool)
     pz, _ = np.nonzero(e_va)
     rule = brier_per_puzzle((pc_va == 0)[e_va], np.asarray(val["mask"])[e_va], pz, len(e_va))
     out["rule"] = {"config": None, "val_brier_mean": float(np.nanmean(rule)), "per_puzzle": rule.tolist(), "budget": None}
 
     # 3. Surface: clue count, global clue digit frequencies (|| position).
-    out["surface_linear"] = _summary(
-        _fit(surface_features(p_tr), surface_features(p_va), train, val, "linear", **kw)
+    out["surface_linear"] = summarize_fit(
+        fit_cells(surface_features(p_tr), surface_features(p_va), train, val, "linear", **kw)
     )
 
     # 4. Permuted representation (primary H1 control): one clue-count stratum, whole
     # grids permuted, independent seeds; tuned on permuted val, scored on unpermuted val.
-    out["permuted_linear"] = _summary(
-        _fit(
-            permute_puzzles(rep_tr, PERMUTE_SEED_TRAIN),
-            rep_va,
-            train,
-            val,
-            "linear",
-            f_tune=permute_puzzles(rep_va, PERMUTE_SEED_VAL),
-            **kw,
-        )
-    )
+    out["permuted_linear"] = summarize_fit(permuted_control(rep_tr, rep_va, train, val, **kw))
 
     # 5. Random size-matched features, one seed-0 stream: train puzzles first, then val.
     rnd = random_features(len(p_tr) + len(p_va), seed=0, dim=rep_tr.shape[-1])
-    out["random_linear"] = _summary(_fit(rnd[: len(p_tr)], rnd[len(p_tr) :], train, val, "linear", **kw))
+    out["random_linear"] = summarize_fit(fit_cells(rnd[: len(p_tr)], rnd[len(p_tr) :], train, val, "linear", **kw))
     del rnd
 
     # 6. Label permutation across PROBE-TRAIN empty-cell examples; true val labels.
-    out["label_permuted_linear"] = _summary(
-        _fit(rep_tr, rep_va, train, val, "linear", mask_tr=permute_labels(train["mask"], train["empty"], 0), **kw)
+    out["label_permuted_linear"] = summarize_fit(
+        fit_cells(rep_tr, rep_va, train, val, "linear", mask_tr=permute_labels(train["mask"], train["empty"], 0), **kw)
     )
 
     # 7. Teacher representation at levels 2, 6, 12 (one level loaded at a time).
     for lv in (2, 6, 12):
-        out[f"teacher_L{lv:02d}_linear"] = _summary(
-            _fit(train["teacher"][lv], val["teacher"][lv], train, val, "linear", **kw)
+        out[f"teacher_L{lv:02d}_linear"] = summarize_fit(
+            fit_cells(train["teacher"][lv], val["teacher"][lv], train, val, "linear", **kw)
         )
 
     mb = marginal_brier(train["mask"], train["empty"], val["mask"], val["empty"])
@@ -217,7 +224,7 @@ def _fit_unit(f_tr, f_va, p_tr, p_va, **kw) -> dict:
     Ytr = torch.from_numpy(unit_digit_labels(p_tr).reshape(-1, 9).astype(np.float32))
     y_va = unit_digit_labels(p_va).reshape(-1, 9).astype(np.float32)
     fit = fit_selected(Xtr, Ytr, Xva, torch.from_numpy(y_va), pz.numpy(), len(p_va), "linear", **kw)
-    return {**_summary(fit), **unit_metrics(fit["preds"], y_va, pz.numpy(), len(p_va))}
+    return {**summarize_fit(fit), **unit_metrics(fit["preds"], y_va, pz.numpy(), len(p_va))}
 
 
 def run_unit_digit(train: dict, val: dict, epochs: int = 50, batch: int = 4096, min_steps: int = 2000) -> dict:
