@@ -86,6 +86,15 @@ def extract_streamed(m: NcmModel, out_dir, puzzles: np.ndarray, solutions: np.nd
         f.flush()
     for f in teacher_files.values():
         f.flush()
+    # Explicit cleanup: np.memmap has no close(); dropping every reference here forces
+    # CPython's immediate refcounting deallocation (closing the file/mapping now) instead
+    # of relying on whenever the GC happens to run, for the ~1-hour production run's 15
+    # open handles per subset on Windows.
+    for i in range(len(level_files)):
+        level_files[i] = None
+    for lv in list(teacher_files):
+        teacher_files[lv] = None
+    del level_files, teacher_files
     return solve
 
 
