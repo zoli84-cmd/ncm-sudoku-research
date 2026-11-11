@@ -85,6 +85,26 @@ def test_lock_equiv_l12_end_to_end(tmp_path, monkeypatch):
     mod.main()
     e2 = json.loads((tmp_path / "exp" / "equivariance_l12.json").read_text(encoding="utf-8"))
     assert e2["probe"]["matches_d67"] is True and e2["acceptable"] == pytest.approx(e["acceptable"])
+    assert e2["matches_d67"] is True and e["matches_d67"] is None
+
+
+def test_lock_equiv_l12_d67_mismatch_exits_unless_force(tmp_path, monkeypatch):
+    mod = _load("lock_equiv_l12")
+    _setup(mod, tmp_path, monkeypatch)
+    ids = json.loads((tmp_path / "e3prep" / "probe_val" / "ids.json").read_text(encoding="utf-8"))
+    stage = {"config": [0.1, 0.001], "per_puzzle": [9.0] * len(ids)}
+    (tmp_path / "wl.json").write_text(json.dumps({"val_ids": ids, "stages": {"L12": {"generated_linear": stage}}}),
+                                      encoding="utf-8")
+    monkeypatch.setattr(mod, "WHOLELAYER", tmp_path / "wl.json")
+    monkeypatch.setattr(mod, "load_model", lambda path: pytest.fail("must exit before the equivariance pilot"))
+    with pytest.raises(SystemExit) as exc:
+        mod.main()
+    assert exc.value.code not in (None, 0)
+    assert not (tmp_path / "exp" / "equivariance_l12.json").exists()
+    monkeypatch.setattr(mod, "load_model", lambda path: None)
+    monkeypatch.setattr(mod.sys, "argv", ["lock_equiv_l12.py", "--force"])
+    mod.main()
+    assert json.loads((tmp_path / "exp" / "equivariance_l12.json").read_text(encoding="utf-8"))["matches_d67"] is False
 
 
 def test_lock_equiv_l12_guard(tmp_path, monkeypatch):

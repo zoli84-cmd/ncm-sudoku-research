@@ -6,7 +6,8 @@ Generates the 600 TEST puzzles (seed namespace 6) with ncm_sudoku.subsets.genera
 exact canonical form (symmetry.screen_canonical, as scripts/e3_screen.py) against gate, CAL,
 PROBE-TRAIN, PROBE-VAL and the released set. Saves runs/lock/test/ (ids.json, puzzles.npy,
 solutions.npy; git-ignored, the PROBE subset layout) and writes experiments/lock/test_set.json
-with the count, seed namespace, SHA-256 of the ids (json.dumps(ids, sort_keys=True), UTF-8)
+with the count, seed namespace, SHA-256 of the ids (json.dumps(ids) over the ids in generation
+order, index 0..count-1, default separators, ensure_ascii; UTF-8)
 and of the puzzle and solution arrays (uint8, C order), the screen, generator hashes and the
 code state. Refuses to overwrite experiments/lock/test_set.json unless --force.
 """
@@ -40,7 +41,8 @@ def guard(force: bool) -> None:
 
 
 def sha256_ids(ids) -> str:
-    return hashlib.sha256(json.dumps(list(ids), sort_keys=True).encode("utf-8")).hexdigest()
+    """SHA-256 of json.dumps(ids) (generation order, default separators, ensure_ascii), UTF-8."""
+    return hashlib.sha256(json.dumps(list(ids)).encode("utf-8")).hexdigest()
 
 
 def sha256_array(a) -> str:
@@ -75,7 +77,7 @@ def main() -> None:
         "note": NOTE, "non_confirmatory": True, "date": time.strftime("%Y-%m-%d"), "code": code_state(),
         "subset": "test", "seed_namespace": SEEDS["test"], "count": len(ids), "ids": ids,
         "sha256": {"ids": sha256_ids(ids), "puzzles": sha256_array(puzzles), "solutions": sha256_array(solutions)},
-        "hash_format": {"ids": "json.dumps(ids, sort_keys=True) encoded as UTF-8",
+        "hash_format": {"ids": "json.dumps(ids) over the ids in generation order (index 0..count-1), default separators (', ', ': '), ensure_ascii=True, encoded as UTF-8",
                         "puzzles": "uint8 array (count, 81), C order, raw bytes; 0 = empty",
                         "solutions": "uint8 array (count, 81), C order, raw bytes"},
         "storage": str(DATA.relative_to(ROOT)) if DATA.is_relative_to(ROOT) else str(DATA),

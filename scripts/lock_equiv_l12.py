@@ -9,7 +9,8 @@ Needs runs/e3prep/<probe_train|probe_val>/ (scripts/e3_extract.py) and the check
    at the D67 selected configuration (weight decay 0.1, lr 1e-3), D63 budget, early stopping
    on PROBE-VAL Brier (the per-seed training `fit_selected` runs inside its grid). The
    seed-mean per-puzzle PROBE-VAL Brier is compared with the stored D67 grid fit
-   (experiments/e3prep/wholelayer.json, stage L12; `matches_d67`, None if absent).
+   (experiments/e3prep/wholelayer.json, stage L12; `matches_d67`, None if absent); on a
+   mismatch the script exits non-zero before the equivariance pilot unless --force.
    Seed state dicts, the PCA (tensors) and a JSON config go to runs/lock/equiv_l12/;
    `load_saved` reloads them with torch.load(weights_only=True).
 2. `e3equiv.equivariance_pilot` on the first 200 PROBE-VAL puzzles (k = 4 full-group +
@@ -133,7 +134,8 @@ def load_saved(dirpath) -> tuple[list, dict, dict]:
 
 
 def main() -> None:
-    guard(force="--force" in sys.argv)
+    force = "--force" in sys.argv
+    guard(force=force)
     torch.use_deterministic_algorithms(True)  # before environment_record()
     environment = environment_record()
     tr, va = _subset("probe_train"), _subset("probe_val")
@@ -141,7 +143,10 @@ def main() -> None:
     probes, pca, meta = train(tr, va)
     t_train = round(time.perf_counter() - t0, 1)
     if meta["matches_d67"] is False:
-        print("WARNING: the level-12 seed probes do not reproduce the stored D67 whole-layer fit (matches_d67=False)")
+        msg = "the level-12 seed probes do not reproduce the stored D67 whole-layer fit (matches_d67=False)"
+        if not force:
+            sys.exit(f"ERROR: {msg}; stopping before the equivariance pilot (use --force to continue)")
+        print(f"WARNING: {msg}; continuing because of --force")
     m = load_model(ROOT / "checkpoints" / "sudoku" / "hard")
     feats = lambda s: whole_layer_features(s, pca)  # noqa: E731  one object: the shared cache keys on it
     cache: dict = {}
@@ -151,7 +156,7 @@ def main() -> None:
                            n=N_EQUIV, k=K_ELEMENTS, seed=0)
     out = {
         "note": NOTE, "non_confirmatory": True, "date": time.strftime("%Y-%m-%d"), "environment": environment,
-        "code": code_state(), "level": LEVEL,
+        "code": code_state(), "level": LEVEL, "matches_d67": meta["matches_d67"],
         "probe": {k: v for k, v in meta.items() if k != "per_puzzle"}, "ids": va["ids"][: r["n"]],
         **{k: r[k] for k in ("n", "k", "seed", "n_predictors", "acceptable", "share_within", "mean_deviation",
                              "mean_brier", "mean_brier_original")},

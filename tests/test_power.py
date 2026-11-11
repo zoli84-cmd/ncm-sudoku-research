@@ -148,6 +148,38 @@ def test_equivalence_boundary_error_toy():
     assert r["planning_parameters"]["n"] == 300 and r["planning_parameters"]["margin"] == 0.03
     again = equivalence_boundary_error(x, n=300, reps=20, n_boot_sim=100, seed=0)
     assert again["error"] == r["error"]
+    for k in ("+0.03", "-0.03"):
+        d, p = r["detail"][k], r["error"][k]
+        assert 0.0 <= d["bound_share"] <= 1.0
+        assert d["mc_se"] == pytest.approx(np.sqrt(p * (1 - p) / 20))
+        nb = round(d["bound_share"] * 20)
+        parts = [(d["error_by_path"]["bound"], nb), (d["error_by_path"]["bootstrap"], 20 - nb)]
+        for v, m in parts:
+            assert (v is None) == (m == 0)
+        assert sum(v * m for v, m in parts if m) / 20 == pytest.approx(p)
+
+
+def test_equivalence_boundary_error_path_split(monkeypatch):
+    from ncm_sudoku import power
+    seq = iter([("bound", (-0.01, 0.01)), ("bootstrap", (-0.05, 0.05)), ("bootstrap", (-0.01, 0.01))] * 10)
+
+    def fake(a, level, n_boot):
+        if level == 0.95:
+            return {"method": "bound", "ci": (-0.01, 0.01)}
+        m, ci = next(seq)
+        return {"method": m, "ci": ci}
+    monkeypatch.setattr(power, "interval", fake)
+    x = np.r_[np.full(3, 1.0), np.full(3, -1.0), np.zeros(294)]
+    r = equivalence_boundary_error(x, n=300, reps=3, n_boot_sim=10)
+    d = r["detail"]["+0.03"]
+    assert d["bound_share"] == pytest.approx(1 / 3)
+    assert d["error_by_path"] == {"bound": 1.0, "bootstrap": 0.5} and r["error"]["+0.03"] == pytest.approx(2 / 3)
+
+
+def test_lock_defaults():
+    import inspect
+    assert inspect.signature(equivalence_boundary_error).parameters["reps"].default == 2000
+    assert inspect.signature(h1_tost).parameters["n_boot_sim"].default == 2000
 
 
 def test_equivalence_boundary_error_infeasible_is_none():
@@ -178,3 +210,11 @@ def test_h1_tost_uses_two_sided_family_level(monkeypatch):
     assert r["power_at_zero"] == 1.0 and r["excludes_zero_at_observed"] == 1.0
     monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"method": "bootstrap", "ci": (-0.02, 0.0)})
     assert h1_tost(np.full(50, 0.003), n=100, reps=3, n_boot_sim=20)["power_at_zero"] == 0.0
+
+
+def test_h1_tost_inside_and_above_zero_needs_lower_bound_above_zero(monkeypatch):
+    from ncm_sudoku import power
+    # inside +-0.01 and excludes 0, but below 0: not "above 0"
+    monkeypatch.setattr(power, "interval", lambda a, level, n_boot: {"method": "bootstrap", "ci": (-0.009, -0.001)})
+    r = h1_tost(np.full(50, 0.003), n=100, reps=3, n_boot_sim=20)
+    assert r["excludes_zero_at_observed"] == 1.0 and r["inside_and_above_zero_at_observed"] == 0.0

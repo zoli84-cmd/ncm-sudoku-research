@@ -38,7 +38,8 @@ def test_hashes_are_stable_and_format_defined():
     ids = ["gen-v1-6-1", "gen-v1-6-0"]
     assert mod.sha256_ids(ids) == mod.sha256_ids(list(ids))
     import hashlib
-    assert mod.sha256_ids(ids) == hashlib.sha256(json.dumps(ids, sort_keys=True).encode("utf-8")).hexdigest()
+    assert mod.sha256_ids(ids) == hashlib.sha256(json.dumps(ids).encode("utf-8")).hexdigest()
+    assert mod.sha256_ids(ids) != mod.sha256_ids(sorted(ids))  # generation order, not sorted
     a = np.arange(81, dtype=np.int64).reshape(1, 81) % 10
     assert mod.sha256_array(a) == mod.sha256_array(a.astype(np.uint8)) == mod.sha256_array(np.asfortranarray(a))
     assert mod.sha256_array(a) == hashlib.sha256(a.astype(np.uint8).tobytes(order="C")).hexdigest()
@@ -57,6 +58,7 @@ def test_lock_test_set_end_to_end_and_guard(tmp_path, monkeypatch):
     solutions = np.load(tmp_path / "runs" / "test" / "solutions.npy")
     assert ids == out["ids"] and len(ids) == 3 and puzzles.shape == solutions.shape == (3, 81)
     assert out["sha256"]["ids"] == mod.sha256_ids(ids)
+    assert "generation order" in out["hash_format"]["ids"] and "sort_keys" not in out["hash_format"]["ids"]
     assert out["sha256"]["puzzles"] == mod.sha256_array(puzzles) and out["sha256"]["solutions"] == mod.sha256_array(solutions)
     scr = out["screen"]
     assert scr["n_entries"] == 1 + 8 + 3 and scr["subsets"]["test"] == 3
