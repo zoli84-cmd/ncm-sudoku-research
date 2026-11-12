@@ -4,6 +4,6 @@ Tier: high — the lock is hard to roll back (git tag plus an embargoed OSF regi
 
 | Step | Reviewers | Scope | Status | Accepted blocker/major |
 |---|---|---|---|---|
-| R1 | sol,carbon | full artifact, focus on the v3.7 changes | next | |
-| R2 | sol,carbon | changed sections plus decision log | | |
+| R1 | carbon; astra (replacing sol: 3 failed runs) | full artifact, focus on the v3.7 changes | done 2026-11-12 (10 findings accepted, fixes applied) | 3 |
+| R2 | carbon,astra | round-1 fixes plus decision log | next | |
 | Final | astra | full artifact | | |
