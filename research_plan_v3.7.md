@@ -3,7 +3,7 @@
 **Research plan v3.7 — preregistration lock version**  
 **Date:** 2026-11-12  
 **Predecessors:** `research_plan_v3.6.md`, `research_plan_v3.5.md`, `research_plan_v3.4.md`, `research_plan_v3.3.md`, `research_plan_v3.2.md`, `research_plan_v3.1.md`, `research_plan_v3.md` (English translation of the Hungarian `NCM_Sudoku_kutatasi_terv_v3.md`); all remain unchanged.  
-**Status:** G0 passed (D31), the generator passed the distribution gate (D41), two E2 pilots ran on CAL (D42, D53), and the E3 preparation ran on PROBE-TRAIN/PROBE-VAL (D64, D67, D69). This version fills every lock field of Section 12.2 (D53–D71) and is the protocol frozen by the preregistration lock; TEST has been generated (Section 12.2) but no model has been run on it.  
+**Status:** G0 passed (D31), the generator passed the distribution gate (D41), two E2 pilots ran on CAL (D42, D53), and the E3 preparation ran on PROBE-TRAIN/PROBE-VAL (D64, D67, D69). This version fills every lock field of Section 12.2 (D53–D73) and is the protocol frozen by the preregistration lock; TEST has been generated (Section 12.2) but no model has been run on it.  
 **Versioning:** the English document is authoritative from v3.1 on. Every change from v3.0 is listed in Section 16 and justified in `DECISIONS.md`.
 
 ## 1. Goal, research order, and claim boundaries
@@ -178,7 +178,7 @@ $$
 \theta_2=E[(Y_{D,1}-Y_A)-(Y_{D,11}-Y_A)].
 $$
 
-Level 1 has a single code position, so the replacement is not sampled: all 15 alternative values are run and weighted by their CAL frequency, which gives the exact expectation over the policy without intervention-seed noise. For puzzle $i$ with original level-1 code $a_i$ the weight of value $v\ne a_i$ is $w_{i,v}=\hat f_v/\sum_{k\ne a_i}\hat f_k$, with $\hat f$ the frozen level-1 code frequencies from the CAL generated codes; a value with zero CAL frequency gets weight 0, and a puzzle is ineligible only when the denominator is 0. The same weights apply to every level-1 quantity: the level-1 term of $\theta_2$, $\theta_{\mathrm{comp}}$, damage and format-error summaries. TEST uses the frozen CAL vector. At level 11 a position and a value are drawn with three intervention seeds. The same contrast at levels 2 and 11, $\theta_2'=E[(Y_{D,2}-Y_A)-(Y_{D,11}-Y_A)]$, is secondary and is assessed against an equivalence range of ±3 pp (Section 11.4).
+Level 1 has a single code position, so the replacement is not sampled: all 15 alternative values are run and weighted by their CAL frequency, which gives the exact expectation over the policy without intervention-seed noise. For puzzle $i$ with original level-1 code $a_i$ the weight of value $v\ne a_i$ is $w_{i,v}=\hat f_v/\sum_{k\ne a_i}\hat f_k$, with $\hat f$ the frozen level-1 code frequencies from the CAL generated codes; a value with zero CAL frequency gets weight 0, and a puzzle is ineligible only when the denominator is 0. The same weights apply to every level-1 quantity: the level-1 term of $\theta_2$, $\theta_{\mathrm{comp}}$, damage and format-error summaries. TEST uses the frozen CAL vector; the frequency-policy replacements at levels 2, 6 and 11 likewise use frozen CAL code frequencies (Section 12.2), never frequencies estimated on TEST. At level 11 a position and a value are drawn with three intervention seeds. The same contrast at levels 2 and 11, $\theta_2'=E[(Y_{D,2}-Y_A)-(Y_{D,11}-Y_A)]$, is secondary and is assessed against an equivalence range of ±3 pp (Section 11.4).
 
 **Why level 1 (v3.6).** In the WP1 pilot on CAL (D42) replacements at the measured levels 2, 6 and 11 changed solve rates by at most about 1 pp, and under the frequency policy branch C at level 2 never differed from A in solve outcome. With the frequency policy, the single level-1 replacement lowered the solve rate from 0.850 to 0.763 in branch D (−8.7 pp, the branch H2 uses) and to 0.756 in branch C (−9.4 pp). The primary contrast was moved before the lock, on CAL data only, so that H2 tests the earliest level at the same edit cost; TEST is untouched. The change and its reason are logged in `DECISIONS.md`.
 
@@ -569,12 +569,13 @@ Changes in v3.6 (E2 redesign after the WP1 pilot, D43–D50):
 30. Revisions from the external review R1 of v3.6 (`.reviews/plan-v3-6/decisions.md`): enumeration weights written out; level-1 architecture caveat (Sections 7.2, 13); pilot figures quoted per branch and policy.
 31. Revisions from the final external review of v3.6: sign-preserving simulation scenarios for H2 and the equivalence claim; tie rule for AUC nodes (Sections 7.3, 11.4).
 
-Changes in v3.7 (preregistration lock, D53–D71):
+Changes in v3.7 (preregistration lock, D53–D73):
 
 32. H1 primary probe is the cell-relative whole-layer linear probe (states of the cell and its 20 peers, PCA-256 fitted on PROBE-TRAIN, whitened); the per-cell probe is secondary; the D55 grid and the D63 budget are kept after a budget sensitivity check (Sections 3, 8.1; D66, D68, D69).
 33. H1 is two-sided with a family-level equivalence reading inside ±0.01; secondary teacher − generated contrast at level 12 with ±0.01 (Sections 8.3, 11.1; D65, D68, D70).
 34. Unit–digit label and readout fixed (Section 8.3; D62).
 35. Equivariance analysis moved to level 12 as an exploratory analysis with a fixed acceptable deviation (Section 8.4; D68, D70, D71).
-36. Lock values: TEST size 600, simulated error rates including the injection boundary check for the levels 2 vs. 11 equivalence rule, TEST identity hashes, frozen level-1 frequencies and the E2 common range (Sections 11.4, 12.1, 12.2; D53, D70, D71).
+36. Lock values: TEST size 600, simulated error rates including the injection boundary check for the levels 2 vs. 11 equivalence rule, TEST identity hashes, frozen CAL code frequencies for levels 1, 2, 6 and 11, and the E2 common range (Sections 11.4, 12.1, 12.2; D53, D70, D71).
 37. New interpretation rows for the H1 equivalence outcomes, level-12 solution content and the exploratory equivariance result (Section 13).
+38. Revisions from the external review of v3.7 (`.reviews/plan-v3-7/decisions.md`; D72, D73): frozen CAL frequencies passed to the E2 runner; frozen peer order with PCA rules, control seeds and selected configurations; per-seed Brier averaging; stand-alone justification of the H1 switch; full-precision AUC range; fixed equivariance tolerance with per-category results; hash formats; a 98.33% lower limit above 0 required for the positive-but-small H1 reading (Sections 7.2, 8.1, 8.3, 8.4, 11.4, 12.2, 13).
 

@@ -10,6 +10,8 @@ import torch
 from ncm_sudoku import e2p2
 from ncm_sudoku.perturb import code_frequencies
 
+LOCKED_CAL_FREQS_SHA256 = "0cc7292718750754baf27b813a4095e2a7479cf4e480fbed50e43c665c7983fb"  # v3.7 §12.2
+
 ROOT = Path(__file__).resolve().parents[1]
 LEVELS = (1, 2, 3)  # toy model: 3 levels, 6 codes per row
 A = torch.tensor([[3, 1, 1, 5, 5, 5], [3, 2, 1, 0, 5, 15], [7, 1, 2, 5, 5, 4]])
@@ -85,3 +87,12 @@ def test_lock_cal_freqs_records_environment_after_model_load(tmp_path, monkeypat
     mod.main()
     out = json.loads((tmp_path / "lock" / "cal_freqs.json").read_text(encoding="utf-8"))
     assert out["environment"]["deterministic"] is True
+
+
+def test_committed_cal_freqs_is_the_locked_file():
+    """R2 CARBON-2: the committed frozen-frequency file is the one whose SHA-256 the plan locks (v3.7 §12.2)."""
+    import hashlib
+    path = Path(__file__).resolve().parents[1] / "experiments" / "lock" / "cal_freqs.json"
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == LOCKED_CAL_FREQS_SHA256
+    freqs = e2p2.load_frozen_freqs(path)
+    assert set(freqs) >= {1, 2, 6, 11}
