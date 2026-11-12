@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ncm_sudoku.grid import PEERS
+from ncm_sudoku.grid import PEER_ORDER
 from ncm_sudoku.labels import candidate_mask, inference_waves
 from ncm_sudoku.model import NcmModel
 from ncm_sudoku.runner import decode_codes, generate_codes, teacher_codes
@@ -22,7 +22,7 @@ from ncm_sudoku.states import cell_states, cumulative_states
 from ncm_sudoku.validate import evaluate, parse_output_tokens
 
 TEACHER_LEVELS = (2, 6, 12)
-_PEERS_IDX = np.array([list(PEERS[c]) for c in range(81)], dtype=np.int64)  # (81, 20)
+_PEERS_IDX = np.asarray(PEER_ORDER, dtype=np.int64)  # (81, 20), frozen order (grid.PEER_ORDER)
 
 
 def _process_chunk(m: NcmModel, p_chunk: np.ndarray, s_chunk: np.ndarray):
@@ -113,7 +113,7 @@ def labels(puzzles: np.ndarray) -> dict:
 
 
 def raw_features(puzzles: np.ndarray) -> np.ndarray:
-    """Own one-hot (10) || the 20 peers' one-hots in `PEERS[c]` order (200)."""
+    """Own one-hot (10) || the 20 peers' one-hots in `grid.PEER_ORDER[c]` order (200)."""
     puzzles = np.asarray(puzzles)
     n = len(puzzles)
     oh = np.eye(10, dtype=np.float32)[puzzles]  # (n, 81, 10)

@@ -7,7 +7,7 @@ both projected and unprojected.
 
 D66 design (replaces the D65(1) whole-grid vector, which a shared linear probe can
 only use as a per-puzzle offset): for each cell c, the states of c and its 20 peers
-in `e3data` `PEERS[c]` order (`PEER_IDX[c]`, 21 x F) are projected by a PCA fitted on
+in the frozen `grid.PEER_ORDER[c]` order (`PEER_IDX[c]`, 21 x F) are projected by a PCA fitted on
 the empty-cell rows of PROBE-TRAIN only, and the scores are whitened to unit
 PROBE-TRAIN standard deviation. Probe input per cell (`whole_layer_features`):
 whitened scores || the cell's own state || position one-hot (added by
