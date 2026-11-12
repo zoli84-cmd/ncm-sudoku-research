@@ -1,0 +1,155 @@
+{
+  "note": "non-confirmatory validation (v3.7 Final ASTRA-1): full-batch level-1 enumeration on CAL compared with the pilot-2 subset-batch level-1 records",
+  "non_confirmatory": true,
+  "date": "2026-11-12",
+  "code": {
+    "commit": "3550f844766b3416d33b8c72196bfe909a4883d0",
+    "dirty": true,
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "n_cal": 300,
+  "chunk": 50,
+  "freqs_level1_match_input": true,
+  "freqs_level1_match_pilot": true,
+  "level1_noop_mismatch": 0,
+  "level1_noop_max_tv": {
+    "tv": 0.0,
+    "tv_empty": 0.0
+  },
+  "n_noop": 300,
+  "n_level1_records": 4800,
+  "base_diff": {
+    "solve_A": 0,
+    "solve_B1": 0
+  },
+  "comparison": {
+    "n_matched": 4500,
+    "n_missing_in_pilot": 0,
+    "n_missing_in_new": 0,
+    "fields": {
+      "solve_C": {
+        "n_diff": 0
+      },
+      "solve_D": {
+        "n_diff": 0
+      },
+      "well_formed_C": {
+        "n_diff": 0
+      },
+      "well_formed_D": {
+        "n_diff": 0
+      },
+      "tv": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "tv_empty": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "latent": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "requant_ratio": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "downstream_changes_D": {
+        "n_diff": 0
+      },
+      "w_frequency": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "w_uniform": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      }
+    },
+    "differing": [],
+    "differing_listed_max": 50
+  },
+  "theta": {
+    "frequency": {
+      "level1_term_theta2": {
+        "new": -0.08936788237907008,
+        "pilot": -0.08936788237907008,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      },
+      "theta_comp": {
+        "new": 0.007378617443013386,
+        "pilot": 0.007378617443013386,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      },
+      "theta2": {
+        "new": -0.08936788237907008,
+        "pilot": -0.08936788237907008,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      }
+    },
+    "uniform": {
+      "level1_term_theta2": {
+        "new": -0.15888888888888886,
+        "pilot": -0.15888888888888886,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      },
+      "theta_comp": {
+        "new": 0.006444444444444443,
+        "pilot": 0.006444444444444443,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      },
+      "theta2": {
+        "new": -0.15888888888888886,
+        "pilot": -0.15888888888888886,
+        "n_new": 300,
+        "n_pilot": 300,
+        "max_abs_diff": 0.0
+      }
+    }
+  },
+  "raw": "runs\\lock\\level1_full_batch.json",
+  "seconds": 7156.3
+}
