@@ -1,8 +1,9 @@
 """E3 equivariance pilot (plan v3.6 §8.4; D59). Non-confirmatory planning code.
 
 Each predictor maps puzzles [b, 81] to candidate probabilities [b, 81, 9]; the
-script passes one predictor per selected level-6 linear seed probe
-(`model_predict_fn`), tests pass exact predictors.
+scripts pass one predictor per seed probe (`model_predict_fn`: level-6 per-cell
+probes in `scripts/e3_equiv_power.py`, level-12 whole-layer probes in
+`scripts/lock_equiv_l12.py`), tests pass exact predictors.
 
 Per puzzle i (first `n`), one `np.random.default_rng(seed)` stream draws, in this
 fixed order: `k` elements of the full group, then 2 digit-only, then 2
@@ -42,12 +43,17 @@ def equivariance_pilot(
     n: int = 200,
     k: int = 4,
     seed: int = 0,
+    acceptable: float | None = None,
 ) -> dict:
-    """Returns `deviation` {kind: [n]}, `seed_noise` [n] (mean pairwise predictor
-    difference on untransformed puzzles), `acceptable` (95th percentile of
-    `seed_noise`), `share_within` {kind: share of puzzles with deviation <=
-    acceptable}, `brier` {kind: [n]} (back-transformed predictions vs. the
-    original's candidate mask), `brier_original` [n], and their means."""
+    """Uses the first `n` puzzles in the given order (`puzzles[:n]`; on TEST, indices
+    0..199 of the TEST generation order). Returns `deviation` {kind: [n]}, `seed_noise`
+    [n] (mean pairwise predictor difference on untransformed puzzles), `seed_noise_p95`
+    (its 95th percentile), `acceptable` (the tolerance used: the fixed `acceptable`
+    when given, e.g. the value measured on PROBE-VAL before the lock, else
+    `seed_noise_p95`) and `acceptable_source` ("fixed" or "seed_noise"), `share_within`
+    {kind: share of puzzles with deviation <= acceptable}, `brier` {kind: [n]}
+    (back-transformed predictions vs. the original's candidate mask), `brier_original`
+    [n], and their means."""
     if len(predict_fns) < 2:
         raise ValueError("seed noise needs at least two predictors")
     puzzles = np.asarray(puzzles)[:n]
@@ -80,7 +86,9 @@ def equivariance_pilot(
 
     pairs = list(combinations(originals, 2))
     seed_noise = np.array([np.mean([mad(a[i], b[i], i) for a, b in pairs]) for i in range(n)])
-    acceptable = float(np.percentile(seed_noise, 95))
+    seed_noise_p95 = float(np.percentile(seed_noise, 95))
+    source = "seed_noise" if acceptable is None else "fixed"
+    acceptable = seed_noise_p95 if acceptable is None else float(acceptable)
     return {
         "n": n,
         "k": k,
@@ -88,7 +96,9 @@ def equivariance_pilot(
         "n_predictors": len(predict_fns),
         "deviation": deviation,
         "seed_noise": seed_noise,
+        "seed_noise_p95": seed_noise_p95,
         "acceptable": acceptable,
+        "acceptable_source": source,
         "share_within": {kind: float(np.mean(v <= acceptable)) for kind, v in deviation.items()},
         "mean_deviation": {kind: float(v.mean()) for kind, v in deviation.items()},
         "brier": brier_t,
@@ -98,27 +108,41 @@ def equivariance_pilot(
     }
 
 
-def level6_states(m: NcmModel, puzzles: np.ndarray, batch: int = 50) -> np.ndarray:
-    """Generated-branch cumulative state Z_{<=6} at the cell tokens, [b, 81, 256]."""
+def cell_level_states(m: NcmModel, puzzles: np.ndarray, level: int, batch: int = 50) -> np.ndarray:
+    """Generated-branch cumulative state Z_{<=level} at the cell tokens, [b, 81, 256]."""
     out = []
     for i in range(0, len(puzzles), batch):
         codes = generate_codes(m, puzzles[i : i + batch], batch_size=batch)
-        out.append(cell_states(cumulative_states(m, codes, upto=LEVEL)[LEVEL - 1]).numpy())
+        out.append(cell_states(cumulative_states(m, codes, upto=level)[level - 1]).numpy())
     return np.concatenate(out)
 
 
-def model_predict_fn(m: NcmModel, probe: torch.nn.Module, cache: dict | None = None) -> Callable:
-    """Default predictor: generate -> level-6 cell states -> probe on all 81 cells.
-    Predictors sharing `cache` run the model once per puzzle batch."""
+def level6_states(m: NcmModel, puzzles: np.ndarray, batch: int = 50) -> np.ndarray:
+    """Generated-branch cumulative state Z_{<=6} at the cell tokens, [b, 81, 256]."""
+    return cell_level_states(m, puzzles, LEVEL, batch)
+
+
+def model_predict_fn(
+    m: NcmModel,
+    probe: torch.nn.Module,
+    cache: dict | None = None,
+    level: int = LEVEL,
+    features: Callable[[np.ndarray], np.ndarray] | None = None,
+) -> Callable:
+    """Default predictor: generate -> level-`level` cell states -> `features` (e.g. the
+    D66 whole-layer features; identity when None) -> probe on all 81 cells.
+    Predictors sharing `cache` (and the same `level` and `features` object) run the
+    model and the feature builder once per puzzle batch."""
     cache = {} if cache is None else cache
 
     def predict(puzzles: np.ndarray) -> np.ndarray:
         puzzles = np.ascontiguousarray(puzzles)
-        key = puzzles.tobytes()
+        key = (level, features, puzzles.tobytes())
         if key not in cache:
-            cache[key] = level6_states(m, puzzles)
-        states = cache[key]
-        X, _, _ = build_inputs(states, np.ones(states.shape[:2], bool))
+            states = level6_states(m, puzzles) if level == LEVEL else cell_level_states(m, puzzles, level)
+            cache[key] = states if features is None else features(states)
+        feats = cache[key]
+        X, _, _ = build_inputs(feats, np.ones(feats.shape[:2], bool))
         with torch.no_grad():
             return probe(X).numpy().reshape(len(puzzles), 81, 9)
 

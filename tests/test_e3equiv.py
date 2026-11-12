@@ -81,3 +81,54 @@ def test_model_predict_fn_applies_probe_and_caches(monkeypatch):
     x = torch.cat([torch.ones(81, 4), torch.eye(81)], dim=1)
     with torch.no_grad():
         assert np.allclose(a[0], probe(x).numpy(), atol=1e-6)
+
+
+def test_model_predict_fn_level_and_feature_builder(monkeypatch):
+    calls = []
+
+    def fake_level_states(m, puzzles, level, batch=50):
+        calls.append((len(puzzles), level))
+        return np.ones((len(puzzles), 81, 4), np.float32)
+
+    monkeypatch.setattr(e3equiv, "cell_level_states", fake_level_states)
+    monkeypatch.setattr(e3equiv, "level6_states", lambda *a, **k: pytest.fail("level 12 must not use level 6"))
+    feats = lambda s: np.concatenate([s, 2 * s], axis=2)  # noqa: E731  [b, 81, 4] -> [b, 81, 8]
+    probe = torch.nn.Sequential(torch.nn.Linear(8 + 81, 9), torch.nn.Sigmoid())
+    cache = {}
+    fns = [model_predict_fn(None, probe, cache, level=12, features=feats) for _ in range(2)]
+    pz = np.asarray([P, P])
+    a, b = fns[0](pz), fns[1](pz)
+    assert a.shape == (2, 81, 9) and np.allclose(a, b) and calls == [(2, 12)]
+    X = np.concatenate([np.ones((162, 4)), 2 * np.ones((162, 4)), np.tile(np.eye(81), (2, 1))], axis=1)
+    with torch.no_grad():
+        expect = probe(torch.from_numpy(X.astype(np.float32))).numpy().reshape(2, 81, 9)
+    assert np.allclose(a, expect)
+
+
+def test_level6_states_delegates_to_cell_level_states(monkeypatch):
+    seen = []
+    monkeypatch.setattr(e3equiv, "cell_level_states", lambda m, pz, level, batch=50: seen.append((level, batch)) or 0)
+    e3equiv.level6_states(None, np.asarray([P]), batch=7)
+    assert seen == [(6, 7)]
+
+
+def test_equivariance_default_tolerance_is_seed_noise():
+    f0 = lambda pz: np.zeros((len(pz), 81, 9))  # noqa: E731
+    f1 = lambda pz: np.full((len(pz), 81, 9), 0.3)  # noqa: E731
+    r = equivariance_pilot(np.asarray([P]), [f0, f1], n=1, k=1, seed=0)
+    assert r["acceptable_source"] == "seed_noise"
+    assert r["acceptable"] == r["seed_noise_p95"] == pytest.approx(0.3)
+
+
+def test_equivariance_fixed_tolerance():
+    # position-only predictor: digit deviation 0, geometric deviation > 0
+    bias = np.random.default_rng(0).random((81, 9))
+    f = lambda pz: np.broadcast_to(bias[:, :1], (len(pz), 81, 9)).copy()  # noqa: E731
+    base = equivariance_pilot(np.asarray([P]), [f, f], n=1, k=2, seed=0)
+    assert base["share_within"]["geometric"] == 0.0 and base["seed_noise_p95"] == 0.0
+    big = float(base["deviation"]["geometric"][0]) + 1.0
+    r = equivariance_pilot(np.asarray([P]), [f, f], n=1, k=2, seed=0, acceptable=big)
+    assert r["acceptable_source"] == "fixed" and r["acceptable"] == big
+    assert r["seed_noise_p95"] == 0.0  # still computed and reported
+    assert r["share_within"] == {"all": 1.0, "digit": 1.0, "geometric": 1.0}
+    assert np.allclose(r["deviation"]["geometric"], base["deviation"]["geometric"])

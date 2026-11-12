@@ -50,6 +50,16 @@ def _contrast_line(label: str, entry: dict) -> str:
     return line
 
 
+def _noop_sham(summary: dict) -> str:
+    """Count of no-op violations and the largest no-op TV and empty-cell TV ("–" for older summaries)."""
+    n, mx = summary.get("level1_noop_mismatch"), summary.get("level1_noop_max_tv")
+    text = "–" if n is None else str(n)
+    if mx is not None:
+        fmt = lambda v: "–" if v is None else f"{v:g}"  # noqa: E731
+        text += f"; max no-op TV {fmt(mx['tv'])}, TV (empty cells) {fmt(mx['tv_empty'])}"
+    return text
+
+
 def _report(summary: dict) -> str:
     c = summary["contrasts"]
     lines = [
@@ -66,6 +76,7 @@ def _report(summary: dict) -> str:
         "- Sham mismatch (puzzles whose sham solve differs from A; nonzero = instrumentation error): "
         f"B1≠A {summary['sham_mismatch']['level1_B1']}; "
         + ", ".join(f"L{k} {v}" for k, v in summary["sham_mismatch"]["levels_B"].items()),
+        f"- Level-1 in-batch sham (no-op rows violating C = A, D = B1 or TV = 0): {_noop_sham(summary)}",
         "",
         "| AUC pair | AUC A | AUC B | range | reason |",
         "|---|---|---|---|---|",

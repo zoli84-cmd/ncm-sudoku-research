@@ -1,4 +1,4 @@
-"""E2 and E3-H1 sample-size simulation (plan v3.6 §11.4; D60). Non-confirmatory planning from pilot puzzle-level values.
+"""E2 and E3-H1 sample-size and lock power simulation (plan v3.6 §11.4; D60, D70). Non-confirmatory planning from pilot puzzle-level values.
 
 Each simulated sample resamples n puzzle-level values (in [-1, 1]) from the pilot with replacement,
 applies the scenario transform per drawn value, and runs the real interval rule (`e2p2.interval`).
@@ -36,6 +36,23 @@ def sign_mix(x: np.ndarray, target: float, rng, size: int | None = None) -> np.n
     return np.where(rng.random(len(y)) < p, np.sign(target), -np.sign(target)) * y
 
 
+def inject(x: np.ndarray, target: float, rng, size: int | None = None) -> np.ndarray:
+    """D70(1): resample x (`size` draws, or x itself), then set each drawn zero to sign(target)
+    with p = (target - mean(x)) / (zero share(x) * sign(target)), so the expected mean is target.
+    Nonzero values are unchanged; ValueError when z = 0 or p is outside [0, 1]."""
+    x = np.asarray(x, dtype=float)
+    z, s = float(np.mean(x == 0)), float(np.sign(target))
+    if z == 0 or s == 0:
+        raise ValueError(f"injection infeasible: zero share {z:.4f}, target {target}")
+    p = (target - float(x.mean())) / (z * s)
+    if not 0.0 <= p <= 1.0:
+        raise ValueError(f"injection infeasible: p = {p:.4f} outside [0, 1] (mean {x.mean():.4f}, zero share {z:.4f})")
+    y = _draw(x, rng, size).copy()
+    hit = (y == 0) & (rng.random(len(y)) < p)
+    y[hit] = s
+    return y
+
+
 def sign_flip(x: np.ndarray, rng) -> np.ndarray:
     """Multiply each value by an independent random sign (zeros stay zero)."""
     x = np.asarray(x, dtype=float)
@@ -55,6 +72,22 @@ def required_n(sampler, criterion, ns=NS, reps=500, seed=0, target: float = 0.80
     return None
 
 
+def _equivalence_check(a: np.ndarray, n_boot_sim: int) -> tuple[bool, str]:
+    """(`equivalence_ok` result, interval method: "bootstrap" or "bound")."""
+    r = interval(a, 0.90, n_boot_sim)
+    method = r["method"]
+    if method == "bound":  # TOST at 5% per side: mirror summarize2
+        r = interval(a, 0.95, n_boot_sim)
+    lo, hi = r["ci"]
+    return bool(-TOST_MARGIN < lo and hi < TOST_MARGIN), method
+
+
+def equivalence_ok(a: np.ndarray, n_boot_sim: int) -> bool:
+    """E2 levels 2 vs. 11 TOST rule: the 90% interval (the one-sided 0.95 bound on the rare-event
+    path, mirroring summarize2) lies inside +-TOST_MARGIN."""
+    return _equivalence_check(a, n_boot_sim)[0]
+
+
 def e2_sample_size(values: dict[str, np.ndarray], reps=500, n_boot_sim=1000, seed=0, ns=NS) -> dict:
     """Smallest n per E2 target (H2 two scenarios, H3, equivalence) and their maximum rounded up to 100."""
     x2, xc, xp = (np.asarray(values[k], dtype=float) for k in ("theta2", "theta_comp", "theta2_prime"))
@@ -69,11 +102,7 @@ def e2_sample_size(values: dict[str, np.ndarray], reps=500, n_boot_sim=1000, see
         return (hi - lo) / 2 <= H3_HALF_WIDTH
 
     def eq_ok(a):
-        r = interval(a, 0.90, n_boot_sim)
-        if r["method"] == "bound":  # TOST at 5% per side: mirror summarize2
-            r = interval(a, 0.95, n_boot_sim)
-        lo, hi = r["ci"]
-        return -TOST_MARGIN < lo and hi < TOST_MARGIN
+        return equivalence_ok(a, n_boot_sim)
 
     def resample(x):
         return lambda n, rng: _draw(x, rng, n)
@@ -160,6 +189,102 @@ def h1_sample_size(diffs, reps=500, n_boot_sim=1000, seed=0, ns=NS) -> dict:
             "reps": reps, "n_boot_sim": n_boot_sim, "seed": seed, "ns": [int(n) for n in ns],
             "h1_shift_target": H1_TARGET, "h1_power_target": 0.90, "h1_level": FAMILY_LEVEL,
             "resampling": "per simulated sample: n draws with replacement from the shifted pilot values",
+            "non_confirmatory": True,
+        },
+    }
+
+
+def equivalence_boundary_error(xp, n=600, reps=2000, n_boot_sim=1000, seed=0) -> dict:
+    """D70(1): false-equivalence share of the E2 TOST rule (`equivalence_ok`) at n when the
+    pilot theta2' values are injected to an expected effect of +TOST_MARGIN and -TOST_MARGIN.
+    `detail` per scenario: share of samples on the rare-event bound path, the false-equivalence
+    rate on each path (None if the path never occurred) and the Monte Carlo SE sqrt(p (1 - p) / reps)."""
+    xp = np.asarray(xp, dtype=float)
+    err, detail, notes = {}, {}, {}
+    for key, t in (("+0.03", TOST_MARGIN), ("-0.03", -TOST_MARGIN)):
+        try:
+            inject(xp, t, np.random.default_rng(0))
+        except ValueError as e:
+            err[key], detail[key], notes[key] = None, None, str(e)
+            continue
+        rng = np.random.default_rng(seed)
+        runs = [_equivalence_check(inject(xp, t, rng, n), n_boot_sim) for _ in range(reps)]
+        ok = np.array([r[0] for r in runs], dtype=bool)
+        bound = np.array([r[1] == "bound" for r in runs], dtype=bool)
+        p = float(ok.mean())
+        err[key] = p
+        detail[key] = {
+            "bound_share": float(bound.mean()),
+            "error_by_path": {"bound": float(ok[bound].mean()) if bound.any() else None,
+                              "bootstrap": float(ok[~bound].mean()) if (~bound).any() else None},
+            "mc_se": float(np.sqrt(p * (1 - p) / reps)),
+        }
+    return {
+        "error": err, "detail": detail,
+        "pilot_mean": float(xp.mean()), "pilot_zero_share": float(np.mean(xp == 0)), "n_pilot": int(len(xp)),
+        "notes": notes,
+        "planning_parameters": {
+            "n": int(n), "reps": reps, "n_boot_sim": n_boot_sim, "seed": seed, "margin": TOST_MARGIN,
+            "level": 0.90, "bound_level": 0.95,
+            "scenario": "per simulated sample: n draws with replacement from pilot values, each drawn zero "
+                        "set to sign(target) with the probability that makes the expected mean equal target",
+            "non_confirmatory": True,
+        },
+    }
+
+
+H1_MARGIN = 0.01
+H1_TOST_LEVEL = 1 - 2 * (0.05 / 3)
+
+
+def _h1_tost_ok(a, n_boot_sim, margin) -> bool:
+    """Family-level TOST (alpha 0.05/3 per side): two-sided 1 - 2 alpha bootstrap interval, or the
+    one-sided 1 - alpha rare-event bound, inside +-margin."""
+    r = interval(a, H1_TOST_LEVEL, n_boot_sim)
+    if r["method"] == "bound":  # one-sided limit at alpha per side, as in equivalence_ok
+        r = interval(a, FAMILY_LEVEL, n_boot_sim)
+    lo, hi = r["ci"]
+    return -margin < lo and hi < margin
+
+
+def _family_ci(a, n_boot_sim) -> tuple[float, float]:
+    return interval(a, FAMILY_LEVEL, n_boot_sim)["ci"]
+
+
+def h1_tost(diffs, n=600, reps=500, n_boot_sim=2000, seed=0, margin=H1_MARGIN) -> dict:
+    """D70(2): family-level H1 TOST at n from PROBE-VAL puzzle-level differences
+    (B_permuted - B_generated): power with the diffs re-centred at 0 and unchanged (observed mean),
+    false-equivalence rate with the diffs shifted to +margin and -margin, and the share of runs at
+    the observed mean whose 98.33% family interval excludes 0 (and, jointly with the TOST, lies
+    above 0: lower limit > 0)."""
+    x = np.asarray(diffs, dtype=float)
+    x = x[~np.isnan(x)]
+    tost = lambda a: _h1_tost_ok(a, n_boot_sim, margin)  # noqa: E731
+
+    def share(y, crit):
+        return _share(lambda m, r: _draw(y, r, m), crit, n, reps, np.random.default_rng(seed))
+
+    rng = np.random.default_rng(seed)  # observed mean: TOST and the family interval on the same samples
+    rows = []
+    for _ in range(reps):
+        a = _draw(x, rng, n)
+        lo, hi = _family_ci(a, n_boot_sim)
+        rows.append((tost(a), lo > 0 or hi < 0, lo > 0))
+    pairs = np.array(rows, dtype=bool)
+    return {
+        "power_at_zero": share(shift_to(x, 0.0), tost),
+        "power_at_observed": float(pairs[:, 0].mean()),
+        "false_equivalence": {f"+{margin}": share(shift_to(x, margin), tost),
+                              f"-{margin}": share(shift_to(x, -margin), tost)},
+        "excludes_zero_at_observed": float(pairs[:, 1].mean()),
+        "inside_and_above_zero_at_observed": float(np.mean(pairs[:, 0] & pairs[:, 2])),
+        "observed_mean": float(x.mean()), "observed_sd": float(x.std(ddof=1)) if len(x) > 1 else None,
+        "n_pilot": int(len(x)),
+        "planning_parameters": {
+            "n": int(n), "reps": reps, "n_boot_sim": n_boot_sim, "seed": seed, "margin": margin,
+            "tost_level": H1_TOST_LEVEL, "bound_level": FAMILY_LEVEL, "excludes_zero_level": FAMILY_LEVEL,
+            "resampling": "per simulated sample: n draws with replacement from the (shifted) pilot values; "
+                          "shifts by shift_to (clipped to [-1, 1])",
             "non_confirmatory": True,
         },
     }

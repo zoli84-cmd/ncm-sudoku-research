@@ -95,6 +95,11 @@ def test_write_report_utf8(tmp_path):
     text = (tmp_path / "r.md").read_bytes().decode("utf-8")
     assert "θ₂" in text and "Non-confirmatory" in text
     assert "Sham mismatch" in text and "B1≠A 1" in text and "L11 2" in text
+    assert "Level-1 in-batch sham" in text and "TV = 0): –" in text  # legacy summary: no counter
+    mod.write_report({**_minimal_summary(), "level1_noop_mismatch": 3,
+                      "level1_noop_max_tv": {"tv": 0.0, "tv_empty": 2e-7}}, tmp_path / "r2.md")
+    text2 = (tmp_path / "r2.md").read_text(encoding="utf-8")
+    assert "TV = 0): 3" in text2 and "max no-op TV 0, TV (empty cells) 2e-07" in text2
 
 
 def test_from_raw_rebuilds_summary_and_respects_guard(tmp_path, monkeypatch):

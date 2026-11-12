@@ -1,0 +1,24 @@
+# src/ncm_sudoku
+
+DOX rules and project contracts are inherited from the project root [AGENTS.md](../../AGENTS.md).
+
+## Purpose
+
+Own Python package `ncm_sudoku`: Sudoku core, model instrumentation, and the experiment logic used by `scripts/`.
+
+## Ownership
+
+- Owns every module in this folder; one test module per package module lives in `tests/`
+
+## Local Contracts
+
+- `grid.PEER_ORDER` is a frozen literal (81 × 20); never reorder it, `tests/test_peer_order.py` pins the `PEER_IDX` SHA-256
+- Load checkpoints only through `model.load_model` (weights_only=True)
+
+## Verification
+
+- From the project root: `uv run pytest -q`
+
+## Child DOX Index
+
+- Modules: `grid.py` (grid conventions, NCM tokens, `PEERS`, frozen literal `PEER_ORDER` (81 × 20, the order `e3data._PEERS_IDX` and `wholelayer.PEER_IDX` use; never reorder, `tests/test_peer_order.py` pins the `PEER_IDX` SHA-256)), `validate.py` (parser, metrics), `solve.py` and `dlx.py` (independent solvers), `labels.py` (candidate mask, single waves), `generate.py` (fresh puzzles), `released.py` (safe loader for the released set), `model.py` (safe checkpoint loading), `official.py` (upstream metric mirror), `runner.py` (generation, decoding, teacher codes), `states.py` (cumulative states, cell mapping), `intervene.py` (`forward_with_intervention`, branches A–D), `g0.py` (G0 rule, identity checks, reproduction; shared run records `environment_record` and `code_state` (commit, dirty flag, diff hash over src/, scripts/, pyproject.toml, uv.lock)), `e2p2.py` (E2 pilot-2 runner `run_pilot2` with optional `frozen_freqs` (output `freq_source` "input" or "frozen"), `clean_codes` (branch A generation), `pilot_freqs`, `load_frozen_freqs` (reads `experiments/lock/cal_freqs.json`), `branch_context`/`compare` (C and D branches against A), `baseline_b1`, `level1_enumeration` (every level-1 value on the full ordered batch; rows with a1 = v are `noop` records with weight 0, ignored by every estimate), `level1_noop_mismatch` (in-batch sham count: C = A, D = B1, tv and tv_empty exactly 0) and `level1_noop_max_tv` (largest no-op tv and tv_empty), both reported by `summarize2`, puzzle-level contrasts, bootstrap or rare-event bound, pairwise AUC, `summarize2`), `subsets.py` (seed namespaces, generator freeze check, duplicate/signature screen), `gate.py` (distribution gate), `e1.py` (E1 summary), `perturb.py` (dose grid, code replacement), `e2.py` (E2 pilot runner, θ estimators, cluster bootstrap), `damage.py` (TV damage, latent distance, codebook RMS, re-quantization), `power.py` (E2 sample-size simulation: thinning, sign-mixing and sign-flip scenarios, `required_n`, `e2_sample_size`; E3 H1 sample size: `shift_to`, `h1_sample_size`; D70 lock simulations: `inject` (zero-injection scenario), `equivalence_ok` (E2 TOST rule), `equivalence_boundary_error`, `h1_tost` (family-level H1 TOST ±0.01)), `symmetry.py` (E3 prep: `Symmetry` group elements, `apply_symmetry`, `inverse`, `transform_predictions`, exact minlex `canonical_form`, orbit screen `screen_canonical`), `e3data.py` (E3 PROBE data extraction: `extract` and streaming `extract_streamed`, `labels`, `raw_features`/`peer_counts`/`surface_features` controls, `save_subset`/`load_level`), `probes.py` (E3 shared-cell probe training: `build_inputs` with an `n_positions` parameter for cell and unit readouts, `train_probe`, `GRID`/`SEEDS`, `brier_per_puzzle`, `select`, `fit_selected`), `e3controls.py` (E3 §8.2 controls and D62 unit–digit target: `permute_puzzles`, `random_features`, `permute_labels`, `marginal_brier`, `fit_cells`, `summarize_fit`, `permuted_control`, `run_controls`; `unit_digit_labels`, `unit_readout`, numpy `roc_auc`, `unit_metrics`, `run_unit_digit`), `e3equiv.py` (E3 D59 equivariance pilot `equivariance_pilot` with injectable predictors, first `n` puzzles in the given order (TEST: indices 0..199), optional fixed tolerance `acceptable` (output `acceptable_source` "fixed" or "seed_noise", `seed_noise_p95` always reported); `cell_level_states` (generated cell states at any level), `level6_states`; default predictor `model_predict_fn` = generate, level-6 cell states, probe; its `level` and `features` parameters give the level-12 whole-layer predictor), `wholelayer.py` (E3 D65/D66 cell-relative whole-layer diagnostic features: `PEER_IDX` (cell then its 20 peers in `grid.PEER_ORDER` order), `peer_states`, chunked-covariance `fit_pca_chunks`/`fit_pca`/`fit_cell_pca` (PROBE-TRAIN empty-cell rows only, eigh, sign-normalized, whitening `scale`), `project`, `variance_share`/`cell_variance_share` (val share with the train mean), `whole_layer_features` (whitened peer-state scores || own cell state), `raw_projected_features` (whitened PCA of `raw_features`))

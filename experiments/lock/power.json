@@ -1,0 +1,109 @@
+{
+  "note": "non-confirmatory planning output (plan v3.6 \u00a712.1); not evidence for H1, H2 or H3",
+  "date": "2026-11-12",
+  "code": {
+    "commit": "bed5f970f2c7d87f7dafe862a398b09df3b3195d",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "inputs": {
+    "theta2_prime": "runs\\e2p2\\pilot2.json",
+    "theta2_prime_sha256": "a29578707045e0849733f4ef8a3ef3ce0e350ac86519feab17c1f60417904ac2",
+    "n_theta2_prime": 300,
+    "h1_diffs": "experiments\\e3prep\\wholelayer_h1_diffs_L06.json",
+    "h1_diffs_sha256": "4c6f2835e9d801b897a015b5394abb08abd2cc878837506450f852bd94c8a9ff",
+    "h1_diffs_quantity": "B_permuted - B_generated, whole-layer (D66), level 6, linear, mean over 3 seeds",
+    "n_h1_diffs": 500,
+    "n_h1_diffs_ids": 500
+  },
+  "planning_parameters": {
+    "e2_equivalence_boundary": {
+      "n": 600,
+      "reps": 2000,
+      "n_boot_sim": 1000,
+      "seed": 0,
+      "margin": 0.03,
+      "level": 0.9,
+      "bound_level": 0.95,
+      "scenario": "per simulated sample: n draws with replacement from pilot values, each drawn zero set to sign(target) with the probability that makes the expected mean equal target",
+      "non_confirmatory": true
+    },
+    "h1_tost": {
+      "n": 600,
+      "reps": 500,
+      "n_boot_sim": 2000,
+      "seed": 0,
+      "margin": 0.01,
+      "tost_level": 0.9666666666666667,
+      "bound_level": 0.9833333333333333,
+      "excludes_zero_level": 0.9833333333333333,
+      "resampling": "per simulated sample: n draws with replacement from the (shifted) pilot values; shifts by shift_to (clipped to [-1, 1])",
+      "non_confirmatory": true
+    }
+  },
+  "e2_equivalence_boundary": {
+    "error": {
+      "+0.03": 0.0245,
+      "-0.03": 0.0365
+    },
+    "detail": {
+      "+0.03": {
+        "bound_share": 0.111,
+        "error_by_path": {
+          "bound": 0.013513513513513514,
+          "bootstrap": 0.025871766029246346
+        },
+        "mc_se": 0.003456859123539749
+      },
+      "-0.03": {
+        "bound_share": 0.0695,
+        "error_by_path": {
+          "bound": 0.007194244604316547,
+          "bootstrap": 0.03868887694787748
+        },
+        "mc_se": 0.004193313129257103
+      }
+    },
+    "pilot_mean": 0.0011111111111111111,
+    "pilot_zero_share": 0.9866666666666667,
+    "n_pilot": 300,
+    "notes": {},
+    "planning_parameters": {
+      "n": 600,
+      "reps": 2000,
+      "n_boot_sim": 1000,
+      "seed": 0,
+      "margin": 0.03,
+      "level": 0.9,
+      "bound_level": 0.95,
+      "scenario": "per simulated sample: n draws with replacement from pilot values, each drawn zero set to sign(target) with the probability that makes the expected mean equal target",
+      "non_confirmatory": true
+    }
+  },
+  "h1_tost": {
+    "power_at_zero": 1.0,
+    "power_at_observed": 1.0,
+    "false_equivalence": {
+      "+0.01": 0.016,
+      "-0.01": 0.014
+    },
+    "excludes_zero_at_observed": 1.0,
+    "inside_and_above_zero_at_observed": 1.0,
+    "observed_mean": 0.003110537107866331,
+    "observed_sd": 0.004160347716939246,
+    "n_pilot": 500,
+    "planning_parameters": {
+      "n": 600,
+      "reps": 500,
+      "n_boot_sim": 2000,
+      "seed": 0,
+      "margin": 0.01,
+      "tost_level": 0.9666666666666667,
+      "bound_level": 0.9833333333333333,
+      "excludes_zero_level": 0.9833333333333333,
+      "resampling": "per simulated sample: n draws with replacement from the (shifted) pilot values; shifts by shift_to (clipped to [-1, 1])",
+      "non_confirmatory": true
+    }
+  },
+  "seconds": 141.8
+}

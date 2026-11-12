@@ -16,7 +16,8 @@ def test_run_pilot2_small(model, released, monkeypatch):
     puzzles, sols = released
     out = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2)
     assert len(out["base"]) == 2 and all(b["solve_B1"] == b["solve_A"] for b in out["base"])
-    assert len(out["level1"]) == 2 * 15
+    assert len(out["level1"]) == 2 * 16  # full ordered batch: every value on both rows
+    assert sum(r["noop"] for r in out["level1"]) == 2 and out["level1_noop_mismatch"] == 0  # in-batch sham
     for pid in ("r0", "r1"):
         ws = [r["w_uniform"] for r in out["level1"] if r["puzzle_id"] == pid]
         assert sum(ws) == pytest.approx(1.0)
@@ -164,3 +165,194 @@ def test_summarize2_reports_hamming_empty_and_sham_mismatch():
     cfg = s["configurations"][0]
     assert cfg["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)
     assert s["level1"]["frequency"]["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)
+
+
+# --- frozen CAL code frequencies (v3.7 review CARBON-1) ---
+
+import json  # noqa: E402
+
+import torch  # noqa: E402
+
+from ncm_sudoku.perturb import code_frequencies  # noqa: E402
+
+
+def test_pilot_freqs_default_is_input():
+    A = torch.tensor([[1, 2, 2, 3], [1, 2, 5, 5]])
+    freqs, source = e2p2.pilot_freqs(A, (1, 3), None)
+    assert source == "input" and set(freqs) == {1, 2}
+    for lv, f in zip((1, 2), code_frequencies(A, (1, 3))):
+        assert torch.equal(freqs[lv], f)
+
+
+def test_pilot_freqs_frozen_overrides_and_validates():
+    A = torch.zeros((2, 12), dtype=torch.long)
+    levels = (1,) * 12
+    frozen = {lv: np.eye(16)[lv % 16] for lv in range(1, 13)}
+    freqs, source = e2p2.pilot_freqs(A, levels, frozen)
+    assert source == "frozen"
+    assert torch.equal(freqs[6], torch.tensor(np.eye(16)[6], dtype=torch.float32))
+    assert freqs[6].dtype == torch.float32
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {lv: v for lv, v in frozen.items() if lv != 11})
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {**frozen, 2: np.full(16, 0.5)})  # does not sum to 1
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {**frozen, 2: np.ones(15) / 15})  # wrong length
+
+
+def test_load_frozen_freqs_toy(tmp_path):
+    f = [0.0] * 16; f[3] = 0.25; f[7] = 0.75
+    obj = {"levels": {str(lv): {"counts": [0] * 3 + [1] + [0] * 3 + [3] + [0] * 8, "frequencies": f}
+                      for lv in range(1, 13)}}
+    path = tmp_path / "cal_freqs.json"
+    path.write_text(json.dumps(obj), encoding="utf-8")
+    out = e2p2.load_frozen_freqs(path)
+    assert set(out) == set(range(1, 13))
+    assert out[11].dtype == np.float32 and out[11][7] == np.float32(0.75) and out[11].shape == (16,)
+    obj["levels"]["2"]["frequencies"] = [1 / 16] * 16  # inconsistent with counts
+    path.write_text(json.dumps(obj), encoding="utf-8")
+    with pytest.raises(ValueError):
+        e2p2.load_frozen_freqs(path)
+
+
+@needs_model
+@pytest.mark.slow
+def test_run_pilot2_frozen_freqs_drive_draws(model, released, monkeypatch):
+    monkeypatch.setattr(e2p2, "LEVELS_P2", (11,))
+    monkeypatch.setattr(e2p2, "SEEDS_P2", (0,))
+    drawn = []
+    real = e2p2.perturb_level
+
+    def spy(level_codes, dose, policy, freqs, gen):
+        new, eligible = real(level_codes, dose, policy, freqs, gen)
+        if policy == "frequency":
+            drawn.append((level_codes.clone(), new.clone(), eligible.clone()))
+        return new, eligible
+    monkeypatch.setattr(e2p2, "perturb_level", spy)
+    puzzles, sols = released
+    v = 13
+    frozen = {lv: np.eye(16, dtype=np.float32)[v] for lv in range(1, 13)}
+    out = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2, frozen_freqs=frozen)
+    assert out["freq_source"] == "frozen" and out["freqs_level1"] == np.eye(16)[v].tolist()
+    assert drawn
+    for orig, new, eligible in drawn:
+        changed = new != orig
+        assert (new[changed] == v).all()
+        assert (~eligible | changed.any(dim=1)).all()
+    for r in out["level1"]:
+        assert r["w_frequency"] == (1.0 if r["value"] == v else 0.0)
+    drawn.clear()
+    default = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2)
+    assert default["freq_source"] == "input"
+    A = e2p2.clean_codes(model, puzzles[:2], chunk=2)
+    assert default["freqs_level1"] == code_frequencies(A, model.levels)[0].tolist()
+
+
+# --- full-batch level-1 enumeration (v3.7 Final ASTRA-1) ---
+
+from e2p2_fakes import N_TOY, TOY_LEVELS, install_fakes, toy_puzzles  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+
+def _toy_run(monkeypatch, **kw):
+    calls = []
+    install_fakes(monkeypatch, calls, **kw)
+    pz = toy_puzzles()
+    out = e2p2.run_pilot2(SimpleNamespace(levels=TOY_LEVELS), pz, pz.copy(), [f"p{i}" for i in range(N_TOY)], chunk=2)
+    return out, calls
+
+
+def test_level1_enumeration_runs_full_ordered_batch(monkeypatch):
+    out, calls = _toy_run(monkeypatch)
+    lvl1_d = [c for c in calls if c[0] == "D" and c[1] == 1]
+    # B1 (codes = A's own level-1 code) plus one full-batch pass per value, each in chunks of 2
+    assert len(lvl1_d) == 3 * (1 + 16)
+    rows = [r for c in lvl1_d for r in c[2]]
+    assert rows == list(range(1, N_TOY + 1)) * 17          # all rows, original order, every pass
+    assert [len(c[2]) for c in lvl1_d[:3]] == [2, 2, 1]    # same chunking as A/B
+    for v in range(16):  # pass v sets every row's level-1 code to v
+        assert all(x == v for c in lvl1_d[3 * (v + 1): 3 * (v + 2)] for x in c[3])
+    assert len(out["level1"]) == 16 * N_TOY
+    assert [r["value"] for r in out["level1"]] == [v for v in range(16) for _ in range(N_TOY)]
+    assert [r["puzzle_id"] for r in out["level1"][:N_TOY]] == [f"p{i}" for i in range(N_TOY)]
+
+
+def test_level1_noop_rows_flagged_with_zero_weight(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    a1 = dict(zip([f"p{i}" for i in range(N_TOY)], toy_puzzles()[:, 1].tolist()))
+    for r in out["level1"]:
+        assert r["noop"] == (a1[r["puzzle_id"]] == r["value"])
+        if r["noop"]:
+            assert r["w_frequency"] == 0.0 and r["w_uniform"] == 0.0 and r["tv"] == 0.0
+    assert sum(r["noop"] for r in out["level1"]) == N_TOY
+    assert out["level1_noop_mismatch"] == 0
+
+
+def test_level1_noop_rows_do_not_change_estimates(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    trimmed = {**out, "level1": [r for r in out["level1"] if not r["noop"]]}
+    for c in ("theta2", "theta_comp", "theta2_prime"):
+        for policy in ("frequency", "uniform"):
+            assert puzzle_values(out, c, policy) == puzzle_values(trimmed, c, policy)
+    full, cut = summarize2(out, n_boot=50), summarize2(trimmed, n_boot=50)
+    assert full["level1"] == cut["level1"] and full["contrasts"] == cut["contrasts"]
+    assert full["level1_noop_mismatch"] == 0
+
+
+def test_level1_noop_filter_is_explicit():
+    """No-op records are dropped even if a weight were nonzero (non-weight-based quantities too)."""
+    out = {
+        "base": [{"puzzle_id": "p", "solve_A": 1, "solve_B1": 1}],
+        "level1": [
+            {"puzzle_id": "p", "value": 1, "noop": False, "w_frequency": 1.0, "w_uniform": 1.0, "solve_C": 0,
+             "solve_D": 0, "well_formed_C": True, "well_formed_D": True,
+             **{k: 0.5 for k in e2p2.DAMAGE_KEYS}},
+            {"puzzle_id": "p", "value": 2, "noop": True, "w_frequency": 5.0, "w_uniform": 5.0, "solve_C": 1,
+             "solve_D": 1, "well_formed_C": False, "well_formed_D": False,
+             **{k: 9.0 for k in e2p2.DAMAGE_KEYS}},
+        ],
+    }
+    assert e2p2._level1_terms(out, "frequency") == {"p": (-1.0, 0.0)}
+    assert e2p2._level1_weighted(out["level1"], "frequency", "tv", {"p"}) == [{"tv": 0.5}]
+
+
+def test_level1_noop_mismatch_counts_forced_mismatch(monkeypatch):
+    out, _ = _toy_run(monkeypatch, flip_noop_solve=True)  # p0 (a1 = 3): C solve flipped when v = 3
+    assert out["level1_noop_mismatch"] == 1
+    assert summarize2(out, n_boot=50)["level1_noop_mismatch"] == 1
+    out, _ = _toy_run(monkeypatch, tv_value=0.25)        # every no-op row has TV != 0
+    assert out["level1_noop_mismatch"] == N_TOY
+
+
+def test_level1_noop_mismatch_function():
+    base = [{"puzzle_id": "a", "solve_A": 1, "solve_B1": 0}, {"puzzle_id": "b", "solve_A": 0, "solve_B1": 0}]
+    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "b", "noop": True, "solve_C": 0, "solve_D": 1, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "b", "noop": False, "solve_C": 1, "solve_D": 1, "tv": 0.3, "tv_empty": 0.3}]
+    assert e2p2.level1_noop_mismatch(recs, base) == 1
+
+
+def test_summarize2_without_noop_field_reports_none(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    legacy = {k: v for k, v in out.items() if k != "level1_noop_mismatch"}
+    legacy["level1"] = [{k: v for k, v in r.items() if k != "noop"} for r in out["level1"] if not r["noop"]]
+    assert summarize2(legacy, n_boot=50)["level1_noop_mismatch"] is None
+
+
+def test_level1_noop_mismatch_counts_tv_empty_and_reports_max_tv():
+    base = [{"puzzle_id": "a", "solve_A": 1, "solve_B1": 0}]
+    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 1e-9},
+            {"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "a", "noop": False, "solve_C": 0, "solve_D": 1, "tv": 0.7, "tv_empty": 0.9}]
+    assert e2p2.level1_noop_mismatch(recs, base) == 1  # exact: any nonzero tv_empty counts
+    assert e2p2.level1_noop_max_tv(recs) == {"tv": 0.0, "tv_empty": 1e-9}  # no-op rows only
+    assert e2p2.level1_noop_max_tv([r for r in recs if not r["noop"]]) == {"tv": None, "tv_empty": None}
+
+
+def test_run_pilot2_and_summarize2_report_noop_max_tv(monkeypatch):
+    out, _ = _toy_run(monkeypatch, tv_value=0.25)
+    assert out["level1_noop_max_tv"] == {"tv": 0.25, "tv_empty": 0.25}
+    s = summarize2(out, n_boot=50)
+    assert s["level1_noop_mismatch"] == N_TOY and s["level1_noop_max_tv"] == {"tv": 0.25, "tv_empty": 0.25}
+    legacy = {k: v for k, v in out.items() if k not in ("level1_noop_mismatch", "level1_noop_max_tv")}
+    assert summarize2(legacy, n_boot=50)["level1_noop_max_tv"] is None

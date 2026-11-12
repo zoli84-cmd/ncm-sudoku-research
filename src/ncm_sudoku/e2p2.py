@@ -5,6 +5,7 @@ C level l perturbed with A's suffix replayed, D level l perturbed with the suffi
 regenerated. Damage measures compare C against A on the final cumulative state.
 """
 
+import json
 import math
 from collections import defaultdict
 
@@ -30,74 +31,177 @@ QUANTILES = (0.0, 0.25, 0.5, 0.75, 1.0)
 DAMAGE_KEYS = ("tv", "tv_empty", "hamming_CA", "hamming_CA_empty", "latent", "codebook_rms", "requant_ratio")
 
 
+FROZEN_LEVELS = (1, *LEVELS_P2)  # levels whose frequencies the pilot uses
+
+
 @torch.no_grad()
-def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
-               chunk: int = 50) -> dict:
+def clean_codes(m: NcmModel, puzzles: np.ndarray, chunk: int = 50) -> torch.Tensor:
+    """Clean generated codes A (branch A), generated in chunks of `chunk` puzzles."""
+    return _chunked(lambda s: generate_codes(m, puzzles[s], batch_size=chunk), len(puzzles), chunk)
+
+
+def pilot_freqs(A: torch.Tensor, levels, frozen_freqs: dict | None = None) -> tuple[dict[int, torch.Tensor], str]:
+    """Per-level code frequencies {level: float32 [16]} and their source. Default: estimated
+    from the input codes A (`code_frequencies`, source "input"); with `frozen_freqs` (e.g.
+    `load_frozen_freqs` of the CAL file) the given vectors are used (source "frozen"); levels
+    1, 2, 6 and 11 are required, each a length-16 nonnegative vector summing to 1."""
+    if frozen_freqs is None:
+        return {lv: f for lv, f in enumerate(code_frequencies(A, levels), start=1)}, "input"
+    missing = [lv for lv in FROZEN_LEVELS if lv not in frozen_freqs]
+    if missing:
+        raise ValueError(f"frozen_freqs lacks levels {missing}")
+    out = {}
+    for lv, f in frozen_freqs.items():
+        t = torch.as_tensor(np.asarray(f, dtype=np.float32))
+        if t.shape != (N_CODES,) or (t < 0).any() or abs(float(t.double().sum()) - 1.0) > 1e-6:
+            raise ValueError(f"frozen frequencies for level {lv} are not a length-{N_CODES} distribution")
+        out[int(lv)] = t
+    return out, "frozen"
+
+
+def load_frozen_freqs(path) -> dict[int, np.ndarray]:
+    """Reads `experiments/lock/cal_freqs.json` ({"levels": {"1": {"counts", "frequencies"}, ...}})
+    into {level: float32 [16]}; raises ValueError if a frequency vector differs from the one
+    its counts give (counts / sum in float64, then float32, as `code_frequencies`)."""
+    obj = json.loads(open(path, encoding="utf-8").read())
+    out = {}
+    for key, entry in obj["levels"].items():
+        f = np.asarray(entry["frequencies"], dtype=np.float32)
+        c = np.asarray(entry["counts"], dtype=np.float64)
+        if f.shape != (N_CODES,) or c.shape != (N_CODES,) or not np.array_equal(f, (c / c.sum()).astype(np.float32)):
+            raise ValueError(f"{path}: level {key} frequencies do not match their counts")
+        out[int(key)] = f
+    return out
+
+
+@torch.no_grad()
+def branch_context(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, A: torch.Tensor,
+                   chunk: int = 50) -> dict:
+    """What `compare` needs about branch A: prefixes, level slices, empty mask, parsed and
+    evaluated A, and A's final cumulative state and decoded logits (in A's chunks)."""
     n = len(puzzles)
-    prefix = puzzle_tensor(puzzles)
-    slices = level_slices(m.levels)
-    empty = torch.as_tensor(np.asarray(puzzles) == 0)
-    A = _chunked(lambda s: generate_codes(m, puzzles[s], batch_size=chunk), n, chunk)
     parsed_A, met_A = _eval(puzzles, solutions, A, m)
     z_A = _chunked(lambda s: cumulative_states(m, A[s])[-1], n, chunk)
-    logits_A = _chunked(lambda s: decode_state_logits(m, z_A[s]), n, chunk)
-    freqs1 = code_frequencies(A, m.levels)[0]
+    return {
+        "m": m, "puzzles": puzzles, "solutions": solutions, "A": A, "chunk": chunk,
+        "prefix": puzzle_tensor(puzzles), "slices": level_slices(m.levels),
+        "empty": torch.as_tensor(np.asarray(puzzles) == 0),
+        "parsed_A": parsed_A, "met_A": met_A, "z_A": z_A,
+        "logits_A": _chunked(lambda s: decode_state_logits(m, z_A[s]), n, chunk),
+    }
 
-    def compare(idx: torch.Tensor, C: torch.Tensor, level: int) -> list[dict]:
-        """Branches C (given) and D (regenerated) for puzzle rows `idx`; one dict per row."""
-        k, end = len(idx), slices[level - 1].stop
-        D = _chunked(lambda s: continue_generation(m, prefix[idx[s]], C[s, :end], level), k, chunk)
-        p_sub, s_sub = puzzles[idx.numpy()], solutions[idx.numpy()]
-        parsed_C, met_C = _eval(p_sub, s_sub, C, m)
-        _, met_D = _eval(p_sub, s_sub, D, m)
-        tv, tv_e, lat, ratio = [], [], [], []
-        for i in range(0, k, chunk):
-            s = slice(i, min(i + chunk, k))
-            rows = idx[s]
-            states = cumulative_states(m, C[s])
-            logits_C = decode_state_logits(m, states[-1])
-            tv.append(tv_damage(logits_C, logits_A[rows]))
-            tv_e.append(tv_damage(logits_C, logits_A[rows], empty[rows]))
-            lat.append(latent_distance(states[-1], z_A[rows]))
-            ratio.append(requantize(m, z_A[rows] - states[level - 1], level + 1)[1])
-        tv, tv_e, lat, ratio = (torch.cat(t).tolist() for t in (tv, tv_e, lat, ratio))
-        sl = slices[level - 1]
-        rms = codebook_rms(m, level, A[idx][:, sl], C[:, sl]).tolist()
-        changes = (D[:, end:] != A[idx][:, end:]).sum(dim=1).tolist()
-        out = []
-        for j, i in enumerate(idx.tolist()):
-            both_ok = met_C[j].well_formed and met_A[i].well_formed
-            empty_cells = np.flatnonzero(np.asarray(puzzles[i]).reshape(-1) == 0)
-            out.append({
-                "solve_C": int(met_C[j].solve), "solve_D": int(met_D[j].solve),
-                "well_formed_C": bool(met_C[j].well_formed), "well_formed_D": bool(met_D[j].well_formed),
-                "tv": tv[j], "tv_empty": tv_e[j],
-                "hamming_CA": cell_hamming(parsed_C[j].cells, parsed_A[i].cells) if both_ok else None,
-                "hamming_CA_empty": (cell_hamming(parsed_C[j].cells, parsed_A[i].cells, empty_cells)
-                                     if both_ok else None),
-                "latent": lat[j], "codebook_rms": rms[j], "requant_ratio": ratio[j],
-                "downstream_changes_D": int(changes[j]),
-            })
-        return out
 
+@torch.no_grad()
+def compare(ctx: dict, idx: torch.Tensor, C: torch.Tensor, level: int) -> list[dict]:
+    """Branches C (given) and D (regenerated from C's levels <= `level`) for puzzle rows `idx`,
+    in chunks of `ctx["chunk"]`; one dict per row."""
+    m, puzzles, solutions, A, chunk = (ctx[k] for k in ("m", "puzzles", "solutions", "A", "chunk"))
+    prefix, slices, empty = ctx["prefix"], ctx["slices"], ctx["empty"]
+    parsed_A, met_A, z_A, logits_A = (ctx[k] for k in ("parsed_A", "met_A", "z_A", "logits_A"))
+    k, end = len(idx), slices[level - 1].stop
+    D = _chunked(lambda s: continue_generation(m, prefix[idx[s]], C[s, :end], level), k, chunk)
+    p_sub, s_sub = puzzles[idx.numpy()], solutions[idx.numpy()]
+    parsed_C, met_C = _eval(p_sub, s_sub, C, m)
+    _, met_D = _eval(p_sub, s_sub, D, m)
+    tv, tv_e, lat, ratio = [], [], [], []
+    for i in range(0, k, chunk):
+        s = slice(i, min(i + chunk, k))
+        rows = idx[s]
+        states = cumulative_states(m, C[s])
+        logits_C = decode_state_logits(m, states[-1])
+        tv.append(tv_damage(logits_C, logits_A[rows]))
+        tv_e.append(tv_damage(logits_C, logits_A[rows], empty[rows]))
+        lat.append(latent_distance(states[-1], z_A[rows]))
+        ratio.append(requantize(m, z_A[rows] - states[level - 1], level + 1)[1])
+    tv, tv_e, lat, ratio = (torch.cat(t).tolist() for t in (tv, tv_e, lat, ratio))
+    sl = slices[level - 1]
+    rms = codebook_rms(m, level, A[idx][:, sl], C[:, sl]).tolist()
+    changes = (D[:, end:] != A[idx][:, end:]).sum(dim=1).tolist()
+    out = []
+    for j, i in enumerate(idx.tolist()):
+        both_ok = met_C[j].well_formed and met_A[i].well_formed
+        empty_cells = np.flatnonzero(np.asarray(puzzles[i]).reshape(-1) == 0)
+        out.append({
+            "solve_C": int(met_C[j].solve), "solve_D": int(met_D[j].solve),
+            "well_formed_C": bool(met_C[j].well_formed), "well_formed_D": bool(met_D[j].well_formed),
+            "tv": tv[j], "tv_empty": tv_e[j],
+            "hamming_CA": cell_hamming(parsed_C[j].cells, parsed_A[i].cells) if both_ok else None,
+            "hamming_CA_empty": (cell_hamming(parsed_C[j].cells, parsed_A[i].cells, empty_cells)
+                                 if both_ok else None),
+            "latent": lat[j], "codebook_rms": rms[j], "requant_ratio": ratio[j],
+            "downstream_changes_D": int(changes[j]),
+        })
+    return out
+
+
+@torch.no_grad()
+def baseline_b1(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
+                ctx: dict) -> list[dict]:
+    """Sham B1 (restart from A's level-1 code) on the full batch: per puzzle solve_A and solve_B1."""
+    n, chunk, A, prefix = len(puzzles), ctx["chunk"], ctx["A"], ctx["prefix"]
     B1 = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :1], 1), n, chunk)
     _, met_B1 = _eval(puzzles, solutions, B1, m)
-    base = [{"puzzle_id": puzzle_ids[i], "solve_A": int(met_A[i].solve), "solve_B1": int(met_B1[i].solve)}
+    return [{"puzzle_id": puzzle_ids[i], "solve_A": int(ctx["met_A"][i].solve), "solve_B1": int(met_B1[i].solve)}
             for i in range(n)]
 
-    a1 = A[:, slices[0]].squeeze(1)  # level 1 has a single code
+
+@torch.no_grad()
+def level1_enumeration(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
+                       A: torch.Tensor, freqs1: torch.Tensor, chunk: int = 50,
+                       ctx: dict | None = None) -> list[dict]:
+    """Level-1 enumeration on the full ordered batch (plan §2.2 item 5; v3.7 Final ASTRA-1): for
+    every value v = 0..15, C = A with every row's level-1 code set to v; C and D run on all n rows
+    in the original order with A's chunking. Rows whose own level-1 code is v are no-op rows
+    (C equals A): kept with `noop` True and weight 0 under both policies as an in-batch sham
+    check (`level1_noop_mismatch`); every estimate ignores them (`_active`)."""
+    ctx = branch_context(m, puzzles, solutions, A, chunk) if ctx is None else ctx
+    a1 = A[:, ctx["slices"][0]].squeeze(1)  # level 1 has a single code
     w = {p: level1_weights(a1, freqs1, p) for p in POLICIES}
+    all_rows = torch.arange(len(puzzles))
     level1 = []
     for v in range(N_CODES):
-        idx = torch.nonzero(a1 != v).squeeze(1)
-        if len(idx) == 0:
-            continue
-        C = A[idx].clone()
+        C = A.clone()
         C[:, 0] = v
-        for i, rec in zip(idx.tolist(), compare(idx, C, 1)):
-            level1.append({"puzzle_id": puzzle_ids[i], "value": v,
-                           "w_frequency": float(w["frequency"][i, v]), "w_uniform": float(w["uniform"][i, v]),
+        for i, rec in enumerate(compare(ctx, all_rows, C, 1)):
+            noop = int(a1[i]) == v
+            level1.append({"puzzle_id": puzzle_ids[i], "value": v, "noop": noop,
+                           "w_frequency": 0.0 if noop else float(w["frequency"][i, v]),
+                           "w_uniform": 0.0 if noop else float(w["uniform"][i, v]),
                            **rec})
+    return level1
+
+
+def level1_noop_mismatch(level1: list[dict], base: list[dict]) -> int:
+    """No-op records that violate the in-batch sham: solve_C != solve_A, solve_D != solve_B1,
+    tv != 0 or tv_empty != 0 (exact comparisons)."""
+    b = {r["puzzle_id"]: r for r in base}
+    return sum(1 for r in level1 if r.get("noop") and (
+        r["solve_C"] != b[r["puzzle_id"]]["solve_A"] or r["solve_D"] != b[r["puzzle_id"]]["solve_B1"]
+        or r["tv"] != 0 or r["tv_empty"] != 0))
+
+
+def level1_noop_max_tv(level1: list[dict]) -> dict:
+    """Largest `tv` and `tv_empty` over the no-op records (None if there are none); 0 when C equals A."""
+    noop = [r for r in level1 if r.get("noop")]
+    return {k: (max(r[k] for r in noop) if noop else None) for k in ("tv", "tv_empty")}
+
+
+@torch.no_grad()
+def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
+               chunk: int = 50, frozen_freqs: dict[int, np.ndarray] | None = None) -> dict:
+    """`frozen_freqs` (optional): per-level code frequencies used for the level-1 weights and
+    the level 2/6/11 frequency-policy draws instead of the input's own (`pilot_freqs`);
+    the output records `freq_source` ("input" or "frozen"). Level 1 runs on the full ordered
+    batch (`level1_enumeration`); `level1_noop_mismatch` counts in-batch sham violations."""
+    n = len(puzzles)
+    A = clean_codes(m, puzzles, chunk)
+    ctx = branch_context(m, puzzles, solutions, A, chunk)
+    slices, prefix, met_A = ctx["slices"], ctx["prefix"], ctx["met_A"]
+    level_freqs, freq_source = pilot_freqs(A, m.levels, frozen_freqs)
+    freqs1 = level_freqs[1]
+
+    base = baseline_b1(m, puzzles, solutions, puzzle_ids, ctx)
+    level1 = level1_enumeration(m, puzzles, solutions, puzzle_ids, A, freqs1, chunk, ctx)
 
     records = []
     all_rows = torch.arange(n)
@@ -105,7 +209,7 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
         sl, end = slices[level - 1], slices[level - 1].stop
         B = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :end], level), n, chunk)
         _, met_B = _eval(puzzles, solutions, B, m)
-        freqs = code_frequencies(A, m.levels)[level - 1]
+        freqs = level_freqs[level]
         for policy in POLICIES:
             for dose in dose_grid(sl.stop - sl.start, DOSE_FRACTIONS_V36):
                 for seed in SEEDS_P2:
@@ -113,21 +217,29 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
                     new_level, eligible = perturb_level(A[:, sl], dose, policy, freqs, gen)
                     C = A.clone()
                     C[:, sl] = new_level
-                    for i, rec in enumerate(compare(all_rows, C, level)):
+                    for i, rec in enumerate(compare(ctx, all_rows, C, level)):
                         records.append({"puzzle_id": puzzle_ids[i], "level": level, "policy": policy,
                                         "dose": dose, "seed": seed, "eligible": bool(eligible[i]),
                                         "solve_A": int(met_A[i].solve), "solve_B": int(met_B[i].solve), **rec})
 
-    return {"freqs_level1": freqs1.tolist(), "base": base, "level1": level1, "records": records}
+    return {"freqs_level1": freqs1.tolist(), "freq_source": freq_source, "base": base, "level1": level1,
+            "level1_noop_mismatch": level1_noop_mismatch(level1, base),
+            "level1_noop_max_tv": level1_noop_max_tv(level1), "records": records}
 
 
 # ---------------------------------------------------------------- statistics (plan v3.6 §7.2, §11.2)
 
+def _active(level1: list[dict]) -> list[dict]:
+    """Level-1 records without the no-op rows (`noop` True: C equals A, the in-batch sham)."""
+    return [r for r in level1 if not r.get("noop", False)]
+
+
 def _level1_terms(out: dict, policy: str) -> dict[str, tuple[float, float]]:
-    """Per eligible puzzle: (sum_v w (D - A), sum_v w (D - C)) at level 1; ineligible = weights sum to 0."""
+    """Per eligible puzzle: (sum_v w (D - A), sum_v w (D - C)) at level 1; ineligible = weights sum
+    to 0. No-op rows are ignored."""
     A = {b["puzzle_id"]: b["solve_A"] for b in out["base"]}
     acc = defaultdict(lambda: [0.0, 0.0, 0.0])
-    for r in out["level1"]:
+    for r in _active(out["level1"]):
         w, t = r[f"w_{policy}"], acc[r["puzzle_id"]]
         t[0] += w
         t[1] += w * (r["solve_D"] - A[r["puzzle_id"]])
@@ -245,9 +357,10 @@ def _quantiles(rows, key):
 
 
 def _level1_weighted(level1, policy, key, pids) -> list[dict]:
-    """Per eligible puzzle: {key: sum_v w d / sum_v w} over records with a non-None value (plan §7.2 weights)."""
+    """Per eligible puzzle: {key: sum_v w d / sum_v w} over non-no-op records with a non-None value
+    (plan §7.2 weights)."""
     acc = defaultdict(lambda: [0.0, 0.0])
-    for r in level1:
+    for r in _active(level1):
         if r["puzzle_id"] in pids and r[key] is not None:
             w, t = r[f"w_{policy}"], acc[r["puzzle_id"]]
             t[0] += w * r[key]
@@ -296,7 +409,7 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
     level1 = {}
     for policy in POLICIES:
         acc = defaultdict(lambda: np.zeros(5))
-        for r in out["level1"]:
+        for r in _active(out["level1"]):
             w = r[f"w_{policy}"]
             acc[r["puzzle_id"]] += [w, w * r["solve_C"], w * r["solve_D"],
                                     w * (not r["well_formed_C"]), w * (not r["well_formed_D"])]
@@ -323,6 +436,9 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
     return {
         "non_confirmatory": True,
         "sham_mismatch": sham,
+        # in-batch level-1 sham (no-op rows); None for outputs from before the full-batch enumeration
+        "level1_noop_mismatch": out.get("level1_noop_mismatch"),
+        "level1_noop_max_tv": out.get("level1_noop_max_tv"),
         "freqs_level1": out["freqs_level1"],
         "contrasts": contrasts,
         "equivalence_tost": bool(-TOST_MARGIN < tost["ci"][0] and tost["ci"][1] < TOST_MARGIN),
