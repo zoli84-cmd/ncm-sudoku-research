@@ -71,6 +71,9 @@ def test_lock_level1_check_matches_pilot(tmp_path, monkeypatch):
     assert c["fields"]["tv"]["max_abs_diff"] == 0.0 and "max_abs_diff" not in c["fields"]["solve_C"]
     assert out["level1_noop_mismatch"] == 0 and out["n_noop"] == N_TOY
     assert out["base_diff"] == {"solve_A": 0, "solve_B1": 0}
+    assert out["freqs_level1_match_pilot"] is True and out["freqs_level1_match_input"] is True
+    assert c["fields"]["w_frequency"]["n_diff"] == 0 and c["fields"]["w_uniform"]["max_abs_diff"] == 0.0
+    assert out["level1_noop_max_tv"] == {"tv": 0.0, "tv_empty": 0.0}
     for policy in ("frequency", "uniform"):
         t = out["theta"][policy]
         for q in ("level1_term_theta2", "theta_comp", "theta2"):
@@ -96,3 +99,22 @@ def test_lock_level1_check_reports_forced_difference(tmp_path, monkeypatch):
     assert f["solve_C"]["n_diff"] == 0
     assert out["comparison"]["differing"][0]["puzzle_id"] == r["puzzle_id"]
     assert out["theta"]["uniform"]["theta_comp"]["max_abs_diff"] > 0  # uniform weight 1/15 on that record
+
+
+def test_lock_level1_check_weight_frequency_and_theta2_gating(tmp_path, monkeypatch):
+    pilot = _legacy_pilot(monkeypatch)
+    pilot["level1"][2]["w_uniform"] += 0.01
+    pilot["freqs_level1"] = [1 / 16] * 16
+    pilot["base"][0]["solve_A"] = 1 - pilot["base"][0]["solve_A"]
+    mod = _load("lock_level1_check")
+    _setup(mod, tmp_path, monkeypatch, pilot)
+    mod.main()
+    out = json.loads((tmp_path / "lock" / "level1_check.json").read_text(encoding="utf-8"))
+    f = out["comparison"]["fields"]
+    assert f["w_uniform"]["n_diff"] == 1 and f["w_uniform"]["max_abs_diff"] == pytest.approx(0.01)
+    assert out["freqs_level1_match_pilot"] is False and out["freqs_level1_match_input"] is True
+    assert out["base_diff"]["solve_A"] == 1
+    for policy in ("frequency", "uniform"):
+        t = out["theta"][policy]
+        assert t["theta2"] is None and "solve_A" in t["theta2_note"]
+        assert t["theta_comp"]["n_new"] > 0 and t["level1_term_theta2"]["n_new"] > 0

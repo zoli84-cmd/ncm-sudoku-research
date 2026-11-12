@@ -8,10 +8,13 @@ recorded after `load_model`, `e2p2.clean_codes` with chunks of 50), runs the sha
 (`e2p2.baseline_b1`) and the full-batch `e2p2.level1_enumeration` with the frozen CAL level-1
 frequencies from experiments/lock/cal_freqs.json, and compares with the pilot-2 level-1 records
 in runs/e2p2/pilot2.json (subset batches): matched on (puzzle_id, value) for the non-no-op rows,
-per field the number of differing records and, for floats, the maximum absolute difference;
+per field (outcomes, damage measures and the two policy weights) the number of differing records
+and, for floats, the maximum absolute difference; whether the frozen level-1 frequencies equal the
+pilot's `freqs_level1` and the ones re-estimated from A;
 the base (solve_A, solve_B1) differences; the recomputed level-1 quantities next to the pilot
 values per policy (level-1 term of theta2, theta_comp, and theta2 with the pilot's level-11
-term), all through the `e2p2` estimator path; and `level1_noop_mismatch`.
+term, set to None when solve_A differs from the pilot), all through the `e2p2` estimator path;
+and `level1_noop_mismatch` with the largest no-op tv and tv_empty.
 Writes experiments/lock/level1_check.json (atomic) and the new raw level-1 records to
 runs/lock/level1_full_batch.json. Refuses to overwrite level1_check.json unless --force.
 """
@@ -27,7 +30,8 @@ import torch
 from ncm_sudoku import e2p2
 from ncm_sudoku.e2 import POLICIES
 from ncm_sudoku.e2p2 import (
-    baseline_b1, branch_context, clean_codes, level1_enumeration, level1_noop_mismatch, load_frozen_freqs,
+    baseline_b1, branch_context, clean_codes, level1_enumeration, level1_noop_max_tv, level1_noop_mismatch,
+    load_frozen_freqs,
     puzzle_values,
 )
 from ncm_sudoku.g0 import code_state, environment_record
@@ -42,8 +46,8 @@ PILOT = ROOT / "runs" / "e2p2" / "pilot2.json"
 OUT = ROOT / "experiments" / "lock" / "level1_check.json"
 RAW = ROOT / "runs" / "lock" / "level1_full_batch.json"
 FIELDS = ("solve_C", "solve_D", "well_formed_C", "well_formed_D", "tv", "tv_empty", "latent", "requant_ratio",
-          "downstream_changes_D")
-FLOAT_FIELDS = ("tv", "tv_empty", "latent", "requant_ratio")
+          "downstream_changes_D", "w_frequency", "w_uniform")
+FLOAT_FIELDS = ("tv", "tv_empty", "latent", "requant_ratio", "w_frequency", "w_uniform")
 MAX_LISTED = 50
 NOTE = ("non-confirmatory validation (v3.7 Final ASTRA-1): full-batch level-1 enumeration on CAL compared "
         "with the pilot-2 subset-batch level-1 records")
@@ -89,9 +93,11 @@ def _summary(new: dict[str, float], old: dict[str, float]) -> dict:
             "max_abs_diff": max((abs(new[p] - old[p]) for p in common), default=0.0)}
 
 
-def theta_comparison(new: dict, pilot: dict) -> dict:
+def theta_comparison(new: dict, pilot: dict, theta2_valid: bool = True) -> dict:
     """Per policy: mean level-1 term of theta2 (sum_v w (D - A)), theta_comp, and theta2 with the
-    pilot's level-11 term, from the new and the pilot level-1 records (`e2p2` estimator path)."""
+    pilot's level-11 term, from the new and the pilot level-1 records (`e2p2` estimator path).
+    theta2 is None (with `theta2_note`) when `theta2_valid` is False: the pilot's level-11 term
+    uses the pilot's solve_A, so a different A makes the mixed theta2 meaningless."""
     out = {}
     for policy in POLICIES:
         lt = {k: {pid: da for pid, (da, _) in e2p2._level1_terms(d, policy).items()} for k, d in
@@ -99,8 +105,12 @@ def theta_comparison(new: dict, pilot: dict) -> dict:
         out[policy] = {
             "level1_term_theta2": _summary(lt["new"], lt["pilot"]),
             "theta_comp": _summary(puzzle_values(new, "theta_comp", policy), puzzle_values(pilot, "theta_comp", policy)),
-            "theta2": _summary(puzzle_values(new, "theta2", policy), puzzle_values(pilot, "theta2", policy)),
+            "theta2": (_summary(puzzle_values(new, "theta2", policy), puzzle_values(pilot, "theta2", policy))
+                       if theta2_valid else None),
         }
+        if not theta2_valid:
+            out[policy]["theta2_note"] = ("invalid: base_diff solve_A != 0, so the pilot's level-11 term "
+                                          "does not match the regenerated A")
     return out
 
 
@@ -120,23 +130,25 @@ def main() -> None:
     ctx = branch_context(m, puzzles, solutions, A, CHUNK)
     base = baseline_b1(m, puzzles, solutions, ids, ctx)
     level1 = level1_enumeration(m, puzzles, solutions, ids, A, freqs1, CHUNK, ctx)
-    mismatch = level1_noop_mismatch(level1, base)
+    mismatch, max_tv = level1_noop_mismatch(level1, base), level1_noop_max_tv(level1)
     seconds = round(time.perf_counter() - t0, 1)
     _atomic(RAW, json.dumps({"freqs_level1": freqs1.tolist(), "freq_source": "frozen", "ids": ids, "base": base,
                              "level1": level1, "level1_noop_mismatch": mismatch}) + "\n")
 
     new = {"base": base, "level1": level1, "records": pilot["records"]}  # level-11 term from the pilot
     pilot_base = {b["puzzle_id"]: b for b in pilot["base"]}
+    base_diff = {k: sum(b[k] != pilot_base[b["puzzle_id"]][k] for b in base if b["puzzle_id"] in pilot_base)
+                 for k in ("solve_A", "solve_B1")}
     out = {
         "note": NOTE, "non_confirmatory": True, "date": time.strftime("%Y-%m-%d"), "code": code_state(),
         "environment": environment, "n_cal": len(ids), "chunk": CHUNK,
         "freqs_level1_match_input": freqs1.tolist() == code_frequencies(A, m.levels)[0].tolist(),
-        "level1_noop_mismatch": mismatch, "n_noop": sum(r["noop"] for r in level1),
+        "freqs_level1_match_pilot": freqs1.tolist() == pilot["freqs_level1"],
+        "level1_noop_mismatch": mismatch, "level1_noop_max_tv": max_tv, "n_noop": sum(r["noop"] for r in level1),
         "n_level1_records": len(level1),
-        "base_diff": {k: sum(b[k] != pilot_base[b["puzzle_id"]][k] for b in base if b["puzzle_id"] in pilot_base)
-                      for k in ("solve_A", "solve_B1")},
+        "base_diff": base_diff,
         "comparison": compare_records(level1, pilot["level1"]),
-        "theta": theta_comparison(new, pilot),
+        "theta": theta_comparison(new, pilot, theta2_valid=base_diff["solve_A"] == 0),
         "raw": str(RAW.relative_to(ROOT)) if RAW.is_relative_to(ROOT) else str(RAW),
         "seconds": seconds,
     }

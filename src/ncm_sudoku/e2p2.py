@@ -172,11 +172,18 @@ def level1_enumeration(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, 
 
 
 def level1_noop_mismatch(level1: list[dict], base: list[dict]) -> int:
-    """No-op records that violate the in-batch sham: solve_C != solve_A, solve_D != solve_B1, or TV != 0."""
+    """No-op records that violate the in-batch sham: solve_C != solve_A, solve_D != solve_B1,
+    tv != 0 or tv_empty != 0 (exact comparisons)."""
     b = {r["puzzle_id"]: r for r in base}
     return sum(1 for r in level1 if r.get("noop") and (
         r["solve_C"] != b[r["puzzle_id"]]["solve_A"] or r["solve_D"] != b[r["puzzle_id"]]["solve_B1"]
-        or r["tv"] != 0))
+        or r["tv"] != 0 or r["tv_empty"] != 0))
+
+
+def level1_noop_max_tv(level1: list[dict]) -> dict:
+    """Largest `tv` and `tv_empty` over the no-op records (None if there are none); 0 when C equals A."""
+    noop = [r for r in level1 if r.get("noop")]
+    return {k: (max(r[k] for r in noop) if noop else None) for k in ("tv", "tv_empty")}
 
 
 @torch.no_grad()
@@ -216,7 +223,8 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
                                         "solve_A": int(met_A[i].solve), "solve_B": int(met_B[i].solve), **rec})
 
     return {"freqs_level1": freqs1.tolist(), "freq_source": freq_source, "base": base, "level1": level1,
-            "level1_noop_mismatch": level1_noop_mismatch(level1, base), "records": records}
+            "level1_noop_mismatch": level1_noop_mismatch(level1, base),
+            "level1_noop_max_tv": level1_noop_max_tv(level1), "records": records}
 
 
 # ---------------------------------------------------------------- statistics (plan v3.6 §7.2, §11.2)
@@ -430,6 +438,7 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
         "sham_mismatch": sham,
         # in-batch level-1 sham (no-op rows); None for outputs from before the full-batch enumeration
         "level1_noop_mismatch": out.get("level1_noop_mismatch"),
+        "level1_noop_max_tv": out.get("level1_noop_max_tv"),
         "freqs_level1": out["freqs_level1"],
         "contrasts": contrasts,
         "equivalence_tost": bool(-TOST_MARGIN < tost["ci"][0] and tost["ci"][1] < TOST_MARGIN),

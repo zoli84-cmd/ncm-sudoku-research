@@ -326,9 +326,9 @@ def test_level1_noop_mismatch_counts_forced_mismatch(monkeypatch):
 
 def test_level1_noop_mismatch_function():
     base = [{"puzzle_id": "a", "solve_A": 1, "solve_B1": 0}, {"puzzle_id": "b", "solve_A": 0, "solve_B1": 0}]
-    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0},
-            {"puzzle_id": "b", "noop": True, "solve_C": 0, "solve_D": 1, "tv": 0.0},
-            {"puzzle_id": "b", "noop": False, "solve_C": 1, "solve_D": 1, "tv": 0.3}]
+    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "b", "noop": True, "solve_C": 0, "solve_D": 1, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "b", "noop": False, "solve_C": 1, "solve_D": 1, "tv": 0.3, "tv_empty": 0.3}]
     assert e2p2.level1_noop_mismatch(recs, base) == 1
 
 
@@ -337,3 +337,22 @@ def test_summarize2_without_noop_field_reports_none(monkeypatch):
     legacy = {k: v for k, v in out.items() if k != "level1_noop_mismatch"}
     legacy["level1"] = [{k: v for k, v in r.items() if k != "noop"} for r in out["level1"] if not r["noop"]]
     assert summarize2(legacy, n_boot=50)["level1_noop_mismatch"] is None
+
+
+def test_level1_noop_mismatch_counts_tv_empty_and_reports_max_tv():
+    base = [{"puzzle_id": "a", "solve_A": 1, "solve_B1": 0}]
+    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 1e-9},
+            {"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0, "tv_empty": 0.0},
+            {"puzzle_id": "a", "noop": False, "solve_C": 0, "solve_D": 1, "tv": 0.7, "tv_empty": 0.9}]
+    assert e2p2.level1_noop_mismatch(recs, base) == 1  # exact: any nonzero tv_empty counts
+    assert e2p2.level1_noop_max_tv(recs) == {"tv": 0.0, "tv_empty": 1e-9}  # no-op rows only
+    assert e2p2.level1_noop_max_tv([r for r in recs if not r["noop"]]) == {"tv": None, "tv_empty": None}
+
+
+def test_run_pilot2_and_summarize2_report_noop_max_tv(monkeypatch):
+    out, _ = _toy_run(monkeypatch, tv_value=0.25)
+    assert out["level1_noop_max_tv"] == {"tv": 0.25, "tv_empty": 0.25}
+    s = summarize2(out, n_boot=50)
+    assert s["level1_noop_mismatch"] == N_TOY and s["level1_noop_max_tv"] == {"tv": 0.25, "tv_empty": 0.25}
+    legacy = {k: v for k, v in out.items() if k not in ("level1_noop_mismatch", "level1_noop_max_tv")}
+    assert summarize2(legacy, n_boot=50)["level1_noop_max_tv"] is None
