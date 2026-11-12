@@ -110,3 +110,25 @@ def test_level6_states_delegates_to_cell_level_states(monkeypatch):
     monkeypatch.setattr(e3equiv, "cell_level_states", lambda m, pz, level, batch=50: seen.append((level, batch)) or 0)
     e3equiv.level6_states(None, np.asarray([P]), batch=7)
     assert seen == [(6, 7)]
+
+
+def test_equivariance_default_tolerance_is_seed_noise():
+    f0 = lambda pz: np.zeros((len(pz), 81, 9))  # noqa: E731
+    f1 = lambda pz: np.full((len(pz), 81, 9), 0.3)  # noqa: E731
+    r = equivariance_pilot(np.asarray([P]), [f0, f1], n=1, k=1, seed=0)
+    assert r["acceptable_source"] == "seed_noise"
+    assert r["acceptable"] == r["seed_noise_p95"] == pytest.approx(0.3)
+
+
+def test_equivariance_fixed_tolerance():
+    # position-only predictor: digit deviation 0, geometric deviation > 0
+    bias = np.random.default_rng(0).random((81, 9))
+    f = lambda pz: np.broadcast_to(bias[:, :1], (len(pz), 81, 9)).copy()  # noqa: E731
+    base = equivariance_pilot(np.asarray([P]), [f, f], n=1, k=2, seed=0)
+    assert base["share_within"]["geometric"] == 0.0 and base["seed_noise_p95"] == 0.0
+    big = float(base["deviation"]["geometric"][0]) + 1.0
+    r = equivariance_pilot(np.asarray([P]), [f, f], n=1, k=2, seed=0, acceptable=big)
+    assert r["acceptable_source"] == "fixed" and r["acceptable"] == big
+    assert r["seed_noise_p95"] == 0.0  # still computed and reported
+    assert r["share_within"] == {"all": 1.0, "digit": 1.0, "geometric": 1.0}
+    assert np.allclose(r["deviation"]["geometric"], base["deviation"]["geometric"])

@@ -43,12 +43,17 @@ def equivariance_pilot(
     n: int = 200,
     k: int = 4,
     seed: int = 0,
+    acceptable: float | None = None,
 ) -> dict:
-    """Returns `deviation` {kind: [n]}, `seed_noise` [n] (mean pairwise predictor
-    difference on untransformed puzzles), `acceptable` (95th percentile of
-    `seed_noise`), `share_within` {kind: share of puzzles with deviation <=
-    acceptable}, `brier` {kind: [n]} (back-transformed predictions vs. the
-    original's candidate mask), `brier_original` [n], and their means."""
+    """Uses the first `n` puzzles in the given order (`puzzles[:n]`; on TEST, indices
+    0..199 of the TEST generation order). Returns `deviation` {kind: [n]}, `seed_noise`
+    [n] (mean pairwise predictor difference on untransformed puzzles), `seed_noise_p95`
+    (its 95th percentile), `acceptable` (the tolerance used: the fixed `acceptable`
+    when given, e.g. the value measured on PROBE-VAL before the lock, else
+    `seed_noise_p95`) and `acceptable_source` ("fixed" or "seed_noise"), `share_within`
+    {kind: share of puzzles with deviation <= acceptable}, `brier` {kind: [n]}
+    (back-transformed predictions vs. the original's candidate mask), `brier_original`
+    [n], and their means."""
     if len(predict_fns) < 2:
         raise ValueError("seed noise needs at least two predictors")
     puzzles = np.asarray(puzzles)[:n]
@@ -81,7 +86,9 @@ def equivariance_pilot(
 
     pairs = list(combinations(originals, 2))
     seed_noise = np.array([np.mean([mad(a[i], b[i], i) for a, b in pairs]) for i in range(n)])
-    acceptable = float(np.percentile(seed_noise, 95))
+    seed_noise_p95 = float(np.percentile(seed_noise, 95))
+    source = "seed_noise" if acceptable is None else "fixed"
+    acceptable = seed_noise_p95 if acceptable is None else float(acceptable)
     return {
         "n": n,
         "k": k,
@@ -89,7 +96,9 @@ def equivariance_pilot(
         "n_predictors": len(predict_fns),
         "deviation": deviation,
         "seed_noise": seed_noise,
+        "seed_noise_p95": seed_noise_p95,
         "acceptable": acceptable,
+        "acceptable_source": source,
         "share_within": {kind: float(np.mean(v <= acceptable)) for kind, v in deviation.items()},
         "mean_deviation": {kind: float(v.mean()) for kind, v in deviation.items()},
         "brier": brier_t,
