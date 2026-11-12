@@ -16,7 +16,8 @@ def test_run_pilot2_small(model, released, monkeypatch):
     puzzles, sols = released
     out = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2)
     assert len(out["base"]) == 2 and all(b["solve_B1"] == b["solve_A"] for b in out["base"])
-    assert len(out["level1"]) == 2 * 15
+    assert len(out["level1"]) == 2 * 16  # full ordered batch: every value on both rows
+    assert sum(r["noop"] for r in out["level1"]) == 2 and out["level1_noop_mismatch"] == 0  # in-batch sham
     for pid in ("r0", "r1"):
         ws = [r["w_uniform"] for r in out["level1"] if r["puzzle_id"] == pid]
         assert sum(ws) == pytest.approx(1.0)
@@ -245,3 +246,146 @@ def test_run_pilot2_frozen_freqs_drive_draws(model, released, monkeypatch):
     assert default["freq_source"] == "input"
     A = e2p2.clean_codes(model, puzzles[:2], chunk=2)
     assert default["freqs_level1"] == code_frequencies(A, model.levels)[0].tolist()
+
+
+# --- full-batch level-1 enumeration (v3.7 Final ASTRA-1) ---
+
+from types import SimpleNamespace  # noqa: E402
+
+N_TOY = 5
+TOY_LEVELS = (1, 2)  # 3 codes per row: level 1 = code 0, level 2 = codes 1-2
+
+
+def _toy_puzzles():
+    pz = np.zeros((N_TOY, 81), dtype=np.int8)
+    pz[:, 0] = np.arange(1, N_TOY + 1)        # row identity, visible in the puzzle prefix
+    pz[:, 1] = [3, 3, 5, 3, 7]                 # level-1 code of A (3 repeats: several no-op rows)
+    pz[:, 2] = [1, 2, 1, 4, 2]
+    pz[:, 3] = [0, 1, 1, 0, 1]
+    return pz
+
+
+def _install_fakes(monkeypatch, calls, tv_value=None, flip_noop_solve=False):
+    """Deterministic fakes for the model pieces e2p2 uses; solve = first code is even."""
+    def gen(m, puzzles, batch_size=32):
+        return torch.as_tensor(np.asarray(puzzles)[:, 1:4].astype(np.int64))
+
+    def cont(m, prefix, codes_prefix, level):
+        calls.append(("D", level, prefix[:, 1].tolist(), codes_prefix[:, 0].tolist()))
+        k = len(prefix)
+        suffix = torch.as_tensor(np.tile([[1, 1]], (k, 1)), dtype=torch.long)[:, : 3 - codes_prefix.shape[1]]
+        return torch.cat([codes_prefix, suffix], dim=1)
+
+    flipped = []
+
+    def ev(puzzles, solutions, codes, m):
+        calls.append(("eval", len(codes)))
+        solve = [int(int(c[0]) % 2 == 0) for c in codes]
+        # first full-batch eval with every level-1 code 3 is branch C of value 3 (D comes next)
+        if flip_noop_solve and not flipped and len(codes) == N_TOY and bool((codes[:, 0] == 3).all()):
+            flipped.append(True)
+            solve[0] = 1 - solve[0]
+        return ([SimpleNamespace(cells=None)] * len(codes),
+                [SimpleNamespace(solve=s, well_formed=True) for s in solve])
+
+    def tv(a, b, mask=None):
+        d = (a - b).abs().sum(dim=1)
+        return d if tv_value is None else torch.full_like(d, tv_value)
+
+    monkeypatch.setattr(e2p2, "generate_codes", gen)
+    monkeypatch.setattr(e2p2, "continue_generation", cont)
+    monkeypatch.setattr(e2p2, "_eval", ev)
+    monkeypatch.setattr(e2p2, "cumulative_states", lambda m, codes, upto=None: [codes.float(), codes.float()])
+    monkeypatch.setattr(e2p2, "decode_state_logits", lambda m, z: z)
+    monkeypatch.setattr(e2p2, "tv_damage", tv)
+    monkeypatch.setattr(e2p2, "latent_distance", lambda a, b: (a - b).abs().sum(dim=1))
+    monkeypatch.setattr(e2p2, "requantize", lambda m, x, level: (None, torch.zeros(len(x))))
+    monkeypatch.setattr(e2p2, "codebook_rms", lambda m, level, a, b: torch.zeros(len(a)))
+    monkeypatch.setattr(e2p2, "cell_hamming", lambda a, b, cells=None: 0)
+    monkeypatch.setattr(e2p2, "LEVELS_P2", (2,))
+    monkeypatch.setattr(e2p2, "SEEDS_P2", (0,))
+
+
+def _toy_run(monkeypatch, **kw):
+    calls = []
+    _install_fakes(monkeypatch, calls, **kw)
+    pz = _toy_puzzles()
+    out = e2p2.run_pilot2(SimpleNamespace(levels=TOY_LEVELS), pz, pz.copy(), [f"p{i}" for i in range(N_TOY)], chunk=2)
+    return out, calls
+
+
+def test_level1_enumeration_runs_full_ordered_batch(monkeypatch):
+    out, calls = _toy_run(monkeypatch)
+    lvl1_d = [c for c in calls if c[0] == "D" and c[1] == 1]
+    # B1 (codes = A's own level-1 code) plus one full-batch pass per value, each in chunks of 2
+    assert len(lvl1_d) == 3 * (1 + 16)
+    rows = [r for c in lvl1_d for r in c[2]]
+    assert rows == list(range(1, N_TOY + 1)) * 17          # all rows, original order, every pass
+    assert [len(c[2]) for c in lvl1_d[:3]] == [2, 2, 1]    # same chunking as A/B
+    for v in range(16):  # pass v sets every row's level-1 code to v
+        assert all(x == v for c in lvl1_d[3 * (v + 1): 3 * (v + 2)] for x in c[3])
+    assert len(out["level1"]) == 16 * N_TOY
+    assert [r["value"] for r in out["level1"]] == [v for v in range(16) for _ in range(N_TOY)]
+    assert [r["puzzle_id"] for r in out["level1"][:N_TOY]] == [f"p{i}" for i in range(N_TOY)]
+
+
+def test_level1_noop_rows_flagged_with_zero_weight(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    a1 = dict(zip([f"p{i}" for i in range(N_TOY)], _toy_puzzles()[:, 1].tolist()))
+    for r in out["level1"]:
+        assert r["noop"] == (a1[r["puzzle_id"]] == r["value"])
+        if r["noop"]:
+            assert r["w_frequency"] == 0.0 and r["w_uniform"] == 0.0 and r["tv"] == 0.0
+    assert sum(r["noop"] for r in out["level1"]) == N_TOY
+    assert out["level1_noop_mismatch"] == 0
+
+
+def test_level1_noop_rows_do_not_change_estimates(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    trimmed = {**out, "level1": [r for r in out["level1"] if not r["noop"]]}
+    for c in ("theta2", "theta_comp", "theta2_prime"):
+        for policy in ("frequency", "uniform"):
+            assert puzzle_values(out, c, policy) == puzzle_values(trimmed, c, policy)
+    full, cut = summarize2(out, n_boot=50), summarize2(trimmed, n_boot=50)
+    assert full["level1"] == cut["level1"] and full["contrasts"] == cut["contrasts"]
+    assert full["level1_noop_mismatch"] == 0
+
+
+def test_level1_noop_filter_is_explicit():
+    """No-op records are dropped even if a weight were nonzero (non-weight-based quantities too)."""
+    out = {
+        "base": [{"puzzle_id": "p", "solve_A": 1, "solve_B1": 1}],
+        "level1": [
+            {"puzzle_id": "p", "value": 1, "noop": False, "w_frequency": 1.0, "w_uniform": 1.0, "solve_C": 0,
+             "solve_D": 0, "well_formed_C": True, "well_formed_D": True,
+             **{k: 0.5 for k in e2p2.DAMAGE_KEYS}},
+            {"puzzle_id": "p", "value": 2, "noop": True, "w_frequency": 5.0, "w_uniform": 5.0, "solve_C": 1,
+             "solve_D": 1, "well_formed_C": False, "well_formed_D": False,
+             **{k: 9.0 for k in e2p2.DAMAGE_KEYS}},
+        ],
+    }
+    assert e2p2._level1_terms(out, "frequency") == {"p": (-1.0, 0.0)}
+    assert e2p2._level1_weighted(out["level1"], "frequency", "tv", {"p"}) == [{"tv": 0.5}]
+
+
+def test_level1_noop_mismatch_counts_forced_mismatch(monkeypatch):
+    out, _ = _toy_run(monkeypatch, flip_noop_solve=True)  # p0 (a1 = 3): C solve flipped when v = 3
+    assert out["level1_noop_mismatch"] == 1
+    assert summarize2(out, n_boot=50)["level1_noop_mismatch"] == 1
+    out, _ = _toy_run(monkeypatch, tv_value=0.25)        # every no-op row has TV != 0
+    assert out["level1_noop_mismatch"] == N_TOY
+
+
+def test_level1_noop_mismatch_function():
+    base = [{"puzzle_id": "a", "solve_A": 1, "solve_B1": 0}, {"puzzle_id": "b", "solve_A": 0, "solve_B1": 0}]
+    recs = [{"puzzle_id": "a", "noop": True, "solve_C": 1, "solve_D": 0, "tv": 0.0},
+            {"puzzle_id": "b", "noop": True, "solve_C": 0, "solve_D": 1, "tv": 0.0},
+            {"puzzle_id": "b", "noop": False, "solve_C": 1, "solve_D": 1, "tv": 0.3}]
+    assert e2p2.level1_noop_mismatch(recs, base) == 1
+
+
+def test_summarize2_without_noop_field_reports_none(monkeypatch):
+    out, _ = _toy_run(monkeypatch)
+    legacy = {k: v for k, v in out.items() if k != "level1_noop_mismatch"}
+    legacy["level1"] = [{k: v for k, v in r.items() if k != "noop"} for r in out["level1"] if not r["noop"]]
+    assert summarize2(legacy, n_boot=50)["level1_noop_mismatch"] is None

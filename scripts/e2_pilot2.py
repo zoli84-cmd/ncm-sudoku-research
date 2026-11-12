@@ -66,6 +66,8 @@ def _report(summary: dict) -> str:
         "- Sham mismatch (puzzles whose sham solve differs from A; nonzero = instrumentation error): "
         f"B1≠A {summary['sham_mismatch']['level1_B1']}; "
         + ", ".join(f"L{k} {v}" for k, v in summary["sham_mismatch"]["levels_B"].items()),
+        f"- Level-1 in-batch sham (no-op rows violating C = A, D = B1 or TV = 0): "
+        f"{'–' if summary.get('level1_noop_mismatch') is None else summary['level1_noop_mismatch']}",
         "",
         "| AUC pair | AUC A | AUC B | range | reason |",
         "|---|---|---|---|---|",
