@@ -69,3 +69,19 @@ def test_lock_cal_freqs_level1_mismatch_exits(tmp_path, monkeypatch):
         mod.main()
     assert exc.value.code not in (None, 0)
     assert not (tmp_path / "lock" / "cal_freqs.json").exists()
+
+
+def test_lock_cal_freqs_records_environment_after_model_load(tmp_path, monkeypatch):
+    """ASTRA-4: load_model enables deterministic algorithms, so the environment must be read after it."""
+    mod = _load("lock_cal_freqs")
+    _setup(mod, tmp_path, monkeypatch, code_frequencies(A, LEVELS)[0].tolist())
+    state = {"loaded": False}
+
+    def fake_load(path):
+        state["loaded"] = True
+        return SimpleNamespace(levels=LEVELS)
+    monkeypatch.setattr(mod, "load_model", fake_load)
+    monkeypatch.setattr(mod, "environment_record", lambda: {"deterministic": state["loaded"]})
+    mod.main()
+    out = json.loads((tmp_path / "lock" / "cal_freqs.json").read_text(encoding="utf-8"))
+    assert out["environment"]["deterministic"] is True

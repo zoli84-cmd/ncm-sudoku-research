@@ -42,10 +42,10 @@ def guard(force: bool) -> None:
 def main() -> None:
     guard(force="--force" in sys.argv)
     assert_generator_frozen()
-    environment = environment_record()
     batch = generate_subset("cal", N_CAL)
     puzzles = np.stack([g.puzzle for g in batch])
     m = load_model(ROOT / "checkpoints" / "sudoku" / "hard")
+    environment = environment_record()  # after load_model, which enables deterministic algorithms
     t0 = time.perf_counter()
     A = clean_codes(m, puzzles, CHUNK)
     freqs = code_frequencies(A, m.levels)
