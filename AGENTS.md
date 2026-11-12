@@ -44,6 +44,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [research_plan_v3.7.md](research_plan_v3.7.md): authoritative research plan, preregistration lock version
 - [research_plan_v3.6.md](research_plan_v3.6.md): frozen plan v3.6 (E2 redesign, before the E3 preparation and the lock)
 - [research_plan_v3.5.md](research_plan_v3.5.md): frozen plan v3.5 (before the E2 redesign after the WP1 pilot)
+- [osf/registration.md](osf/registration.md): OSF preregistration text for the v3.7 lock (tag `prereg-v3.7`), submitted by the user
 - [ROADMAP.md](ROADMAP.md): work-package status, effort and compute estimates, backlog, open items
 - [research_plan_v3.4.md](research_plan_v3.4.md): frozen plan v3.4 (before WP0 implementation facts)
 - [research_plan_v3.3.md](research_plan_v3.3.md): frozen plan v3.3 (after external review R1, before the final round)
