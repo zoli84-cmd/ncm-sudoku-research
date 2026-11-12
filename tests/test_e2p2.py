@@ -164,3 +164,84 @@ def test_summarize2_reports_hamming_empty_and_sham_mismatch():
     cfg = s["configurations"][0]
     assert cfg["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)
     assert s["level1"]["frequency"]["quantiles"]["hamming_CA_empty"] == pytest.approx([0] * 5)
+
+
+# --- frozen CAL code frequencies (v3.7 review CARBON-1) ---
+
+import json  # noqa: E402
+
+import torch  # noqa: E402
+
+from ncm_sudoku.perturb import code_frequencies  # noqa: E402
+
+
+def test_pilot_freqs_default_is_input():
+    A = torch.tensor([[1, 2, 2, 3], [1, 2, 5, 5]])
+    freqs, source = e2p2.pilot_freqs(A, (1, 3), None)
+    assert source == "input" and set(freqs) == {1, 2}
+    for lv, f in zip((1, 2), code_frequencies(A, (1, 3))):
+        assert torch.equal(freqs[lv], f)
+
+
+def test_pilot_freqs_frozen_overrides_and_validates():
+    A = torch.zeros((2, 12), dtype=torch.long)
+    levels = (1,) * 12
+    frozen = {lv: np.eye(16)[lv % 16] for lv in range(1, 13)}
+    freqs, source = e2p2.pilot_freqs(A, levels, frozen)
+    assert source == "frozen"
+    assert torch.equal(freqs[6], torch.tensor(np.eye(16)[6], dtype=torch.float32))
+    assert freqs[6].dtype == torch.float32
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {lv: v for lv, v in frozen.items() if lv != 11})
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {**frozen, 2: np.full(16, 0.5)})  # does not sum to 1
+    with pytest.raises(ValueError):
+        e2p2.pilot_freqs(A, levels, {**frozen, 2: np.ones(15) / 15})  # wrong length
+
+
+def test_load_frozen_freqs_toy(tmp_path):
+    f = [0.0] * 16; f[3] = 0.25; f[7] = 0.75
+    obj = {"levels": {str(lv): {"counts": [0] * 3 + [1] + [0] * 3 + [3] + [0] * 8, "frequencies": f}
+                      for lv in range(1, 13)}}
+    path = tmp_path / "cal_freqs.json"
+    path.write_text(json.dumps(obj), encoding="utf-8")
+    out = e2p2.load_frozen_freqs(path)
+    assert set(out) == set(range(1, 13))
+    assert out[11].dtype == np.float32 and out[11][7] == np.float32(0.75) and out[11].shape == (16,)
+    obj["levels"]["2"]["frequencies"] = [1 / 16] * 16  # inconsistent with counts
+    path.write_text(json.dumps(obj), encoding="utf-8")
+    with pytest.raises(ValueError):
+        e2p2.load_frozen_freqs(path)
+
+
+@needs_model
+@pytest.mark.slow
+def test_run_pilot2_frozen_freqs_drive_draws(model, released, monkeypatch):
+    monkeypatch.setattr(e2p2, "LEVELS_P2", (11,))
+    monkeypatch.setattr(e2p2, "SEEDS_P2", (0,))
+    drawn = []
+    real = e2p2.perturb_level
+
+    def spy(level_codes, dose, policy, freqs, gen):
+        new, eligible = real(level_codes, dose, policy, freqs, gen)
+        if policy == "frequency":
+            drawn.append((level_codes.clone(), new.clone(), eligible.clone()))
+        return new, eligible
+    monkeypatch.setattr(e2p2, "perturb_level", spy)
+    puzzles, sols = released
+    v = 13
+    frozen = {lv: np.eye(16, dtype=np.float32)[v] for lv in range(1, 13)}
+    out = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2, frozen_freqs=frozen)
+    assert out["freq_source"] == "frozen" and out["freqs_level1"] == np.eye(16)[v].tolist()
+    assert drawn
+    for orig, new, eligible in drawn:
+        changed = new != orig
+        assert (new[changed] == v).all()
+        assert (~eligible | changed.any(dim=1)).all()
+    for r in out["level1"]:
+        assert r["w_frequency"] == (1.0 if r["value"] == v else 0.0)
+    drawn.clear()
+    default = e2p2.run_pilot2(model, puzzles[:2], sols[:2], ["r0", "r1"], chunk=2)
+    assert default["freq_source"] == "input"
+    A = e2p2.clean_codes(model, puzzles[:2], chunk=2)
+    assert default["freqs_level1"] == code_frequencies(A, model.levels)[0].tolist()

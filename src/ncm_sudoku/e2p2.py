@@ -5,6 +5,7 @@ C level l perturbed with A's suffix replayed, D level l perturbed with the suffi
 regenerated. Damage measures compare C against A on the final cumulative state.
 """
 
+import json
 import math
 from collections import defaultdict
 
@@ -30,18 +31,65 @@ QUANTILES = (0.0, 0.25, 0.5, 0.75, 1.0)
 DAMAGE_KEYS = ("tv", "tv_empty", "hamming_CA", "hamming_CA_empty", "latent", "codebook_rms", "requant_ratio")
 
 
+FROZEN_LEVELS = (1, *LEVELS_P2)  # levels whose frequencies the pilot uses
+
+
+@torch.no_grad()
+def clean_codes(m: NcmModel, puzzles: np.ndarray, chunk: int = 50) -> torch.Tensor:
+    """Clean generated codes A (branch A), generated in chunks of `chunk` puzzles."""
+    return _chunked(lambda s: generate_codes(m, puzzles[s], batch_size=chunk), len(puzzles), chunk)
+
+
+def pilot_freqs(A: torch.Tensor, levels, frozen_freqs: dict | None = None) -> tuple[dict[int, torch.Tensor], str]:
+    """Per-level code frequencies {level: float32 [16]} and their source. Default: estimated
+    from the input codes A (`code_frequencies`, source "input"); with `frozen_freqs` (e.g.
+    `load_frozen_freqs` of the CAL file) the given vectors are used (source "frozen"); levels
+    1, 2, 6 and 11 are required, each a length-16 nonnegative vector summing to 1."""
+    if frozen_freqs is None:
+        return {lv: f for lv, f in enumerate(code_frequencies(A, levels), start=1)}, "input"
+    missing = [lv for lv in FROZEN_LEVELS if lv not in frozen_freqs]
+    if missing:
+        raise ValueError(f"frozen_freqs lacks levels {missing}")
+    out = {}
+    for lv, f in frozen_freqs.items():
+        t = torch.as_tensor(np.asarray(f, dtype=np.float32))
+        if t.shape != (N_CODES,) or (t < 0).any() or abs(float(t.double().sum()) - 1.0) > 1e-6:
+            raise ValueError(f"frozen frequencies for level {lv} are not a length-{N_CODES} distribution")
+        out[int(lv)] = t
+    return out, "frozen"
+
+
+def load_frozen_freqs(path) -> dict[int, np.ndarray]:
+    """Reads `experiments/lock/cal_freqs.json` ({"levels": {"1": {"counts", "frequencies"}, ...}})
+    into {level: float32 [16]}; raises ValueError if a frequency vector differs from the one
+    its counts give (counts / sum in float64, then float32, as `code_frequencies`)."""
+    obj = json.loads(open(path, encoding="utf-8").read())
+    out = {}
+    for key, entry in obj["levels"].items():
+        f = np.asarray(entry["frequencies"], dtype=np.float32)
+        c = np.asarray(entry["counts"], dtype=np.float64)
+        if f.shape != (N_CODES,) or c.shape != (N_CODES,) or not np.array_equal(f, (c / c.sum()).astype(np.float32)):
+            raise ValueError(f"{path}: level {key} frequencies do not match their counts")
+        out[int(key)] = f
+    return out
+
+
 @torch.no_grad()
 def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
-               chunk: int = 50) -> dict:
+               chunk: int = 50, frozen_freqs: dict[int, np.ndarray] | None = None) -> dict:
+    """`frozen_freqs` (optional): per-level code frequencies used for the level-1 weights and
+    the level 2/6/11 frequency-policy draws instead of the input's own (`pilot_freqs`);
+    the output records `freq_source` ("input" or "frozen")."""
     n = len(puzzles)
     prefix = puzzle_tensor(puzzles)
     slices = level_slices(m.levels)
     empty = torch.as_tensor(np.asarray(puzzles) == 0)
-    A = _chunked(lambda s: generate_codes(m, puzzles[s], batch_size=chunk), n, chunk)
+    A = clean_codes(m, puzzles, chunk)
     parsed_A, met_A = _eval(puzzles, solutions, A, m)
     z_A = _chunked(lambda s: cumulative_states(m, A[s])[-1], n, chunk)
     logits_A = _chunked(lambda s: decode_state_logits(m, z_A[s]), n, chunk)
-    freqs1 = code_frequencies(A, m.levels)[0]
+    level_freqs, freq_source = pilot_freqs(A, m.levels, frozen_freqs)
+    freqs1 = level_freqs[1]
 
     def compare(idx: torch.Tensor, C: torch.Tensor, level: int) -> list[dict]:
         """Branches C (given) and D (regenerated) for puzzle rows `idx`; one dict per row."""
@@ -105,7 +153,7 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
         sl, end = slices[level - 1], slices[level - 1].stop
         B = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :end], level), n, chunk)
         _, met_B = _eval(puzzles, solutions, B, m)
-        freqs = code_frequencies(A, m.levels)[level - 1]
+        freqs = level_freqs[level]
         for policy in POLICIES:
             for dose in dose_grid(sl.stop - sl.start, DOSE_FRACTIONS_V36):
                 for seed in SEEDS_P2:
@@ -118,7 +166,8 @@ def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_i
                                         "dose": dose, "seed": seed, "eligible": bool(eligible[i]),
                                         "solve_A": int(met_A[i].solve), "solve_B": int(met_B[i].solve), **rec})
 
-    return {"freqs_level1": freqs1.tolist(), "base": base, "level1": level1, "records": records}
+    return {"freqs_level1": freqs1.tolist(), "freq_source": freq_source, "base": base, "level1": level1,
+            "records": records}
 
 
 # ---------------------------------------------------------------- statistics (plan v3.6 §7.2, §11.2)
