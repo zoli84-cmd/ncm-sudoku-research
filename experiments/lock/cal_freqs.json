@@ -2,7 +2,7 @@
   "note": "CAL code frequencies frozen before the lock (v3.7 review CARBON-1): the E2 frequency policy on TEST uses these instead of re-estimating them from the TEST codes",
   "date": "2026-11-12",
   "code": {
-    "commit": "c7e8f158bd434d4672dd7288c30fac3a7f6a436c",
+    "commit": "86b41bf79ce61672cf63d5d47e23de5cecac5916",
     "dirty": false,
     "diff_sha256": null
   },
@@ -13,7 +13,7 @@
     "platform": "Windows-11-10.0.22631-SP0",
     "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
     "torch_threads": 4,
-    "deterministic": false,
+    "deterministic": true,
     "precision": "fp32, eager, cpu",
     "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
     "checkpoints": {
@@ -815,5 +815,5 @@
       ]
     }
   },
-  "seconds": 408.0
+  "seconds": 404.9
 }
