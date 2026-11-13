@@ -9,10 +9,13 @@ Order: role data (TEST verified first), checkpoints, `wp2.guard_start`, output c
 `e1_records`, atomic write, finish, `status_line`.
 
 E1 keeps no partial stage state (spec ambiguity 21): `--resume` restarts it from scratch after
-the guard's input, code and environment checks pass, and the previous (incomplete) `e1.json` is
-cleared first, exactly as a fresh start. The TEST role never deletes outputs (`clear_outputs`),
-so a complete TEST record refuses a rerun outright (single-look); an interrupted TEST run can
-only continue with `--resume`.
+the guard's input, code and environment checks pass. Output clearing only runs on a fresh start
+(`wp2_e2.py`'s rule): on `--resume`, `e1.json` is simply recomputed and the atomic write replaces
+it in place, so a TEST-role resume works even though `clear_outputs` never deletes TEST outputs
+(a resume that first tried to clear an existing `e1.json` would fail permanently in the TEST
+role). The TEST role never deletes outputs, so a complete TEST record refuses a rerun outright
+(single-look); an interrupted TEST run can only continue with `--resume`, and a fresh TEST start
+over existing outputs is refused.
 
 Outputs (raw, git-ignored) under `runs/wp2/<role>/`: `e1.json` (`role`, `ids`, `note`, `records`,
 `batch_size`). Run record: `experiments/wp2/<role>/runs/e1.json` (technical fields only: `n`,
@@ -48,7 +51,8 @@ def run(argv: list[str] | None = None) -> int:
               "solutions_sha256": sha256_array(data.solutions), "batch_size": BATCH_SIZE}
     rec = wp2.guard_start(RUNNER, role, args.force, args.resume, inputs)
     L = _layout(role)
-    wp2.clear_outputs(RUNNER, role, [L["e1_json"]])  # also on --resume: E1 restarts from scratch
+    if not args.resume:
+        wp2.clear_outputs(RUNNER, role, [L["e1_json"]])
     m = load_model(CKPT_DIR)
 
     records = e1_records(m, data.puzzles, data.solutions, data.ids, batch_size=BATCH_SIZE)
