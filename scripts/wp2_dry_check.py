@@ -30,7 +30,11 @@ base), E1 (`solve` against the pilot-2 `solve_A`) and the extraction (`matches_e
 configs and allclose `per_puzzle` for every mapped E3 fit (`E3_MAP`), the depth breakdown
 (`DEPTH_MAP`) and equivariance, zero solve-based and code-based E2 identity failures in both the
 E2 output and the run record (spec ambiguity 23), and PROBE files that still match the dry e3
-record's `inputs`. `NEW_FITS` have no pre-lock reference and are only listed.
+record's `inputs`. `NEW_FITS` have no pre-lock reference and are only listed. The check itself must run
+frozen (`freeze_state()["frozen"]`) on clean code, with `code_state()` and `freeze_state()` unchanged between
+its start and end (`check_state`; `code_end` and `freeze_state_end` are recorded next to the start states).
+The E2 `level1_noop_mismatch` is recomputed from the level-1 rows (`e2p2.level1_noop_mismatch`); the stored
+count must be zero as well.
 """
 
 import argparse
@@ -264,7 +268,8 @@ def _identity_ok(block: dict) -> bool:
     shape = (set(sham) == {"level1_B1", "levels_B"} and set(code) == {"level1_B1", "levels_B", "level1_noop_D"}
              and isinstance(sham["levels_B"], dict) and isinstance(code["levels_B"], dict)
              and set(sham["levels_B"]) == E2_LEVEL_KEYS and set(code["levels_B"]) == E2_LEVEL_KEYS)
-    return shape and _zero(block.get("level1_noop_mismatch")) and _zero(sham) and _zero(code)
+    stored_ok = "level1_noop_mismatch_stored" not in block or _zero(block["level1_noop_mismatch_stored"])
+    return shape and stored_ok and _zero(block.get("level1_noop_mismatch")) and _zero(sham) and _zero(code)
 
 
 # --- parts -----------------------------------------------------------------------------------------
@@ -296,7 +301,8 @@ def e2_parts(e2: dict, e2_rec: dict, pilot2: dict, full: dict, ids: list[str]) -
     exp_base = {(pid,) for pid in ids}
     base = {name: compare_keyed(e2.get("base", []), ref.get("base", []), ("puzzle_id",), BASE_FIELDS, exp_base)
             for name, ref in (("pilot2", pilot2), ("level1_full_batch", full))}
-    out_block = {"level1_noop_mismatch": e2.get("level1_noop_mismatch"),
+    out_block = {"level1_noop_mismatch": e2p2.level1_noop_mismatch(e2.get("level1", []), e2.get("base", [])),
+                 "level1_noop_mismatch_stored": e2.get("level1_noop_mismatch"),
                  "sham_mismatch": e2p2.sham_mismatch_counts(e2), "code_mismatch": e2.get("code_mismatch")}
     rec_block = {k: e2_rec.get(k) for k in ("level1_noop_mismatch", "sham_mismatch", "code_mismatch")}
     return {
@@ -420,6 +426,7 @@ def report(c: dict) -> str:
     L = ["# WP2 dry-run check", "", wp2.DRY_NOTE, "",
          f"- date: {c['date']}", f"- code commit: {c['code'].get('commit')} (dirty: {c['code'].get('dirty')})",
          f"- tag commit: {c['freeze_state'].get('tag_commit')}; frozen: {c['freeze_state'].get('frozen')}",
+         f"- check state (frozen, clean, unchanged during the check): {c['check_state']['ok']}",
          f"- technical_success: **{str(c['technical_success']).lower()}**", "",
          "## Run records", "", "| runner | status | valid | reasons |", "|---|---|---|---|"]
     L += [f"| {r} | {s['status']} | {s['valid']} | {', '.join(s['reasons']) or '-'} |" for r, s in c["records"].items()]
@@ -494,10 +501,17 @@ def run(argv: list[str] | None = None) -> int:
         "extraction": extraction_part(records["e3_extract"]),
         "probe_inputs": probe,
     }
-    success = all(s["valid"] for s in statuses.values()) and all(p["ok"] for p in comparisons.values())
+    torch.use_deterministic_algorithms(True)
+    freeze_end, code_end = wp2.freeze_state(), wp2.code_state()
+    state = {"frozen": freeze.get("frozen") is True and freeze_end.get("frozen") is True,
+             "clean": code.get("dirty") is False and code_end.get("dirty") is False,
+             "unchanged": code_end == code and freeze_end == freeze}
+    state["ok"] = all(state.values())
+    success = (state["ok"] and all(s["valid"] for s in statuses.values())
+               and all(p["ok"] for p in comparisons.values()))
     check = {
         "note": wp2.DRY_NOTE, "date": time.strftime("%Y-%m-%d"), "code": code, "freeze_state": freeze,
-        "environment": environment, "records": statuses, "comparisons": comparisons,
+        "code_end": code_end, "freeze_state_end": freeze_end, "check_state": state, "environment": environment, "records": statuses, "comparisons": comparisons,
         "technical_success": bool(success),
         "snapshot": {"dry_records": dry_records, "compared": compared, "probe_inputs": probe_snapshot},
     }

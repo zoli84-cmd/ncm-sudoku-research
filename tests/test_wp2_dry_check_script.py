@@ -388,3 +388,43 @@ def test_dry_check_mapping_covers_every_stage_fit():
     assert mod.E3_MAP["training_size.n125"] == ("probes.json", ("stages", "training_size", "125"))
     assert mod.DEPTH_MAP == {"generated_linear": "pc_L06.linear", "raw_linear": "controls.raw_linear"}
     assert len(mod.E2_FIELDS) == 20 and mod.E2_FIELDS[:5] == ("puzzle_id", "level", "policy", "dose", "seed")
+
+
+# --- the check's own state (fix round 1) -----------------------------------------------------------
+
+def test_dry_check_records_its_own_state(env):
+    assert mod.run([]) == 0
+    c = _read(env.check)
+    assert c["check_state"] == {"frozen": True, "clean": True, "unchanged": True, "ok": True}
+    assert c["code_end"] == c["code"] and c["freeze_state_end"] == c["freeze_state"]
+
+
+@pytest.mark.parametrize("case", ["not_frozen", "dirty", "changed_during_check"])
+def test_dry_check_requires_frozen_clean_unchanged_state(env, monkeypatch, case):
+    if case == "not_frozen":
+        monkeypatch.setattr(wp2, "freeze_state", lambda root=None: {**wp2_fakes.FROZEN, "frozen": False})
+    elif case == "dirty":
+        monkeypatch.setattr(wp2, "code_state", lambda: {**wp2_fakes.CODE, "dirty": True, "diff_sha256": "d" * 64})
+    else:
+        states = iter([dict(wp2_fakes.CODE), {**wp2_fakes.CODE, "dirty": True, "diff_sha256": "e" * 64}])
+        monkeypatch.setattr(wp2, "code_state", lambda: next(states))
+    assert mod.run([]) == 1
+    c = _read(env.check)
+    assert c["technical_success"] is False and c["check_state"]["ok"] is False
+    key = {"not_frozen": "frozen", "dirty": "clean", "changed_during_check": "unchanged"}[case]
+    assert c["check_state"][key] is False
+    assert all(v["ok"] for v in c["comparisons"].values())  # only the check's own state fails
+
+
+def test_dry_check_recomputes_level1_noop_mismatch(env):
+    e2 = _read(env.raw / "e2.json")
+    row = next(r for r in e2["level1"] if r["noop"])
+    row["tv"] = 1e-6  # a real in-batch sham violation; the stored count stays 0
+    assert e2["level1_noop_mismatch"] == 0
+    _set_output(env, "e2", env.raw / "e2.json", e2, "e2.json")
+    mod.run([])
+    c = _read(env.check)
+    assert c["technical_success"] is False
+    ident = c["comparisons"]["e2_identity"]
+    assert ident["ok"] is False and ident["output"]["level1_noop_mismatch"] == 1
+    assert ident["output"]["level1_noop_mismatch_stored"] == 0
