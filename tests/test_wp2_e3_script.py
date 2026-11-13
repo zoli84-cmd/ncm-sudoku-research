@@ -205,7 +205,8 @@ def test_wp2_e3_final_files_assembled_from_checkpoints(tmp_path, monkeypatch):
         assert fits["stages"][name] == ck["summary"] and budget[name] == ck["budget"]
         assert fits["files"][name] == ck["files"] and fits["stage_digests"][name] == done["checkpoint_sha256"]
         assert done == {"stage": name, "checkpoint_sha256": wp2.file_sha256(stages / f"{name}.json")}
-        assert set(ck) == {"stage", "summary", "budget", "files", "in_dims", "seconds", "stage_environment"}
+        assert set(ck) == {"stage", "note", "summary", "budget", "files", "in_dims", "seconds", "stage_environment"}
+        assert ck["note"] == wp2.DRY_NOTE
     assert _rec(env)["stage_digests"] == fits["stage_digests"]
 
 
@@ -239,9 +240,25 @@ def test_wp2_e3_stage_without_artifacts_is_rerun(tmp_path, monkeypatch):
     _crash_at(env, "wl_teacher_L12")
     (_out(env) / "preds" / "wl_L06__generated.npz").unlink()
     fn, calls = _counter("wl_L06")
-    _set_stages(env, wl_L06=fn, wl_L12=_never)
+    fn12, calls12 = _counter("wl_L12")
+    _set_stages(env, wl_L06=fn, wl_L12=fn12)
     env.mod.main(["--role", "dry", "--resume"])
     assert calls == [1] and (_out(env) / "preds" / "wl_L06__generated.npz").exists()
+    assert calls12 == [1]  # every stage after a recomputed one reruns too (cascade)
+    assert _rec(env)["complete"] is True
+
+
+def test_wp2_e3_recomputed_stage_cascades_to_later_stages(tmp_path, monkeypatch):
+    """wl_L06_controls depends on the saved wl_L06 PCA and in_dims: once wl_L06 is recomputed on
+    resume, it and every later stage rerun; earlier done stages are kept."""
+    env = _setup(tmp_path, monkeypatch, stages=["wl_L12", "wl_L06", "wl_L06_controls", "wl_teacher_L12"])
+    _crash_at(env, "wl_teacher_L12")
+    assert (_out(env) / "stages" / "wl_L06_controls.done.json").exists()
+    (_out(env) / "models" / "wl_L06__generated_seed1.pt").unlink()
+    counters = {n: _counter(n) for n in ("wl_L06", "wl_L06_controls", "wl_teacher_L12")}
+    _set_stages(env, wl_L12=_never, **{n: c[0] for n, c in counters.items()})
+    env.mod.main(["--role", "dry", "--resume"])
+    assert all(len(c[1]) == 1 for c in counters.values())
     assert _rec(env)["complete"] is True
 
 
@@ -517,6 +534,34 @@ def test_wp2_e3_test_interrupted_run_resumes(dry_done, tmp_path, monkeypatch):
     rec = _rec(env, "test")
     assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"
     assert list(_fits(env, "test")["stages"]) == SHORT and _fits(env, "test")["note"] != wp2.DRY_NOTE
+
+
+def test_wp2_e3_test_resume_rejects_probe_mutation_same_ids(dry_done, tmp_path, monkeypatch):
+    env = _copy(dry_done, tmp_path, monkeypatch)
+    _freeze_for_test(env)
+    env.active = SHORT
+    _crash_at(env, "wl_teacher_L12", role="test")
+    _rewrite(env.root / "runs" / "e3prep" / "probe_val" / "L12.npy")
+    _all_fail(env)
+    with pytest.raises(SystemExit, match=re.escape("probe_val/L12.npy")):
+        env.mod.main(["--role", "test", "--resume"])
+    assert _rec(env, "test")["complete"] is False
+
+
+def test_wp2_e3_test_stdout_is_technical_only(dry_done, tmp_path, monkeypatch, capsys):
+    env = _copy(dry_done, tmp_path, monkeypatch)
+    _freeze_for_test(env)
+    env.active = SHORT
+    _set_stages(env)
+    capsys.readouterr()
+    env.mod.main(["--role", "test"])
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert len(lines) == len(SHORT) + 1
+    for line in lines:
+        assert set(json.loads(line)) <= set(wp2.TECHNICAL_KEYS)
+    assert _rec(env, "test")["valid"] is True
+    ck = json.loads((_out(env, "test") / "stages" / "wl_L06.json").read_text(encoding="utf-8"))
+    assert "note" not in ck
 
 
 def test_wp2_e3_test_refused_fresh_start_then_resume_keeps_outputs(dry_done, tmp_path, monkeypatch):

@@ -24,7 +24,9 @@ value, `in_dims`, `seconds`, `stage_environment`); (3) marker `stages/<stage>.do
 SHA-256 equals the marker's digest and every artifact in `files` matches. No marker: the stage's
 checkpoint and artifacts (`<stage>__*`) are deleted and it reruns. Marker present but the checkpoint
 digest or an artifact SHA-256 differs: `SystemExit` naming the file. A missing artifact removes the
-marker and checkpoint and reruns the stage. `stored` (passed to later stages) is built only from
+marker and checkpoint and reruns the stage. Once a stage is discarded on resume, every later stage
+in `STAGES` order is discarded and rerun too (later stages may read its artifacts, e.g.
+`wl_L06_controls` the saved wl_L06 PCA). Dry-role checkpoints carry `note` = `wp2.DRY_NOTE`. `stored` (passed to later stages) is built only from
 verified checkpoints (JSON round trip).
 
 Outputs: `experiments/wp2/<role>/e3_fits.json` (note, role, date, n_train, n_val, n_score,
@@ -220,10 +222,10 @@ def _stored(ck: dict) -> dict:
     return {"summary": ck["summary"], "files": ck["files"], "in_dims": ck["in_dims"]}
 
 
-def _publish(L: dict, stage: str, res: dict, seconds: float) -> dict:
+def _publish(L: dict, role: str, stage: str, res: dict, seconds: float) -> dict:
     files = wp2e3.save_stage(L["out"], stage, res)
     ck_path, done_path = _paths(L, stage)
-    ck = {"stage": stage, "summary": res["summary"], "budget": res["budget"], "files": files,
+    ck = {"stage": stage, **({"note": wp2.DRY_NOTE} if role == "dry" else {}), "summary": res["summary"], "budget": res["budget"], "files": files,
           "in_dims": res["in_dims"], "seconds": seconds,
           "stage_environment": {"date": time.strftime("%Y-%m-%d"), "environment": wp2.environment_record(),
                                 "code": wp2.code_state()}}
@@ -258,10 +260,11 @@ def run(argv: list[str] | None = None) -> int:
         rec = wp2.mark_outputs_started(RUNNER, role)
 
     stages = list(wp2e3.STAGES)
-    checkpoints = {}
+    checkpoints, cascade = {}, False
     for name, _ in stages:  # validate every stored stage before any fit
-        ck = _verify_stage(L, name) if args.resume else None
-        if ck is None:
+        ck = _verify_stage(L, name) if args.resume and not cascade else None
+        if ck is None:  # this stage and every later one rerun (later stages may read its artifacts)
+            cascade = True
             _discard_stage(L, name)
         else:
             checkpoints[name] = ck
@@ -276,7 +279,7 @@ def run(argv: list[str] | None = None) -> int:
         t0 = time.perf_counter()
         res = fn(sets, KW, stored)
         seconds = time.perf_counter() - t0
-        ck = _publish(L, name, res, seconds)
+        ck = _publish(L, role, name, res, seconds)
         stored[name] = _stored(ck)
         wp2.status_line(runner=RUNNER, role=role, stage=name, seconds=round(seconds, 1))
         del res, ck
