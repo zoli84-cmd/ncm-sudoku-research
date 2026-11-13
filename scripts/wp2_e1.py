@@ -1,6 +1,6 @@
 """WP2 E1 confirmatory runner (plan v3.7 §6, §10; D76; WP2 plan spec ambiguities 12, 13, 21).
 
-Usage: uv run python scripts/wp2_e1.py --role test|dry [--force | --resume]
+Usage: uv run --locked python scripts/wp2_e1.py --role test|dry [--force | --resume]
 
 Runs the tokenizer/generator breakdown once (`e1.e1_records`, batch size 50, spec ambiguity
 13) on the role's puzzles (`wp2.load_role`: TEST, or the first 50 CAL puzzles in the dry role).

@@ -373,3 +373,53 @@ def test_wp2_evaluate_report_labels_h1_tost_by_its_level_and_method(default):
     row = next(line for line in default.report.splitlines() if line.startswith("| H1 |"))
     assert "96.67% interval (bootstrap)" in row
     assert "96.67% TOST interval (H1)" not in default.report
+
+
+# --- final review fixes ---------------------------------------------------------------------------
+
+def test_wp2_evaluate_writes_nothing_if_the_report_fails(setup, monkeypatch):
+    env = setup(role="test")
+    report = env.mod.report
+
+    def failing(res):
+        raise RuntimeError("report failed on a TEST-only path")
+
+    monkeypatch.setattr(env.mod, "report", failing)
+    with pytest.raises(RuntimeError, match="TEST-only"):
+        env.mod.main(["--role", "test"])
+    assert not (env.exp / "results.json").exists() and not (env.exp / "report.md").exists()
+    monkeypatch.setattr(env.mod, "report", report)
+    res = _run(env, "test")  # the single look is still available
+    assert res["role"] == "test" and (env.exp / "report.md").is_file()
+
+
+def _rewrite_score_ids(env, ids):
+    """A consistent score set (extract manifest, e3_fits.json score_ids, e3 record) with other ids."""
+    p = env.score_dir / "ids.json"
+    wp2.atomic_write(p, json.dumps(ids))
+    rec = json.loads((env.records / "e3_extract.json").read_text(encoding="utf-8"))
+    _edit_record(env, "e3_extract", score_manifest={**rec["score_manifest"], "ids.json": wp2.file_sha256(p)})
+    fits_path = env.exp / "e3_fits.json"
+    fits = json.loads(fits_path.read_text(encoding="utf-8"))
+    wp2.atomic_json(fits_path, {**fits, "score_ids": ids})
+    rec = json.loads((env.records / "e3.json").read_text(encoding="utf-8"))
+    _edit_record(env, "e3", outputs={**rec["outputs"], "e3_fits.json": wp2.file_sha256(fits_path)})
+
+
+def test_wp2_evaluate_test_role_requires_score_ids_equal_role_ids(setup):
+    env = setup(role="test")
+    _rewrite_score_ids(env, [f"other-{i}" for i in range(env.n)])
+    with pytest.raises(SystemExit, match="score set's ids differ from the TEST ids"):
+        env.mod.main(["--role", "test"])
+    assert not (env.exp / "results.json").exists()
+
+
+def test_wp2_evaluate_test_role_requires_equivariance_ids_from_score_ids(setup):
+    env = setup(role="test")
+    p = env.exp / "equivariance.json"
+    eq = json.loads(p.read_text(encoding="utf-8"))
+    wp2.atomic_json(p, {**eq, "ids": eq["ids"][1:]})
+    _edit_record(env, "equiv", outputs={"equivariance.json": wp2.file_sha256(p)})
+    with pytest.raises(SystemExit, match="equivariance.json ids differ from the first 200 score ids"):
+        env.mod.main(["--role", "test"])
+    assert not (env.exp / "results.json").exists()

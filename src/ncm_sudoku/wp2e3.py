@@ -8,8 +8,10 @@ the dry run) through the three-set parameters of `e3controls.fit_cells`,
 D64 per-cell and D67 whole-layer stages reproduce the pre-lock script outputs exactly
 (same RNG streams, seeds, grid and budget); the dry run checks this (Task 13).
 
-`STAGES` (in run order; the last three are new for WP2 and come last, so the order of
-the earlier stages is unchanged) are callables `(sets, kw, stored) -> StageResult`,
+`STAGES` (in run order; four stages are new for WP2: `wl_L02`, placed after
+`wl_teacher_L12` with the other whole-layer stages, and the last three, `wl_L06_controls`,
+`wl_teacher_L06` and `wl_training_size`; the stages with a pre-lock reference keep their
+pre-lock relative order) are callables `(sets, kw, stored) -> StageResult`,
 where `stored` is `{stage: {"summary", "files", "in_dims"}}` of the finished stages
 (rebuilt by the runner from verified per-stage checkpoints). A `StageResult` is a dict:
 

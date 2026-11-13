@@ -14,7 +14,7 @@ Known values:
 - Configuration tv = dose * TV_PER_DOSE[level], so the 6 vs. 11 frozen range is covered.
 - Diagnostics: configuration stages change cell 0 under D in every row and no cell under C;
   the primary level-11 stages have state_dist_D = 0.5 and state_dist_C = 0.25 at every level.
-- E3 (n_score puzzles, ids `score-<i>`): per puzzle and seed the prediction deviates from the
+- E3 (n_score puzzles, ids `score-<i>`; the TEST role uses the E2 ids and n_score = n): per puzzle and seed the prediction deviates from the
   label by d in every bit, so the per-puzzle Brier is d^2 = base + jitter (jitter shared by every
   fit); `wl_L06.permuted` has base + theta1_shift, so theta1 = theta1_shift up to float32.
 """
@@ -284,7 +284,9 @@ def write_role(root: Path, role: str, n: int = 40, theta2: float = -0.10, theta1
     wp2.atomic_json(recs / "e2.json", record("e2", role, **e2_extra))
 
     score_dir = raw / "e3data" / "score"
-    score_ids = [f"score-{i}" for i in range(n_score)]
+    if role == "test":  # TEST scores E3 on the same puzzles as E2 and E1
+        n_score = n
+    score_ids = list(e2_ids) if role == "test" else [f"score-{i}" for i in range(n_score)]
     score_puzzles = _puzzles(n_score, 5)
     lab = labels(score_puzzles)
     wp2.atomic_write(score_dir / "ids.json", json.dumps(score_ids))
@@ -301,7 +303,7 @@ def write_role(root: Path, role: str, n: int = 40, theta2: float = -0.10, theta1
         {"e3_fits.json": exp / "e3_fits.json", "e3_budget.json": exp / "e3_budget.json"})))
 
     kinds = ("all", "digit", "geometric")
-    equiv = {"note": note, "non_confirmatory": True, "role": role, "level": 12, "n": 20, "k": 4,
+    equiv = {"note": note, "non_confirmatory": True, "role": role, "level": 12, "n": 20, "k": 4, "ids": score_ids[:200],
              "acceptable": 0.0116, "acceptable_source": "fixed", "seed_noise_p95": 0.012,
              "share_within": {k: 0.0 for k in kinds}, "mean_deviation": {"all": 0.079, "digit": 0.066,
                                                                          "geometric": 0.077},

@@ -1,7 +1,7 @@
 """WP2 exploratory level-12 whole-layer equivariance runner (plan v3.7 §8.4, §12.2, §13; D59,
 D76; WP2 plan spec ambiguities 6, 7, 21, 24).
 
-Usage: uv run python scripts/wp2_equiv.py --role test|dry [--force | --resume]
+Usage: uv run --locked python scripts/wp2_equiv.py --role test|dry [--force | --resume]
 
 Runs `e3equiv.equivariance_pilot` once on the role's score set (TEST, or the PROBE-VAL score set
 in the dry role; `scripts/wp2_e3_extract.py`), on the first `N_EQUIV` score ids in generation

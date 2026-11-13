@@ -1,7 +1,7 @@
 """WP2 pre-written single-look evaluation (plan v3.7 §6, §7.3-§7.4, §8.2-§8.4, §10, §11, §13; D76-D79;
 WP2 plan spec ambiguities 2, 3, 7-10, 18, 19, 22-24).
 
-Usage: uv run python scripts/wp2_evaluate.py --role test|dry
+Usage: uv run --locked python scripts/wp2_evaluate.py --role test|dry
 
 Single look: the TEST role refuses to run (named exit, nothing written) if
 `experiments/wp2/test/results.json` or `report.md` already exists; the dry role may rerun.
@@ -17,7 +17,8 @@ exist and pass `wp2.valid_record` at the current tag commit; any reason exits na
 the reasons. The one exception is an E2 record whose only reason is `identity-failure` (spec
 ambiguity 23): the evaluation continues but computes no E2 interval, TOST, AUC or reading; every
 E2 entry carries the identity-failure status block instead. The TEST role also requires
-`wp2.freeze_state()["frozen"]` now. Every input file is checked against the manifest of the record
+`wp2.freeze_state()["frozen"]` now, the score set's ids equal to the TEST ids and the
+equivariance ids equal to the first `N_EQUIV` score ids. Every input file is checked against the manifest of the record
 that produced it (run record `outputs`, `score_manifest`, `e3_fits.json` `files`, `e2.json`
 `diag_files`) before it is read; a mismatch exits naming the file.
 
@@ -25,7 +26,8 @@ Statistics come only from `wp2eval` (`contrast`, `tost`, `h1_block`, `auc_frozen
 `e2_descriptive`, `select_readings`) and `e2p2` (`puzzle_values`, `dose_nodes`); `summarize2` and
 `auc_pair` are never called.
 
-Outputs: `experiments/wp2/<role>/results.json` and `report.md` (UTF-8). E2 diagnostics (D78) are
+Outputs: `experiments/wp2/<role>/results.json` and `report.md` (UTF-8); the report is rendered
+before either file is written, so a failure leaves neither behind. E2 diagnostics (D78) are
 descriptive: level-1 rows are weighted by the policy weights over non-no-op rows, configuration
 rows are averaged over eligible seeds within puzzle, then over puzzles.
 """
@@ -58,6 +60,7 @@ N_BOOT = wp2eval.N_BOOT
 ALPHA = 0.05  # per side, theta2' and theta_T TOST (§11.4, §8.3)
 OUTPUT_FILES = ("results.json", "report.md")
 SCORE_FILES = ("ids.json", "puzzles.npy", "mask.npy", "empty.npy", "depth.npy")
+N_EQUIV = 200  # wp2_equiv.py: equivariance.json ids are the first N_EQUIV score ids
 TEST_NOTE = "WP2 confirmatory evaluation on TEST (plan v3.7); single look, read only after all TEST runs are complete"
 DEVIATION_REQUIRED = "a logged deviation (DECISIONS.md) is required before any E2 inference"
 CI95_BOUND_LABEL = ("individual-level (0.95) rare-event bound; the 98.33% family interval is the inferential one")
@@ -779,6 +782,11 @@ def run(argv: list[str] | None = None) -> int:
     role_data = wp2.load_role(role)
     if list(role_data.ids) != e2["ids"]:
         sys.exit(f"{NAME}: the role's puzzle ids differ from e2.json ids")
+    if role == "test":  # defence in depth: the runners check these at the source
+        if score["ids"] != list(role_data.ids):
+            sys.exit(f"{NAME}: the score set's ids differ from the TEST ids")
+        if equiv.get("ids") != score["ids"][:N_EQUIV]:
+            sys.exit(f"{NAME}: equivariance.json ids differ from the first {N_EQUIV} score ids")
     prelock = {name: _read(inputs.unrecorded(wp2.ROOT / "experiments" / "e3prep" / name))
                for name in ("probes.json", "wholelayer.json")}
 
@@ -806,8 +814,9 @@ def run(argv: list[str] | None = None) -> int:
         "readings": readings, "auc": auc, "disclosure_7_4": DISCLOSURE_7_4, "tables": tables,
     }
     res = _plain(res)
+    text = report(res)  # rendered before either write: a report failure leaves the single look unused
     wp2.atomic_json(exp / "results.json", res)
-    wp2.atomic_write(exp / "report.md", report(res))
+    wp2.atomic_write(exp / "report.md", text)
     return 0
 
 

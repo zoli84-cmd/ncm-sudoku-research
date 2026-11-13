@@ -1,6 +1,6 @@
 """WP2 dry-run comparison (plan v3.7 §10, §12.2; D76(2)-(3); WP2 plan spec ambiguities 11, 12, 13, 23, 24).
 
-Usage: uv run python scripts/wp2_dry_check.py
+Usage: uv run --locked python scripts/wp2_dry_check.py
 
 Compares the dry run (E2 and E1 on the first 50 CAL puzzles, E3 with PROBE-VAL in the TEST role,
 level-12 equivariance) with the pre-lock records and writes `experiments/wp2/dry/check.json` and
@@ -21,7 +21,9 @@ Inputs, each read once and hashed from the bytes that are parsed:
   and the depth predictions (`e3_fits.json` `files`);
 - references: `runs/e2p2/pilot2.json`, `runs/lock/level1_full_batch.json`,
   `experiments/e3prep/probes.json`, `experiments/e3prep/wholelayer.json`,
-  `experiments/lock/equivariance_l12.json`.
+  `experiments/lock/equivariance_l12.json`;
+- the dry evaluation `experiments/wp2/dry/results.json` and `report.md` (`dry_evaluate_part`; both
+  join the `compared` snapshot group).
 
 `technical_success` requires every dry record valid at the tag commit (`wp2.valid_record`), the dry
 ids equal to the first 50 CAL ids of both E2 references, exact equality with complete key coverage
@@ -30,7 +32,11 @@ base), E1 (`solve` against the pilot-2 `solve_A`) and the extraction (`matches_e
 configs and allclose `per_puzzle` for every mapped E3 fit (`E3_MAP`), the depth breakdown
 (`DEPTH_MAP`) and equivariance, zero solve-based and code-based E2 identity failures in both the
 E2 output and the run record (spec ambiguity 23), and PROBE files that still match the dry e3
-record's `inputs`. `NEW_FITS` have no pre-lock reference and are only listed. The check itself must run
+record's `inputs`, and the dry evaluation (`dry_evaluate`): `results.json` and `report.md` present,
+role dry, `code_state` at the tag commit and clean, every recorded input under `runs/wp2/dry/` and
+`experiments/wp2/dry/` unchanged, and the five dry outputs read here recorded with their current
+SHA-256. A missing dry evaluation is a failed part, not a refusal. `NEW_FITS` have no pre-lock
+reference and are only listed. The check itself must run
 frozen (`freeze_state()["frozen"]`) on clean code, with `code_state()` and `freeze_state()` unchanged between
 its start and end (`check_state`; `code_end` and `freeze_state_end` are recorded next to the start states).
 The E2 `level1_noop_mismatch` is recomputed from the level-1 rows (`e2p2.level1_noop_mismatch`); the stored
@@ -407,6 +413,32 @@ def extraction_part(extract_rec: dict) -> dict:
     return {"matches_e3prep": m, "ok": ok}
 
 
+def dry_evaluate_part(rd: Reader, exp: Path, raw: Path, tag_commit: str | None, outputs: list[str]) -> dict:
+    """The dry `wp2_evaluate.py` run (runbook: it must exit 0 before this check): `results.json` and
+    `report.md` exist, `results.json` has role dry and `code_state` at the tag commit and clean, every
+    recorded input under the dry directories still has its recorded SHA-256 (`changed`), and every
+    dry output this check reads (`outputs`, ROOT-relative, already hashed by `rd`) is recorded with
+    that hash (`not_recorded`)."""
+    files = [exp / "results.json", exp / "report.md"]
+    missing = [_rel(f) for f in files if not f.is_file()]
+    if missing:
+        return {"missing": missing, "ok": False}
+    res = rd.json(files[0])
+    rd.bytes(files[1])
+    code = res.get("code_state") if isinstance(res.get("code_state"), dict) else {}
+    inputs = res.get("inputs") if isinstance(res.get("inputs"), dict) else {}
+    dry_dirs = tuple(f"{_rel(d)}/" for d in (exp, raw))
+    changed = sorted(rel for rel, sha in inputs.items() if rel.startswith(dry_dirs)
+                     and (not (wp2.ROOT / rel).is_file() or wp2.file_sha256(wp2.ROOT / rel) != sha))
+    not_recorded = sorted(rel for rel in outputs if inputs.get(rel) != rd.sha[rel])
+    state = {"role_dry": res.get("role") == ROLE,
+             "tag_commit": tag_commit is not None and code.get("commit") == tag_commit,
+             "clean": code.get("dirty") is False}
+    return {"missing": [], "code_state": code, **state, "n_inputs_checked": sum(r.startswith(dry_dirs) for r in inputs),
+            "changed": changed, "not_recorded": not_recorded,
+            "ok": all(state.values()) and not changed and not not_recorded}
+
+
 def probe_inputs_part(e3_rec: dict) -> tuple[dict, dict]:
     """The PROBE entries of the dry e3 record's `inputs`, as ROOT-relative paths with SHA-256 only."""
     files = _get(e3_rec, ("inputs", "files")) or {}
@@ -449,6 +481,11 @@ def report(c: dict) -> str:
         "extraction": "matches_e3prep of the e3_extract record",
         "probe_inputs": f"{cmp['probe_inputs']['n']} PROBE files; changed: "
                         f"{', '.join(cmp['probe_inputs']['changed']) or 'none'}",
+        "dry_evaluate": ("missing: " + ", ".join(cmp["dry_evaluate"]["missing"]) if cmp["dry_evaluate"]["missing"]
+                         else f"results.json at the tag commit {cmp['dry_evaluate']['tag_commit']}, clean "
+                              f"{cmp['dry_evaluate']['clean']}, role dry {cmp['dry_evaluate']['role_dry']}; changed "
+                              f"inputs: {', '.join(cmp['dry_evaluate']['changed']) or 'none'}; unrecorded outputs: "
+                              f"{', '.join(cmp['dry_evaluate']['not_recorded']) or 'none'}"),
     }
     L += [f"| {k} | {cmp[k]['ok']} | {details[k]} |" for k in cmp]
     L += ["", f"New fits without a pre-lock reference: {', '.join(cmp['e3']['new_fits'])}.", ""]
@@ -477,9 +514,14 @@ def run(argv: list[str] | None = None) -> int:
     rd.bytes(exp / "e3_budget.json", outs("e3", "e3_budget.json"), "e3 run record")
     equiv = rd.json(exp / "equivariance.json", outs("equiv", "equivariance.json"), "equiv run record")
     refs = {name: rd.json(wp2.ROOT / rel) for name, rel in REFERENCES.items()}
+    eval_outputs = [_rel(p) for p in (raw / "e1.json", raw / "e2.json", exp / "e3_fits.json", exp / "e3_budget.json",
+                                      exp / "equivariance.json")]
+    dry_eval = dry_evaluate_part(rd, exp, raw, freeze.get("tag_commit"), eval_outputs)
     compared = {_rel(p): rd.sha[_rel(p)] for p in (
         raw / "e2.json", raw / "e1.json", raw / "e2" / "parts.json", exp / "e3_fits.json", exp / "e3_budget.json",
         exp / "equivariance.json", *(wp2.ROOT / rel for rel in REFERENCES.values()))}
+    compared.update({rel: rd.sha[rel] for rel in (_rel(exp / "results.json"), _rel(exp / "report.md"))
+                     if rel in rd.sha})
 
     manifest = records["e3_extract"].get("score_manifest") or {}
     score_dir = raw / "e3data" / "score"
@@ -500,6 +542,7 @@ def run(argv: list[str] | None = None) -> int:
         "e1": e1_part(e1, pilot2, ids),
         "extraction": extraction_part(records["e3_extract"]),
         "probe_inputs": probe,
+        "dry_evaluate": dry_eval,
     }
     torch.use_deterministic_algorithms(True)
     freeze_end, code_end = wp2.freeze_state(), wp2.code_state()

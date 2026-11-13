@@ -1,7 +1,7 @@
 """WP2 E3 confirmatory runner (plan v3.7 §8.1-§8.3, §10, §12.2; D63, D64, D67, D76; WP2 plan spec
 ambiguities 17, 21, 24).
 
-Usage: uv run python scripts/wp2_e3.py --role test|dry [--force | --resume]
+Usage: uv run --locked python scripts/wp2_e3.py --role test|dry [--force | --resume]
 
 Runs every stage of `wp2e3.STAGES` once: trained on PROBE-TRAIN, selected on PROBE-VAL (both from
 `runs/e3prep/`, reused unchanged) and scored on the role's score set `runs/wp2/<role>/e3data/score/`

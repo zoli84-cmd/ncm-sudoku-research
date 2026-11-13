@@ -28,6 +28,7 @@ def _load(name: str):
 
 
 mod = _load("wp2_dry_check")
+evaluate = _load("wp2_evaluate")
 
 
 @pytest.fixture(autouse=True)
@@ -164,6 +165,12 @@ def _build(root: Path, mp: pytest.MonkeyPatch) -> SimpleNamespace:
     lock_acc = 0.011644554557515473
     wp2.atomic_json(env.lock_eq, {**common, "acceptable": lock_acc, "share_within": within(lock_acc),
                                   "probe": {"level": 12, "kind": "linear", "config": [0.1, 0.001]}})
+
+    # the dry evaluation on the final dry outputs (runbook: it must exit 0 before the dry check)
+    mp.setattr(evaluate, "N_BOOT", 200)
+    mp.setattr(wp2, "load_role", lambda r: wp2.RoleData(ids=fake.e2_ids, puzzles=fake.e2_puzzles,
+                                                        solutions=fake.e2_puzzles, source="fake"))
+    assert evaluate.run(["--role", "dry"]) == 0
     return env
 
 
@@ -239,7 +246,7 @@ def test_dry_check_success_on_identical_synthetic_references(env, capsys):
     assert set(c["snapshot"]["dry_records"]) == {f"experiments/wp2/dry/runs/{r}.json"
                                                  for r in ("e3_extract", "e3", "equiv", "e2", "e1")}
     assert set(c["snapshot"]["compared"]) == {
-        "runs/wp2/dry/e2.json", "runs/wp2/dry/e1.json", "runs/wp2/dry/e2/parts.json",
+        "experiments/wp2/dry/results.json", "experiments/wp2/dry/report.md", "runs/wp2/dry/e2.json", "runs/wp2/dry/e1.json", "runs/wp2/dry/e2/parts.json",
         "experiments/wp2/dry/e3_fits.json", "experiments/wp2/dry/e3_budget.json",
         "experiments/wp2/dry/equivariance.json", "runs/e2p2/pilot2.json", "runs/lock/level1_full_batch.json",
         "experiments/e3prep/probes.json", "experiments/e3prep/wholelayer.json",
@@ -252,6 +259,7 @@ def test_dry_check_success_on_identical_synthetic_references(env, capsys):
     assert cmp["e1"]["n_matched"] == 50
     assert set(cmp["e3"]["new_fits"]) == mod.NEW_FITS
     assert cmp["e3"]["depth"]["ok"] is True
+    assert cmp["dry_evaluate"]["ok"] is True and cmp["dry_evaluate"]["changed"] == []
     assert cmp["equivariance"]["share_within"]["at_0.0116"] == _read(env.exp / "equivariance.json")["share_within"]
     assert set(cmp["equivariance"]["share_within"]["at_lock_value"]) == set(KINDS)
     assert (env.check.parent / "check.md").is_file()
@@ -346,9 +354,12 @@ def _mutate(env, part: str) -> None:
         raise ValueError(part)
 
 
-FAILS = {"e2_records": "e2_records", "e2_level1": "e2_level1", "e2_base": "e2_base", "e2_identity": "e2_identity",
-         "e2_code_identity": "e2_identity", "e3_config": "e3", "e3_per_puzzle": "e3", "equivariance": "equivariance",
-         "e1": "e1", "e1_coverage": "e1", "extraction": "extraction", "invalid_record": None}
+# a rewritten dry output also makes the earlier dry evaluation stale (`dry_evaluate`)
+FAILS = {"e2_records": {"e2_records"}, "e2_level1": {"e2_level1"}, "e2_base": {"e2_base"},
+         "e2_identity": {"e2_identity"}, "e2_code_identity": {"e2_identity", "dry_evaluate"},
+         "e3_config": {"e3"}, "e3_per_puzzle": {"e3"}, "equivariance": {"equivariance"},
+         "e1": {"e1", "dry_evaluate"}, "e1_coverage": {"e1", "dry_evaluate"}, "extraction": {"extraction"},
+         "invalid_record": set()}
 
 
 @pytest.mark.parametrize("part", ["e2_records", "e2_level1", "e2_base", "e2_identity", "e2_code_identity",
@@ -360,7 +371,7 @@ def test_dry_check_detects_each_difference(env, part, capsys):
     c = _read(env.check)
     assert c["technical_success"] is False
     failing = {k for k, v in c["comparisons"].items() if not v["ok"]}
-    assert failing == ({FAILS[part]} if FAILS[part] else set())
+    assert failing == FAILS[part]
     invalid = {r for r, s in c["records"].items() if not s["valid"]}
     assert invalid == ({"e3"} if part == "invalid_record" else set())
     assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["valid"] is False
@@ -428,3 +439,61 @@ def test_dry_check_recomputes_level1_noop_mismatch(env):
     ident = c["comparisons"]["e2_identity"]
     assert ident["ok"] is False and ident["output"]["level1_noop_mismatch"] == 1
     assert ident["output"]["level1_noop_mismatch_stored"] == 0
+
+
+# --- the dry evaluation (final review) -------------------------------------------------------------
+
+def _edit_results(env, **fields) -> None:
+    p = env.exp / "results.json"
+    wp2.atomic_json(p, {**_read(p), **fields})
+
+
+@pytest.mark.parametrize("name", ["results.json", "report.md"])
+def test_dry_check_requires_the_dry_evaluation(env, name):
+    (env.exp / name).unlink()
+    assert mod.run([]) == 1
+    c = _read(env.check)
+    assert c["technical_success"] is False
+    ev = c["comparisons"]["dry_evaluate"]
+    assert ev["ok"] is False and ev["missing"] == [f"experiments/wp2/dry/{name}"]
+    assert all(v["ok"] for k, v in c["comparisons"].items() if k != "dry_evaluate")
+
+
+@pytest.mark.parametrize("case", ["other_commit", "dirty", "no_tag"])
+def test_dry_check_requires_the_dry_evaluation_at_the_tag_commit(env, monkeypatch, case):
+    code = _read(env.exp / "results.json")["code_state"]
+    if case == "other_commit":
+        _edit_results(env, code_state={**code, "commit": "b" * 40})
+    elif case == "dirty":
+        _edit_results(env, code_state={**code, "dirty": True, "diff_sha256": "d" * 64})
+    else:
+        monkeypatch.setattr(wp2, "freeze_state", lambda root=None: {**wp2_fakes.FROZEN, "tag_commit": None})
+    mod.run([])
+    c = _read(env.check)
+    assert c["technical_success"] is False and c["comparisons"]["dry_evaluate"]["ok"] is False
+
+
+def test_dry_check_requires_the_dry_evaluation_of_the_current_outputs(env):
+    p = env.raw / "e2" / "diag" / "level1__v00.npz"  # read by the evaluation only
+    rel = p.relative_to(env.root).as_posix()
+    assert rel in _read(env.exp / "results.json")["inputs"]
+    p.write_bytes(p.read_bytes() + b" ")
+    mod.run([])
+    c = _read(env.check)
+    ev = c["comparisons"]["dry_evaluate"]
+    assert c["technical_success"] is False and ev["ok"] is False and ev["changed"] == [rel]
+
+
+def test_dry_check_requires_the_dry_evaluation_to_record_the_dry_outputs(env):
+    res = _read(env.exp / "results.json")
+    _edit_results(env, inputs={k: v for k, v in res["inputs"].items() if k != "runs/wp2/dry/e1.json"})
+    mod.run([])
+    c = _read(env.check)
+    ev = c["comparisons"]["dry_evaluate"]
+    assert c["technical_success"] is False and ev["ok"] is False and ev["not_recorded"] == ["runs/wp2/dry/e1.json"]
+
+
+def test_dry_check_requires_the_dry_role_evaluation(env):
+    _edit_results(env, role="test")
+    mod.run([])
+    assert _read(env.check)["comparisons"]["dry_evaluate"]["ok"] is False

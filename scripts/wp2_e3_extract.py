@@ -1,6 +1,6 @@
 """WP2 E3 score-set extraction (plan v3.7 §8.1, §10, §12.2; D76; WP2 plan spec ambiguity 21).
 
-Usage: uv run python scripts/wp2_e3_extract.py --role test|dry [--force | --resume]
+Usage: uv run --locked python scripts/wp2_e3_extract.py --role test|dry [--force | --resume]
 
 Generates and extracts, once, the per-level representations, logical labels and masks for the
 role's E3 score set: TEST (600 puzzles, `wp2.verify_test_data`) or, in the dry role, PROBE-VAL

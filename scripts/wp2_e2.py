@@ -1,6 +1,6 @@
 """WP2 E2 confirmatory runner (plan v3.7 §7, §10, §12.2; D76, D78; WP2 plan spec ambiguities 11, 21-24).
 
-Usage: uv run python scripts/wp2_e2.py --role test|dry [--force | --resume]
+Usage: uv run --locked python scripts/wp2_e2.py --role test|dry [--force | --resume]
 
 Runs the locked E2 design once (`e2p2.run_pilot2` with the frozen CAL frequencies, generation
 chunk 50, outcome decoding in 50-row batches, D78 diagnostics) on the role's puzzles
