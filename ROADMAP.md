@@ -12,9 +12,9 @@ Single place for work-package status, backlog, and open items. Decisions live in
 | E2 pilot 2 | Plan v3.6 (D43–D52): review, implementation (TV damage, level-1 enumeration, extended doses, diagnostics), second pilot on CAL | done (2026-11-11): D53; E2 TEST requirement 600 | measured: pilot 3.91 h; sample-size simulation about 15 min | 1 session |
 | E3 preparation | Solver waves, labels and depth on PROBE subsets; probe and baseline training-size curves; H1 sample size (plan §12.1) | done (2026-11-11): D64; whole-layer diagnostic D65–D67, budget sensitivity D69; H1 form decided (D68) | probes minutes–hours | 2–3 sessions |
 | Lock | Sample-size simulation (E2 and H1 → one TEST size), §12.2 checklist, OSF embargoed registration with git tag hash | done (2026-11-12): `research_plan_v3.7.md` reviewed (high tier), tag `prereg-v3.7`, embargoed OSF registration https://osf.io/m28fx (D75) | minutes (simulation) | 1–2 sessions |
-| WP2 | E3 confirmatory evaluation on TEST: probes, control matrix, depth, equivariance | after lock | state extraction 0.02 s/puzzle; probes minutes–hours | 3–5 sessions |
-| WP3 | E4a / E4b targeted patching (conditional on the E4 gate) | conditional | depends on E4-TEST size | 3–6 sessions or dropped |
-| WP4 | Integrated analysis, figures, manuscript | after WP2 (and WP3) | minutes | 4–8 sessions |
+| WP2 | Confirmatory TEST runs (D76): E1, E2 (H2, H3) and E3 (H1) on the 600 TEST puzzles with every pre-specified secondary and exploratory analysis; code freeze (tag `wp2-code`), dry run on CAL/PROBE-VAL, TEST runs, pre-written evaluation, report under `experiments/wp2/` | in progress (2026-11-13): implementation plan `docs/superpowers/plans/2026-11-13-wp2.md` reviewed (D77, D78); next: subagent-driven implementation | planning estimate from measured stage times: dry run ≈ 8.1 h, TEST ≈ 17.5 h (E3 ≈ 6.4 h, E2 ≈ 10.1 h incl. ≤ 2 h unmeasured diagnostics; re-estimated from the dry run before TEST) | 4–5 sessions |
+| WP3 | E4a / E4b targeted patching (conditional on the E4 gate); needs its own protocol and registration before its test set is generated | conditional | depends on E4-TEST size | 3–6 sessions or dropped, plus the separate registration |
+| WP4 | Integrated analysis, figures, manuscript (plan §12.3 fixes the analysis output; manuscript scope and external review rounds are not yet planned) | after WP2; does not wait for WP3 if E4 is dropped | minutes | 4–8 sessions |
 | E5 | Optional extension (other checkpoint, retraining, other task) | not planned | — | needs a new protocol |
 
 Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`): baseline generation 1.30 s; branch D regeneration from level 2 / 6 / 11: 1.13 / 0.69 / 0.19 s; cumulative states 0.02 s; decode only (branch C) 0.02 s; RSS ≈ 0.5–0.65 GB; storage 322 B of codes vs ≈ 1.1 MB of FP32 states per puzzle.
@@ -31,4 +31,4 @@ Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`)
 ## Open items
 
 - Repeat the related-work search before submission (`literature/`).
-- Copilot review runs: reviewers fail when they try to read files outside the repository (`C:\Users\ako2bp\AGENTS.md`); add an explicit "repository files only" line to future briefs.
+- Remaining effort (planning estimate, 2026-11-13): 8–13 sessions without WP3, 11–19 with WP3; about 26 h of background CPU for WP2. At the pace of WP0 to the lock (about 9–13 sessions in five days), WP2 takes about 2–4 days, the roadmap without WP3 about 1.5–3 weeks, and WP3 adds about 1–2 weeks including its registration.
