@@ -36,8 +36,8 @@ import torch
 
 from ncm_sudoku.e3controls import fit_cells, permuted_control, run_controls, run_unit_digit, summarize_fit
 from ncm_sudoku.e3data import TEACHER_LEVELS, load_level, raw_features
+from ncm_sudoku.e3metrics import DEPTH_CLASSES, depth_breakdown, depth_breakdown_seeds
 from ncm_sudoku.g0 import code_state, environment_record
-from ncm_sudoku.labels import CENSORED, STUCK
 from ncm_sudoku.model import ROOT
 from ncm_sudoku.probes import SEEDS, brier_per_puzzle, build_inputs, train_probe
 
@@ -50,52 +50,12 @@ H1_LEVEL = 6
 SIZES = (125, 250, 500, 1000, 2000)
 KW: dict = {}  # fit_selected/train_probe budget overrides; empty = D55/D63 defaults (tests shrink it)
 NOTE = "non-confirmatory planning output (plan v3.6 §12.1); not evidence for H1"
-DEPTH_CLASSES = {
-    "1": lambda d: d == 1,
-    "2": lambda d: d == 2,
-    "3": lambda d: d == 3,
-    ">=4": lambda d: d >= 4,
-    "stuck": lambda d: d == STUCK,
-    "censored": lambda d: d == CENSORED,
-}
 
 
 def guard(force: bool) -> None:
     path = OUT / "probes.json"
     if path.exists() and not force:
         sys.exit(f"{path} exists: e3_probes is a rerun-guarded script; use --force or --resume")
-
-
-def depth_breakdown(preds: np.ndarray, mask: np.ndarray, empty: np.ndarray, depth: np.ndarray) -> dict:
-    """Brier per depth class over PROBE-VAL empty cells (rows of `preds` in row-major
-    (puzzle, cell) order): per puzzle over its cells of the class, then over the
-    puzzles that have such cells (§8.3 aggregation)."""
-    empty = np.asarray(empty, bool)
-    pz, _ = np.nonzero(empty)
-    d, y = np.asarray(depth)[empty], np.asarray(mask)[empty]
-    out = {}
-    for name, rule in DEPTH_CLASSES.items():
-        sel = rule(d)
-        pb = brier_per_puzzle(np.asarray(preds)[sel], y[sel], pz[sel], len(empty))
-        n_cells = int(sel.sum())
-        out[name] = {
-            "brier": float(np.nanmean(pb)) if n_cells else None,
-            "n_cells": n_cells,
-            "n_puzzles": int(len(np.unique(pz[sel]))),
-        }
-    return out
-
-
-def depth_breakdown_seeds(preds: list, mask: np.ndarray, empty: np.ndarray, depth: np.ndarray) -> dict:
-    """`depth_breakdown` per seed model, then the mean of the per-seed Briers (the scale of
-    every headline Brier: mean over seeds, not the Brier of the seed-averaged prediction)."""
-    per = [depth_breakdown(p, mask, empty, depth) for p in preds]
-    out = {}
-    for c in DEPTH_CLASSES:
-        b = [x[c]["brier"] for x in per]
-        out[c] = {"brier": None if None in b else float(np.mean(b)), "brier_per_seed": b,
-                  "n_cells": per[0][c]["n_cells"], "n_puzzles": per[0][c]["n_puzzles"]}
-    return out
 
 
 def _subset(name: str) -> dict:
