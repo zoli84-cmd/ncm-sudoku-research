@@ -15,6 +15,8 @@ Endpoint: `per_puzzle` (per-puzzle Brier on the given PROBE-VAL, mean over the 3
 models at the selected configuration) is the scored quantity, and `val_brier_mean`
 is its nanmean (= mean of the per-seed Briers). The selection-set value is kept
 separately as `tune_brier_mean`; the two differ only when `train_va` is given.
+For WP2 three-set fitting (`e3controls.fit_cells(score=...)`), `features_va` is the
+score set and `train_va` the PROBE-VAL selection set.
 
 `fit_selected` deviation from the brief's literal signature: the brief lists
 `fit_selected(features_tr, lab_tr, features_va, lab_va, kind, train_va=None)`, but
@@ -221,9 +223,11 @@ def fit_selected(
     Returns dict with `config`, `val_brier_mean` (the scored endpoint:
     nanmean of `per_puzzle`), `tune_brier_mean` (selection-set mean over seeds),
     `per_puzzle` (per-puzzle Brier on features_va, averaged over the 3 seed models
-    at the selected config; the endpoint), `preds` (seed-averaged val predictions) and `budget`
-    (dict keyed by (wd, lr, seed), one training-budget dict per `train_probe` call,
-    §8.1: the training budget is documented for every comparison).
+    at the selected config; the endpoint), `preds` (seed-averaged val predictions),
+    `seed_preds` (per-seed predictions on the `features_va` rows, in `SEEDS` order),
+    `state_dicts` (CPU copies of the selected configuration's seed models, `SEEDS`
+    order) and `budget` (dict keyed by (wd, lr, seed), one training-budget dict per
+    `train_probe` call, §8.1: the training budget is documented for every comparison).
     """
     if train_va is not None:
         tune_X, tune_Y, tune_puzzle, tune_n_puzzles = train_va
@@ -262,6 +266,7 @@ def fit_selected(
     lab_va_np = lab_va.numpy() if isinstance(lab_va, torch.Tensor) else np.asarray(lab_va)
 
     preds_sum, per_puzzle_sum = None, None
+    seed_preds, state_dicts = [], []
     for seed in SEEDS:
         model = models[(cfg[0], cfg[1], seed)]
         model.eval()
@@ -270,6 +275,8 @@ def fit_selected(
         pb = brier_per_puzzle(pred, lab_va_np, va_puzzle_arr, n_va_puzzles)
         preds_sum = pred if preds_sum is None else preds_sum + pred
         per_puzzle_sum = pb if per_puzzle_sum is None else per_puzzle_sum + pb
+        seed_preds.append(pred)
+        state_dicts.append({k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
 
     per_puzzle = per_puzzle_sum / len(SEEDS)
     return {
@@ -278,5 +285,7 @@ def fit_selected(
         "tune_brier_mean": tune_brier_mean,
         "per_puzzle": per_puzzle,
         "preds": preds_sum / len(SEEDS),
+        "seed_preds": seed_preds,
+        "state_dicts": state_dicts,
         "budget": budget,
     }

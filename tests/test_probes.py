@@ -230,3 +230,48 @@ def test_fit_selected_explicit_puzzle_count_keeps_trailing_empty_puzzle():
     assert out["per_puzzle"].shape == (n_va,)
     assert np.isnan(out["per_puzzle"][-1])  # the fully-given puzzle contributes no rows
     assert np.isfinite(out["per_puzzle"][:-1]).all()
+
+
+def _toy_sets(seed=6, n_tr=12, n_va=5):
+    rng = np.random.default_rng(seed)
+    out = []
+    for n in (n_tr, n_va):
+        f = rng.normal(size=(n, 81, 4))
+        y = (f[..., :1] > 0).repeat(9, axis=2).astype(np.float32)
+        X, pz, _ = build_inputs(f, np.ones((n, 81), bool))
+        out.append((X, torch.tensor(y.reshape(-1, 9)), pz.numpy(), n))
+    return out
+
+
+def test_fit_selected_returns_seed_preds_and_state_dicts():
+    from ncm_sudoku.probes import _make_model
+
+    (Xtr, Ytr, _, _), (Xva, Yva, pz_va, n_va) = _toy_sets()
+    fit = fit_selected(Xtr, Ytr, Xva, Yva, pz_va, n_va, "linear", epochs=1, batch=512, min_steps=1)
+    assert len(fit["seed_preds"]) == 3 and len(fit["state_dicts"]) == 3
+    assert np.allclose(np.mean(fit["seed_preds"], axis=0), fit["preds"])
+    per = [brier_per_puzzle(p, Yva.numpy(), pz_va, n_va) for p in fit["seed_preds"]]
+    assert np.allclose(np.mean(per, axis=0), fit["per_puzzle"])
+    for i, sd in enumerate(fit["state_dicts"]):
+        assert all(v.device.type == "cpu" for v in sd.values())
+        m = _make_model("linear", Xva.shape[1])
+        m.load_state_dict(sd)
+        m.eval()
+        with torch.no_grad():
+            assert np.allclose(m(Xva).numpy(), fit["seed_preds"][i])
+
+
+def test_fit_selected_budget_has_full_grid():
+    (Xtr, Ytr, _, _), (Xva, Yva, pz_va, n_va) = _toy_sets(7)
+    fit = fit_selected(Xtr, Ytr, Xva, Yva, pz_va, n_va, "linear", epochs=1, batch=512, min_steps=1)
+    assert set(fit["budget"]) == {(wd, lr, s) for wd, lr in GRID for s in SEEDS}
+    assert len(fit["budget"]) == 30
+
+
+def test_summarize_fit_drops_seed_preds_and_state_dicts():
+    from ncm_sudoku.e3controls import summarize_fit
+
+    (Xtr, Ytr, _, _), (Xva, Yva, pz_va, n_va) = _toy_sets(8)
+    fit = fit_selected(Xtr, Ytr, Xva, Yva, pz_va, n_va, "linear", epochs=1, batch=512, min_steps=1)
+    s = summarize_fit(fit)
+    assert "seed_preds" not in s and "state_dicts" not in s and "preds" not in s
