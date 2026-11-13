@@ -258,7 +258,12 @@ def _one(readings, hyp):
     ((-0.02, -0.005), False, {"h1_negative"}),
     ((-0.008, -0.002), True, {"h1_negative"}),
     ((0.004, 0.015), False, {"h1_readable_not_equiv", "probe_beats_null"}),
-    ((-0.004, 0.012), False, {"non_significant"})])
+    ((-0.004, 0.012), False, {"non_significant"}),
+    ((0.0, 0.006), True, {"h1_no_practical"}),  # boundaries: fl == 0 contains 0
+    ((1e-12, 0.006), True, {"h1_small_positive", "probe_beats_null"}),
+    ((0.0, 0.015), False, {"non_significant"}),
+    ((-0.004, 0.0), False, {"non_significant"}),  # fh == 0 is not < 0
+    ((-0.004, 0.0), True, {"h1_no_practical"})])
 def test_select_readings_h1(fam, tost_eq, rows):
     readings = wp2eval.select_readings({**R, "H1": _block(fam, fam, tost_eq)})
     assert _rows(readings, "H1") == rows
@@ -327,3 +332,35 @@ def test_equivariance_reading_constant():
     eq = [x for x in wp2eval.select_readings(R) if x["hypothesis"] == "equivariance"][0]
     assert eq["row"] is None and eq["note"] == wp2eval.EQUIV_READING
     assert eq["inputs"] == R["equivariance"]
+
+
+@pytest.mark.parametrize("fam,row", [((-0.05, 0.0), "non_significant"), ((0.0, 0.05), "non_significant"),
+                                     ((-0.05, -1e-12), "early_sensitivity"), ((1e-12, 0.05), None)])
+def test_select_readings_h2_boundaries(fam, row):
+    assert _rows(wp2eval.select_readings({**R, "H2": _block(fam)}), "H2") == {row}
+
+
+@pytest.mark.parametrize("fam,rows", [((0.0, 0.05), {"non_significant"}), ((-0.05, 0.0), {"non_significant"}),
+                                      ((1e-12, 0.05), {"d_better_than_c", "positive_compensation"}),
+                                      ((-0.05, -1e-12), {None})])
+def test_select_readings_h3_boundaries(fam, rows):
+    assert _rows(wp2eval.select_readings({**R, "H3": _block(fam)}), "H3") == rows
+
+
+def test_tost_at_exact_margin_is_not_equivalent(monkeypatch):
+    for ci in ((-0.01, 0.005), (-0.005, 0.01), (-0.01, 0.01)):
+        monkeypatch.setattr(e2p2, "interval", lambda v, level, _ci=ci, **k: {
+            "method": "bootstrap", "estimate": 0.0, "ci": _ci, "n": len(v), "n_nonzero": len(v)})
+        assert wp2eval.tost(np.ones(50), 0.01, 0.05)["equivalent"] is False
+    monkeypatch.setattr(e2p2, "interval", lambda v, level, **k: {
+        "method": "bootstrap", "estimate": 0.0, "ci": (-0.0099, 0.0099), "n": len(v), "n_nonzero": len(v)})
+    assert wp2eval.tost(np.ones(50), 0.01, 0.05)["equivalent"] is True
+
+
+def test_select_readings_single_e2_failure_with_none_block():
+    fail = {"status": "identity-failure"}
+    rows = wp2eval.select_readings({**R, "H2": None, "H3": fail, "theta2_prime": None})
+    assert not any(x["hypothesis"] in ("H2", "H3", "theta2_prime") for x in rows)
+    (e2,) = [x for x in rows if x["hypothesis"] == "E2"]
+    assert e2["row"] is None and e2["note"] == wp2eval.E2_IDENTITY_NOTE
+    assert e2["inputs"] == {"H2": None, "H3": "identity-failure", "theta2_prime": None}

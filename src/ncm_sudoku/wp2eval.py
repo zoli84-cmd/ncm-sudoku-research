@@ -300,8 +300,9 @@ def select_readings(r: dict) -> list[dict]:
     equivariance analysis (spec ambiguities 7-10, 23). `raw_ceiling` is never selected."""
     readings = _h1(r["H1"])
     e2 = ("H2", "H3", "theta2_prime")
-    if any(isinstance(r[k], dict) and r[k].get("status") == "identity-failure" for k in e2):
-        readings.append(_reading("E2", None, {k: r[k].get("status") for k in e2}, E2_IDENTITY_NOTE))
+    status = {k: (r[k].get("status") if isinstance(r[k], dict) else None) for k in e2}
+    if "identity-failure" in status.values():
+        readings.append(_reading("E2", None, status, E2_IDENTITY_NOTE))
     else:
         readings += _h2(r["H2"]) + _h3(r["H3"]) + _theta2_prime(r["theta2_prime"])
     readings += _level12(r["theta1_L12_wl"], r["theta_T"])
