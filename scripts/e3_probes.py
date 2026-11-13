@@ -34,7 +34,7 @@ import time
 import numpy as np
 import torch
 
-from ncm_sudoku.e3controls import fit_cells, permuted_control, run_controls, run_unit_digit, summarize_fit
+from ncm_sudoku.e3controls import fit_cells, first_n, permuted_control, run_controls, run_unit_digit, summarize_fit
 from ncm_sudoku.e3data import TEACHER_LEVELS, load_level, raw_features
 from ncm_sudoku.e3metrics import DEPTH_CLASSES, depth_breakdown, depth_breakdown_seeds
 from ncm_sudoku.g0 import code_state, environment_record
@@ -131,8 +131,8 @@ def _training_size(tr, va, st) -> dict:
         if n >= n_train:  # identical to the full-size level-6 fit (deterministic): reuse it
             out[str(n)] = {**st[f"L{H1_LEVEL:02d}_linear"], "n_puzzles": n_train, "reused": True}
             continue
-        sub = {k: tr[k][:n] for k in ("puzzles", "mask", "empty")}
-        out[str(n)] = {**summarize_fit(fit_cells(tr["rep"][:n], va["rep"], sub, va, "linear", **KW)),
+        sub = first_n(tr, n)
+        out[str(n)] = {**summarize_fit(fit_cells(sub["rep"], va["rep"], sub, va, "linear", **KW)),
                        "n_puzzles": n, "reused": False}
     return {"training_size": out}
 

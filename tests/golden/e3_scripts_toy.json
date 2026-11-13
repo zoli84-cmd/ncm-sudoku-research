@@ -1,0 +1,1825 @@
+{
+ "e3_probes": {
+  "L01_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2500418023534952,
+    0.25038254460347226,
+    0.2514906749697173,
+    0.24942859016175523
+   ],
+   "tune_brier_mean": 0.25033590302211,
+   "val_brier_mean": 0.25033590302211
+  },
+  "L02_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25191027122538,
+    0.2501953225354491,
+    0.2519190621395488,
+    0.25032533950890395
+   ],
+   "tune_brier_mean": 0.25108749885232057,
+   "val_brier_mean": 0.2510874988523205
+  },
+  "L02_mlp": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 6089,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25033075843828345,
+    0.2498599377630577,
+    0.25071320578221745,
+    0.2488288673953204
+   ],
+   "tune_brier_mean": 0.24993319234471975,
+   "val_brier_mean": 0.24993319234471975
+  },
+  "L02_permuted_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2519763421980209,
+    0.2502477809450123,
+    0.25183325007088814,
+    0.25021240420453217
+   ],
+   "tune_brier_mean": 0.24974319187263894,
+   "val_brier_mean": 0.25106744435461337
+  },
+  "L03_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25237024098480854,
+    0.24984475432775108,
+    0.2513326680541574,
+    0.24998563557545264
+   ],
+   "tune_brier_mean": 0.25088332473554237,
+   "val_brier_mean": 0.2508833247355424
+  },
+  "L04_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2517631302712941,
+    0.2505941894126415,
+    0.2507417946380666,
+    0.2502510163290138
+   ],
+   "tune_brier_mean": 0.25083753266275405,
+   "val_brier_mean": 0.250837532662754
+  },
+  "L05_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2514576870544139,
+    0.2502428172892173,
+    0.2512086628443329,
+    0.2503986601449358
+   ],
+   "tune_brier_mean": 0.25082695683322503,
+   "val_brier_mean": 0.250826956833225
+  },
+  "L06_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2522126773050633,
+    0.24943023548603682,
+    0.251075683482107,
+    0.2507263758001917
+   ],
+   "tune_brier_mean": 0.2508612430183497,
+   "val_brier_mean": 0.2508612430183497
+  },
+  "L06_mlp": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 6089,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2506143392402416,
+    0.2505758952228534,
+    0.25012005264923537,
+    0.2478749204230202
+   ],
+   "tune_brier_mean": 0.24979630188383764,
+   "val_brier_mean": 0.2497963018838376
+  },
+  "L07_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25243765467076223,
+    0.25000872392218326,
+    0.25220044162259825,
+    0.24961205503253323
+   ],
+   "tune_brier_mean": 0.25106471881201925,
+   "val_brier_mean": 0.25106471881201925
+  },
+  "L08_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25302612139775893,
+    0.2500051228520707,
+    0.2506044876342062,
+    0.2493066151713852
+   ],
+   "tune_brier_mean": 0.25073558676385527,
+   "val_brier_mean": 0.25073558676385527
+  },
+  "L09_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25336263432863987,
+    0.25035701924284504,
+    0.25020344144179,
+    0.2490013933410942
+   ],
+   "tune_brier_mean": 0.2507311220885923,
+   "val_brier_mean": 0.2507311220885923
+  },
+  "L10_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2508105944208116,
+    0.25077371429414014,
+    0.2517528178979805,
+    0.24924921412741394
+   ],
+   "tune_brier_mean": 0.2506465851850866,
+   "val_brier_mean": 0.25064658518508653
+  },
+  "L11_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25303878372681,
+    0.2498997399447395,
+    0.2516008660714533,
+    0.2516556260186855
+   ],
+   "tune_brier_mean": 0.25154875394042203,
+   "val_brier_mean": 0.2515487539404221
+  },
+  "L12_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.2510907423697584,
+    0.25012613828883307,
+    0.2515165028651982,
+    0.25015611530041865
+   ],
+   "tune_brier_mean": 0.2507223747060521,
+   "val_brier_mean": 0.2507223747060521
+  },
+  "L12_mlp": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 6089,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 6089,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25081078690960074,
+    0.24964244961049487,
+    0.2503127940309869,
+    0.2483961772201598
+   ],
+   "tune_brier_mean": 0.2497905519428106,
+   "val_brier_mean": 0.24979055194281055
+  },
+  "L12_permuted_linear": {
+   "budget": {
+    "any_hit_cap": true,
+    "n_params": 774,
+    "selected": [
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     },
+     {
+      "best_epoch": 0,
+      "epochs_run": 1,
+      "hit_cap": true,
+      "n_params": 774,
+      "n_steps": 1
+     }
+    ]
+   },
+   "config": [
+    0.1,
+    0.003
+   ],
+   "per_puzzle": [
+    0.25104902489469366,
+    0.25005259526531226,
+    0.25141151427669356,
+    0.2500464318658288
+   ],
+   "tune_brier_mean": 0.25028384966244344,
+   "val_brier_mean": 0.2506398915756321
+  },
+  "controls": {
+   "label_permuted_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25227510194286407,
+     0.24942460135997582,
+     0.2510856680068267,
+     0.25064688101636684
+    ],
+    "tune_brier_mean": 0.2508580630815083,
+    "val_brier_mean": 0.2508580630815084
+   },
+   "marginal": {
+    "budget": null,
+    "config": null,
+    "per_puzzle": [
+     0.25820377224964064,
+     0.25231567935816307,
+     0.27677780680173303,
+     0.2618567643106625
+    ],
+    "val_brier_mean": 0.2622885056800498
+   },
+   "peer_counts_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 819,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 819,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 819,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 819,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2434150493949233,
+     0.25338123043301314,
+     0.25398020097204044,
+     0.2480598066761229
+    ],
+    "tune_brier_mean": 0.2497090718690249,
+    "val_brier_mean": 0.24970907186902494
+   },
+   "permuted_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2521949285090566,
+     0.2495395710897592,
+     0.2510895296594668,
+     0.25069770927759055
+    ],
+    "tune_brier_mean": 0.25111206762018795,
+    "val_brier_mean": 0.2508804346339683
+   },
+   "random_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2503396895071129,
+     0.2517028896830478,
+     0.2507182543009154,
+     0.2510054745787846
+    ],
+    "tune_brier_mean": 0.25094157701746517,
+    "val_brier_mean": 0.25094157701746517
+   },
+   "raw_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 2628,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2444933425294521,
+     0.24596376443560372,
+     0.2471859861787152,
+     0.2494524121138031
+    ],
+    "tune_brier_mean": 0.24677387631439354,
+    "val_brier_mean": 0.24677387631439354
+   },
+   "raw_mlp": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 19273,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 19273,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 19273,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 19273,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0,
+     0.003
+    ],
+    "per_puzzle": [
+     0.24647137270512184,
+     0.24770243347459883,
+     0.24656478803585338,
+     0.24533606346744072
+    ],
+    "tune_brier_mean": 0.24651866442075368,
+    "val_brier_mean": 0.2465186644207537
+   },
+   "rule": {
+    "budget": null,
+    "config": null,
+    "per_puzzle": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "val_brier_mean": 0.0
+   },
+   "surface_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 828,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 828,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 828,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 828,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.24965262451231193,
+     0.24849411516153083,
+     0.24999814121715805,
+     0.24961369929702018
+    ],
+    "tune_brier_mean": 0.24943964504700525,
+    "val_brier_mean": 0.24943964504700525
+   },
+   "teacher_L02_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25281647673600877,
+     0.24904042804270535,
+     0.25025810677148425,
+     0.24967560581305168
+    ],
+    "tune_brier_mean": 0.2504476543408125,
+    "val_brier_mean": 0.2504476543408125
+   },
+   "teacher_L06_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25123060321762214,
+     0.2515843663526436,
+     0.25147968045386504,
+     0.24919913842041053
+    ],
+    "tune_brier_mean": 0.25087344711113535,
+    "val_brier_mean": 0.25087344711113535
+   },
+   "teacher_L12_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25139815453287356,
+     0.2507000848826444,
+     0.2523303686337868,
+     0.24915306293859377
+    ],
+    "tune_brier_mean": 0.2508954177469746,
+    "val_brier_mean": 0.25089541774697466
+   }
+  },
+  "depth_L06": {
+   "aggregation": "per seed model, then mean of the per-seed Briers",
+   "generated_linear": {
+    "1": {
+     "brier": 0.2510923591964463,
+     "brier_per_seed": [
+      0.2534365320870047,
+      0.25058694756040156,
+      0.24925359794193264
+     ],
+     "n_cells": 64,
+     "n_puzzles": 4
+    },
+    "2": {
+     "brier": 0.2510912608045815,
+     "brier_per_seed": [
+      0.2518275763655483,
+      0.25061002615383465,
+      0.2508361798943616
+     ],
+     "n_cells": 84,
+     "n_puzzles": 4
+    },
+    "3": {
+     "brier": 0.25018162951422346,
+     "brier_per_seed": [
+      0.2495861851394125,
+      0.2521622360856418,
+      0.24879646731761618
+     ],
+     "n_cells": 36,
+     "n_puzzles": 4
+    },
+    ">=4": {
+     "brier": 0.2503789008536941,
+     "brier_per_seed": [
+      0.2494561782791497,
+      0.2525328041935484,
+      0.24914772008838412
+     ],
+     "n_cells": 20,
+     "n_puzzles": 4
+    },
+    "censored": {
+     "brier": null,
+     "brier_per_seed": [
+      null,
+      null,
+      null
+     ],
+     "n_cells": 0,
+     "n_puzzles": 0
+    },
+    "stuck": {
+     "brier": null,
+     "brier_per_seed": [
+      null,
+      null,
+      null
+     ],
+     "n_cells": 0,
+     "n_puzzles": 0
+    }
+   },
+   "raw_linear": {
+    "1": {
+     "brier": 0.24559518479451406,
+     "brier_per_seed": [
+      0.24570893834510632,
+      0.24833877182648317,
+      0.24273784421195269
+     ],
+     "n_cells": 64,
+     "n_puzzles": 4
+    },
+    "2": {
+     "brier": 0.24704081883321286,
+     "brier_per_seed": [
+      0.24687792810925321,
+      0.24721090171713378,
+      0.24703362667325157
+     ],
+     "n_cells": 84,
+     "n_puzzles": 4
+    },
+    "3": {
+     "brier": 0.25013695646410206,
+     "brier_per_seed": [
+      0.24613300576317473,
+      0.2522776996210373,
+      0.25200016400809405
+     ],
+     "n_cells": 36,
+     "n_puzzles": 4
+    },
+    ">=4": {
+     "brier": 0.24337098632949172,
+     "brier_per_seed": [
+      0.24456922558073363,
+      0.24470170160801685,
+      0.24084203179972466
+     ],
+     "n_cells": 20,
+     "n_puzzles": 4
+    },
+    "censored": {
+     "brier": null,
+     "brier_per_seed": [
+      null,
+      null,
+      null
+     ],
+     "n_cells": 0,
+     "n_puzzles": 0
+    },
+    "stuck": {
+     "brier": null,
+     "brier_per_seed": [
+      null,
+      null,
+      null
+     ],
+     "n_cells": 0,
+     "n_puzzles": 0
+    }
+   }
+  },
+  "models_L06": {
+   "config": [
+    0.1,
+    0.003
+   ],
+   "files": [
+    "L06_linear_seed0.pt",
+    "L06_linear_seed1.pt",
+    "L06_linear_seed2.pt"
+   ],
+   "in_dim": 85,
+   "kind": "linear",
+   "level": 6,
+   "retrain_matches": true,
+   "seeds": [
+    0,
+    1,
+    2
+   ]
+  },
+  "training_size": {
+   "4": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "n_puzzles": 4,
+    "per_puzzle": [
+     0.25223408277025133,
+     0.2495838276322294,
+     0.25101763980039316,
+     0.2507690858233043
+    ],
+    "reused": false,
+    "tune_brier_mean": 0.2509011590065446,
+    "val_brier_mean": 0.2509011590065445
+   },
+   "8": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 774,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 774,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "n_puzzles": 8,
+    "per_puzzle": [
+     0.2522126773050633,
+     0.24943023548603682,
+     0.251075683482107,
+     0.2507263758001917
+    ],
+    "reused": true,
+    "tune_brier_mean": 0.2508612430183497,
+    "val_brier_mean": 0.2508612430183497
+   }
+  },
+  "unit_digit": {
+   "generated": {
+    "brier": 0.25083786940450065,
+    "brier_ensemble": 0.2496483423090386,
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 288,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 288,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 288,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 288,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "exact_match": 0.009259259259259259,
+    "per_puzzle": [
+     0.2503260921496865,
+     0.24971238705230517,
+     0.2517250121879381,
+     0.2515879862280728
+    ],
+    "roc_auc": 0.524332788671024,
+    "tune_brier_mean": 0.25083786940450065,
+    "val_brier_mean": 0.25083786940450065
+   },
+   "raw": {
+    "brier": 0.25198950270232606,
+    "brier_ensemble": 0.2511884745013505,
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 342,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 342,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 342,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 342,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "exact_match": 0.0,
+    "per_puzzle": [
+     0.25446351731012434,
+     0.2525767991262413,
+     0.25148049587485166,
+     0.24943719849808696
+    ],
+    "roc_auc": 0.4998819898329702,
+    "tune_brier_mean": 0.25198950270232606,
+    "val_brier_mean": 0.25198950270232606
+   }
+  }
+ },
+ "e3_wholelayer": {
+  "L06": {
+   "generated_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 846,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25450413463996563,
+     0.2511226251305632,
+     0.2515691283719916,
+     0.25421200089546764
+    ],
+    "tune_brier_mean": 0.252851972259497,
+    "val_brier_mean": 0.252851972259497
+   },
+   "h1": {
+    "mean_diff": -4.671569070571757e-05,
+    "mean_permuted": 0.25280525656879127,
+    "n": 4,
+    "path": "experiments/e3prep/wholelayer_h1_diffs_L06.json",
+    "relative_improvement": -0.00018478923792870455
+   },
+   "pca": {
+    "explained_variance_share": 0.2171938453686913,
+    "explained_variance_share_val": 0.09142327896061715,
+    "input_dim": 84,
+    "k": 8,
+    "n_components_fitted": 8,
+    "n_rows": 408
+   },
+   "permuted_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 846,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2544242709074882,
+     0.2511618422130189,
+     0.25149115847854125,
+     0.25414375467611683
+    ],
+    "tune_brier_mean": 0.2517904917239333,
+    "val_brier_mean": 0.25280525656879127
+   }
+  },
+  "L12": {
+   "generated_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 846,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.252005567804574,
+     0.2515263796667873,
+     0.25278602896643276,
+     0.2545048136977988
+    ],
+    "tune_brier_mean": 0.2527056975338982,
+    "val_brier_mean": 0.2527056975338982
+   },
+   "h1": {
+    "mean_diff": -0.00013581758390351917,
+    "mean_permuted": 0.2525698799499947,
+    "n": 4,
+    "path": "experiments/e3prep/wholelayer_h1_diffs_L12.json",
+    "relative_improvement": -0.0005377425999109995
+   },
+   "pca": {
+    "explained_variance_share": 0.22558152830507125,
+    "explained_variance_share_val": 0.09140361600772559,
+    "input_dim": 84,
+    "k": 8,
+    "n_components_fitted": 8,
+    "n_rows": 408
+   },
+   "permuted_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 846,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2520300237112372,
+     0.2513407828012635,
+     0.25264246749419494,
+     0.25426624579328316
+    ],
+    "tune_brier_mean": 0.2510659537299131,
+    "val_brier_mean": 0.2525698799499947
+   }
+  },
+  "raw_projected": {
+   "linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 810,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 810,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 810,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 810,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2495195885428382,
+     0.25515973309517026,
+     0.25404454625407075,
+     0.251423022862948
+    ],
+    "tune_brier_mean": 0.25253672268875677,
+    "val_brier_mean": 0.25253672268875677
+   },
+   "pca": {
+    "explained_variance_share": 0.2615214484878933,
+    "explained_variance_share_val": 0.16814419023487798,
+    "input_dim": 210,
+    "k": 8,
+    "n_components_fitted": 8,
+    "n_rows": 408
+   }
+  },
+  "raw_unprojected": {
+   "linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 2628,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 2628,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.2444933425294521,
+     0.24596376443560372,
+     0.2471859861787152,
+     0.2494524121138031
+    ],
+    "tune_brier_mean": 0.24677387631439354,
+    "val_brier_mean": 0.24677387631439354
+   }
+  },
+  "teacher_L12": {
+   "pca": {
+    "explained_variance_share": 0.21824838133650418,
+    "explained_variance_share_val": 0.10073297518214917,
+    "input_dim": 84,
+    "k": 8,
+    "n_components_fitted": 8,
+    "n_rows": 408
+   },
+   "teacher_linear": {
+    "budget": {
+     "any_hit_cap": true,
+     "n_params": 846,
+     "selected": [
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      },
+      {
+       "best_epoch": 0,
+       "epochs_run": 1,
+       "hit_cap": true,
+       "n_params": 846,
+       "n_steps": 1
+      }
+     ]
+    },
+    "config": [
+     0.1,
+     0.003
+    ],
+    "per_puzzle": [
+     0.25182403059452835,
+     0.2524000969094528,
+     0.24980689438909312,
+     0.25496256186971283
+    ],
+    "tune_brier_mean": 0.25224839594069676,
+    "val_brier_mean": 0.25224839594069676
+   },
+   "teacher_minus_generated": {
+    "diffs": [
+     -0.00018153721004565693,
+     0.0008737172426654949,
+     -0.0029791345773396427,
+     0.0004577481719140186
+    ],
+    "ids": [
+     "probe_val-0",
+     "probe_val-1",
+     "probe_val-2",
+     "probe_val-3"
+    ],
+    "mean_diff": -0.00045730159320144653,
+    "mean_teacher": 0.25224839594069676,
+    "n": 4,
+    "quantity": "B_teacher - B_generated, whole-layer (D66), level 12, linear, mean over 3 seeds"
+   }
+  }
+ }
+}

@@ -39,14 +39,8 @@ from ncm_sudoku.e3controls import fit_cells, permuted_control, summarize_fit
 from ncm_sudoku.e3data import load_level, raw_features
 from ncm_sudoku.g0 import code_state, environment_record
 from ncm_sudoku.model import ROOT
-from ncm_sudoku.wholelayer import (
-    cell_variance_share,
-    fit_cell_pca,
-    fit_pca,
-    raw_projected_features,
-    variance_share,
-    whole_layer_features,
-)
+from ncm_sudoku.wholelayer import cell_pca_features, raw_pca_features
+from ncm_sudoku.wholelayer import pca_info as _pca_info  # noqa: F401  moved to src (WP2 Task 8); re-exported
 
 RUNS = ROOT / "runs" / "e3prep"
 OUT = ROOT / "experiments" / "e3prep"
@@ -85,12 +79,6 @@ def _atomic(path, text: str) -> None:
     os.replace(tmp, path)
 
 
-def _pca_info(pca: dict, dim: int, share_val: float) -> dict:
-    return {"k": int(pca["components"].shape[0]), "input_dim": int(dim), "n_rows": pca["n_rows"],
-            "n_components_fitted": pca["n_components_fitted"],
-            "explained_variance_share": pca["explained_variance_share"], "explained_variance_share_val": share_val}
-
-
 def _diff(a: list, b: list, ids: list, quantity: str) -> dict:
     """Per-puzzle a - b, its mean, and the relative improvement mean_diff / mean(a)
     (None when mean(a) is 0)."""
@@ -106,10 +94,8 @@ def _whole_layer(tr, va, teacher: bool, lv: int) -> tuple[dict, np.ndarray, np.n
     (pca info, train features, val features)."""
     s_tr = load_level(RUNS, "probe_train", lv, teacher=teacher)
     s_va = load_level(RUNS, "probe_val", lv, teacher=teacher)
-    pca = fit_cell_pca(s_tr, tr["empty"], K)
-    info = _pca_info(pca, 21 * s_tr.shape[2], cell_variance_share(s_va, va["empty"], pca))
-    f_tr, f_va = whole_layer_features(s_tr, pca), whole_layer_features(s_va, pca)
-    del s_tr, s_va, pca
+    _, info, f_tr, f_va, _ = cell_pca_features(s_tr, s_va, tr["empty"], va["empty"], K)
+    del s_tr, s_va
     return info, f_tr, f_va
 
 
@@ -142,10 +128,7 @@ def _teacher(tr, va, st) -> dict:
 
 
 def _raw_projected(tr, va, st) -> dict:
-    rows_tr = raw_features(tr["puzzles"])[tr["empty"]]
-    pca = fit_pca(rows_tr, min(K, *rows_tr.shape))
-    info = _pca_info(pca, rows_tr.shape[1], variance_share(raw_features(va["puzzles"])[va["empty"]], pca))
-    f_tr, f_va = raw_projected_features(tr["puzzles"], pca), raw_projected_features(va["puzzles"], pca)
+    _, info, f_tr, f_va, _ = raw_pca_features(tr["puzzles"], va["puzzles"], tr["empty"], va["empty"], K)
     return {"pca": info, "linear": summarize_fit(fit_cells(f_tr, f_va, tr, va, "linear", **KW))}
 
 

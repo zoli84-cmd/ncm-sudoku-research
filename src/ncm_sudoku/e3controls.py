@@ -190,6 +190,12 @@ def permuted_control(rep_tr, rep_va, train, val, rep_score=None, score=None, **k
     )
 
 
+def first_n(train: dict, n: int) -> dict:
+    """The first `n` PROBE-TRAIN puzzles of `puzzles`, `mask`, `empty` (and `rep` when
+    present), as the training-size curve slices them."""
+    return {k: train[k][:n] for k in ("puzzles", "mask", "empty", "rep") if k in train}
+
+
 def random_rows(n_train: int, val_ids: list[str], score_ids: list[str]) -> np.ndarray:
     """Rows of one seed-0 `random_features(n_train + n_val + n_new)` stream for the
     score puzzles (spec ambiguity 17): the stream is train, then val, then the score

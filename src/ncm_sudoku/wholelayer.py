@@ -145,3 +145,39 @@ def raw_projected_features(puzzles: np.ndarray, pca: dict) -> np.ndarray:
     """[n, 81] -> [n, 81, k]: whitened PCA scores of `e3data.raw_features` (210-d)."""
     r = raw_features(puzzles)
     return project(r.reshape(-1, r.shape[2]), pca).reshape(len(r), 81, -1)
+
+
+# --- shared stage helpers (moved from scripts/e3_wholelayer.py; also used by `wp2e3`) -------
+
+def pca_info(pca: dict, dim: int, share_val: float) -> dict:
+    return {"k": int(pca["components"].shape[0]), "input_dim": int(dim), "n_rows": pca["n_rows"],
+            "n_components_fitted": pca["n_components_fitted"],
+            "explained_variance_share": pca["explained_variance_share"], "explained_variance_share_val": share_val}
+
+
+def cell_pca_features(s_tr, s_va, empty_tr, empty_va, k: int, s_sc=None, empty_sc=None):
+    """Peer-state PCA on the PROBE-TRAIN empty cells and whole-layer features (D66):
+    returns (pca, info, f_tr, f_va, f_sc). `info` is `pca_info` with the PROBE-VAL share;
+    with `s_sc` (needs `empty_sc`) also `explained_variance_share_score`; f_sc is None
+    without `s_sc`."""
+    if s_sc is not None and empty_sc is None:
+        raise ValueError("cell_pca_features: `s_sc` needs `empty_sc`")
+    pca = fit_cell_pca(s_tr, empty_tr, k)
+    info = pca_info(pca, 21 * s_tr.shape[2], cell_variance_share(s_va, empty_va, pca))
+    f_tr, f_va = whole_layer_features(s_tr, pca), whole_layer_features(s_va, pca)
+    f_sc = None
+    if s_sc is not None:
+        info["explained_variance_share_score"] = cell_variance_share(s_sc, empty_sc, pca)
+        f_sc = whole_layer_features(s_sc, pca)
+    return pca, info, f_tr, f_va, f_sc
+
+
+def raw_pca_features(p_tr, p_va, empty_tr, empty_va, k: int, p_sc=None):
+    """Projected raw-input control: PCA of `raw_features` on the PROBE-TRAIN empty cells,
+    k = min(k, rows, 210); returns (pca, info, f_tr, f_va, f_sc) (f_sc None without p_sc)."""
+    rows_tr = raw_features(p_tr)[empty_tr]
+    pca = fit_pca(rows_tr, min(k, *rows_tr.shape))
+    info = pca_info(pca, rows_tr.shape[1], variance_share(raw_features(p_va)[empty_va], pca))
+    f_tr, f_va = raw_projected_features(p_tr, pca), raw_projected_features(p_va, pca)
+    f_sc = None if p_sc is None else raw_projected_features(p_sc, pca)
+    return pca, info, f_tr, f_va, f_sc

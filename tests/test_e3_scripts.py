@@ -239,3 +239,33 @@ def test_e3_screen_records_code(tmp_path, monkeypatch):
     mod.main()
     r = json.loads((tmp_path / "experiments" / "e3prep" / "screen.json").read_text(encoding="utf-8"))
     assert r["code"] == CODE
+
+
+GOLDEN = Path(__file__).parent / "golden" / "e3_scripts_toy.json"
+
+
+def _script_stages(tmp: Path, mp) -> dict:
+    """`stages` of scripts/e3_wholelayer.py (K = 8) and scripts/e3_probes.py (SIZES (4, 8))
+    on `_toy_runs` with KW = FAST, after a JSON round trip."""
+    runs = tmp / "runs"
+    _toy_runs(runs)
+    out = {}
+    for name, result, extra in (("e3_wholelayer", "wholelayer.json", dict(K=8)),
+                                ("e3_probes", "probes.json", dict(MODELS=runs / "models", SIZES=(4, 8)))):
+        mod = _load(name)
+        for k, v in dict(RUNS=runs, OUT=tmp / name, KW=FAST, **extra).items():
+            mp.setattr(mod, k, v)
+        mp.setattr(mod, "environment_record", lambda: {})
+        mp.setattr(mod, "code_state", lambda: CODE)
+        mp.setattr(mod.sys, "argv", [f"{name}.py"])
+        mod.main()
+        out[name] = json.loads((tmp / name / result).read_text(encoding="utf-8"))["stages"]
+    return out
+
+
+def test_e3_scripts_match_golden_after_move(tmp_path, monkeypatch):
+    # tests/golden/e3_scripts_toy.json was written by _script_stages from the scripts before
+    # the WP2 Task 8 helper move (wholelayer.pca_info/cell_pca_features/raw_pca_features,
+    # e3controls.first_n); it pins their outputs exactly.
+    golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
+    assert _script_stages(tmp_path, monkeypatch) == golden

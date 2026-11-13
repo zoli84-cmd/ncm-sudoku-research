@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 import torch
 
+from ncm_sudoku import wholelayer
+from ncm_sudoku.e3controls import first_n
 from ncm_sudoku.e3data import raw_features
 from ncm_sudoku.grid import PEERS
 from ncm_sudoku.wholelayer import (
@@ -256,9 +258,9 @@ def test_e3_wholelayer_resume_skips_finished_stages(tmp_path, monkeypatch):
     mod.main()
     monkeypatch.setattr(mod, "STAGES", full[:2])
     monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py", "--resume"])
-    real_fit = mod.fit_cell_pca
+    real_fit = wholelayer.fit_cell_pca
     calls = []
-    monkeypatch.setattr(mod, "fit_cell_pca", lambda *a, **k: calls.append(1) or real_fit(*a, **k))
+    monkeypatch.setattr(wholelayer, "fit_cell_pca", lambda *a, **k: calls.append(1) or real_fit(*a, **k))
     mod.main()
     assert len(calls) == 1  # only L12 ran
     r = json.loads((out / "wholelayer.json").read_text(encoding="utf-8"))
@@ -290,3 +292,48 @@ def test_e3_wholelayer_force_and_resume_rejected(tmp_path, monkeypatch):
     monkeypatch.setattr(mod.sys, "argv", ["e3_wholelayer.py", "--force", "--resume"])
     with pytest.raises(SystemExit, match="--force"):
         mod.main()
+
+
+def test_pca_info_moved_verbatim():
+    assert _load()._pca_info is wholelayer.pca_info  # the script re-exports the moved function
+
+
+def test_cell_pca_features_matches_whole_layer_path():
+    s_tr, e_tr = _toy_states(seed=0)
+    s_va, e_va = _toy_states(n=5, seed=1)
+    s_sc, e_sc = _toy_states(n=4, seed=2)
+    pca, info, f_tr, f_va, f_sc = wholelayer.cell_pca_features(s_tr, s_va, e_tr, e_va, 8)
+    ref = fit_cell_pca(s_tr, e_tr, 8)
+    assert all(np.array_equal(pca[k], ref[k]) for k in ("mean", "components", "scale"))
+    assert info == wholelayer.pca_info(ref, 21 * 3, cell_variance_share(s_va, e_va, ref))
+    assert np.array_equal(f_tr, whole_layer_features(s_tr, ref)) and np.array_equal(f_va, whole_layer_features(s_va, ref))
+    assert f_sc is None and "explained_variance_share_score" not in info
+    _, info2, _, _, f_sc = wholelayer.cell_pca_features(s_tr, s_va, e_tr, e_va, 8, s_sc=s_sc, empty_sc=e_sc)
+    assert np.array_equal(f_sc, whole_layer_features(s_sc, ref))
+    assert info2 == {**info, "explained_variance_share_score": cell_variance_share(s_sc, e_sc, ref)}
+    with pytest.raises(ValueError):
+        wholelayer.cell_pca_features(s_tr, s_va, e_tr, e_va, 8, s_sc=s_sc)
+
+
+def test_raw_pca_features_matches_raw_projected_path():
+    rng = np.random.default_rng(0)
+    p_tr, p_va, p_sc = (rng.integers(0, 10, (n, 81)) for n in (12, 5, 4))
+    e_tr, e_va = p_tr == 0, p_va == 0
+    pca, info, f_tr, f_va, f_sc = wholelayer.raw_pca_features(p_tr, p_va, e_tr, e_va, 8, p_sc=p_sc)
+    rows = raw_features(p_tr)[e_tr]
+    ref = fit_pca(rows, min(8, *rows.shape))
+    assert np.array_equal(pca["components"], ref["components"])
+    assert info == wholelayer.pca_info(ref, 210, variance_share(raw_features(p_va)[e_va], ref))
+    assert np.array_equal(f_tr, raw_projected_features(p_tr, ref)) and np.array_equal(f_sc, raw_projected_features(p_sc, ref))
+    assert wholelayer.raw_pca_features(p_tr, p_va, e_tr, e_va, 8)[4] is None
+
+
+def test_first_n_slices_training_arrays():
+    rng = np.random.default_rng(0)
+    tr = {"ids": list("abcd"), "puzzles": rng.integers(0, 10, (4, 81)), "mask": rng.integers(0, 2, (4, 81, 9)),
+          "empty": rng.random((4, 81)) < 0.5, "depth": np.zeros((4, 81))}
+    sub = first_n(tr, 2)
+    assert set(sub) == {"puzzles", "mask", "empty"}
+    assert all(np.array_equal(sub[k], tr[k][:2]) for k in sub)
+    sub = first_n({**tr, "rep": rng.standard_normal((4, 81, 3))}, 3)
+    assert set(sub) == {"puzzles", "mask", "empty", "rep"} and len(sub["rep"]) == 3
