@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -64,11 +65,36 @@ class RoleData:
 
 # --- atomic writes ---------------------------------------------------------------------------
 
+_sleep = time.sleep  # monkeypatched by tests
+
+
+def replace_with_retry(src: Path, dst: Path, *, timeout_s: float = 120.0, first_delay_s: float = 0.1,
+                       max_delay_s: float = 5.0, sleep=None) -> None:
+    """`os.replace(src, dst)`, retried on `PermissionError` only (on Windows a virus scanner or the
+    search indexer can briefly hold a freshly written file). Sleeps first_delay_s, doubling, each
+    sleep capped at max_delay_s; once the next sleep would push the total past timeout_s, the last
+    `PermissionError` is re-raised. Any other exception is raised at once. Same result as one
+    successful `os.replace`; nothing else is written."""
+    sleep = _sleep if sleep is None else sleep
+    delay, slept = first_delay_s, 0.0
+    while True:
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            delay = min(delay, max_delay_s)
+            if slept + delay > timeout_s:
+                raise
+            sleep(delay)
+            slept += delay
+            delay *= 2
+
+
 def _replace(tmp: Path, path: Path, write) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         write(tmp)
-        os.replace(tmp, path)
+        replace_with_retry(tmp, path)
     finally:
         if tmp.exists():
             tmp.unlink()

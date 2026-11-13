@@ -36,7 +36,6 @@ PCA tensors and a json meta per fit (`models/`), all atomically, and returns
 """
 
 import json
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -58,7 +57,7 @@ from ncm_sudoku.e3controls import (
 from ncm_sudoku.e3data import TEACHER_LEVELS, load_level, raw_features
 from ncm_sudoku.probes import GRID, SEEDS, _make_model
 from ncm_sudoku.wholelayer import cell_pca_features, raw_pca_features, variance_share
-from ncm_sudoku.wp2 import atomic_json, atomic_npz, file_sha256
+from ncm_sudoku.wp2 import atomic_json, atomic_npz, file_sha256, replace_with_retry
 
 K = 256
 SIZES = (125, 250, 500, 1000, 2000)
@@ -367,7 +366,7 @@ def _atomic_pt(path: Path, obj) -> None:
     tmp = path.with_name(path.name + ".tmp")
     try:
         torch.save(obj, tmp)
-        os.replace(tmp, path)
+        replace_with_retry(tmp, path)
     finally:
         if tmp.exists():
             tmp.unlink()

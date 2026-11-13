@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -549,6 +550,75 @@ def test_atomic_npy_and_npz_keep_names(tmp_path):
     assert sorted(p.name for p in tmp_path.iterdir()) == ["A.npy", "p.npz"]
     assert np.load(tmp_path / "A.npy").tolist() == [0, 1, 2]
     assert np.load(tmp_path / "p.npz")["mean"].tolist() == [1.0, 1.0]
+
+
+def _flaky_replace(monkeypatch, fails: int, exc=PermissionError, only=None):
+    """Monkeypatches os.replace to raise `exc` on the first `fails` calls (for `only` names when
+    given), then delegate to the real os.replace; returns the list of attempted (src, dst) names."""
+    real, calls = os.replace, []
+
+    def fake(src, dst):
+        if only is None or Path(src).name == only:
+            calls.append((Path(src).name, Path(dst).name))
+            if len(calls) <= fails:
+                raise exc(13, "Access is denied", str(src))
+        return real(src, dst)
+    monkeypatch.setattr(os, "replace", fake)
+    return calls
+
+
+def test_replace_with_retry_succeeds_after_permission_errors(tmp_path, monkeypatch):
+    src, dst = tmp_path / "a.tmp", tmp_path / "a"
+    src.write_text("x", encoding="utf-8")
+    calls = _flaky_replace(monkeypatch, fails=3)
+    sleeps = []
+    wp2.replace_with_retry(src, dst, sleep=sleeps.append)
+    assert len(calls) == 4
+    assert sleeps == pytest.approx([0.1, 0.2, 0.4])
+    assert dst.read_text(encoding="utf-8") == "x" and not src.exists()
+
+
+def test_replace_with_retry_caps_each_sleep(tmp_path, monkeypatch):
+    src, dst = tmp_path / "a.tmp", tmp_path / "a"
+    src.write_text("x", encoding="utf-8")
+    _flaky_replace(monkeypatch, fails=8)
+    sleeps = []
+    wp2.replace_with_retry(src, dst, sleep=sleeps.append, first_delay_s=1.0, max_delay_s=5.0)
+    assert sleeps == pytest.approx([1.0, 2.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0])
+    assert dst.exists()
+
+
+def test_replace_with_retry_reraises_after_timeout(tmp_path, monkeypatch):
+    src, dst = tmp_path / "a.tmp", tmp_path / "a"
+    src.write_text("x", encoding="utf-8")
+    calls = _flaky_replace(monkeypatch, fails=10**6)
+    sleeps = []
+    with pytest.raises(PermissionError):
+        wp2.replace_with_retry(src, dst, timeout_s=1.0, sleep=sleeps.append)
+    assert sum(sleeps) <= 1.0
+    assert sleeps == pytest.approx([0.1, 0.2, 0.4])
+    assert len(calls) == 4
+    assert src.exists() and not dst.exists()
+
+
+def test_replace_with_retry_does_not_retry_other_errors(tmp_path, monkeypatch):
+    src, dst = tmp_path / "a.tmp", tmp_path / "a"
+    src.write_text("x", encoding="utf-8")
+    calls = _flaky_replace(monkeypatch, fails=1, exc=FileNotFoundError)
+    sleeps = []
+    with pytest.raises(FileNotFoundError):
+        wp2.replace_with_retry(src, dst, sleep=sleeps.append)
+    assert len(calls) == 1 and sleeps == []
+
+
+def test_atomic_json_survives_transient_permission_error(tmp_path, monkeypatch):
+    calls = _flaky_replace(monkeypatch, fails=2)
+    sleeps = []
+    monkeypatch.setattr(wp2, "_sleep", sleeps.append)
+    wp2.atomic_json(tmp_path / "x.json", {"a": 1})
+    assert len(calls) == 3 and len(sleeps) == 2
+    assert (tmp_path / "x.json").read_bytes() == b'{\n  "a": 1\n}\n'
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["x.json"]
 
 
 def test_atomic_write_and_json_lf(tmp_path):

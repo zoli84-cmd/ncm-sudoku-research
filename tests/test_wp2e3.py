@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-from ncm_sudoku import wp2e3
+from ncm_sudoku import wp2, wp2e3
 from ncm_sudoku.e3controls import permute_labels, random_features
 from ncm_sudoku.e3data import labels, load_level, save_subset
 from ncm_sudoku.probes import GRID, SEEDS, build_inputs
@@ -327,3 +328,20 @@ def test_save_stage_rule_marginal_and_reused(full):
         assert file_sha256(out / name) == sha
     assert len(np.load(out / "preds" / "unit_digit__generated.npz")["mean"]) == 4 * 27
     assert not list(out.rglob("*.tmp*"))
+
+
+def test_atomic_pt_survives_transient_permission_error(tmp_path, monkeypatch):
+    real, calls = os.replace, []
+
+    def flaky(src, dst):
+        calls.append(Path(dst).name)
+        if len(calls) == 1:
+            raise PermissionError(13, "Access is denied", str(src))
+        return real(src, dst)
+    monkeypatch.setattr(os, "replace", flaky)
+    sleeps = []
+    monkeypatch.setattr(wp2, "_sleep", sleeps.append)
+    wp2e3._atomic_pt(tmp_path / "m.pt", {"w": torch.ones(2)})
+    assert calls == ["m.pt", "m.pt"] and len(sleeps) == 1
+    assert torch.load(tmp_path / "m.pt", weights_only=True)["w"].tolist() == [1.0, 1.0]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["m.pt"]

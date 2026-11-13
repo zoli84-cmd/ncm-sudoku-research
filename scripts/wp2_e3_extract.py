@@ -44,7 +44,6 @@ solve share) is printed or written to the run record (D76(5)).
 
 import hashlib
 import json
-import os
 import shutil
 import sys
 import time
@@ -169,7 +168,7 @@ def run(argv: list[str] | None = None) -> int:
     wp2.atomic_write(L["score_tmp"] / "ids.json", json.dumps(data.ids) + "\n")
 
     score_manifest = wp2.manifest({name: L["score_tmp"] / name for name in FILE_NAMES})
-    os.replace(L["score_tmp"], L["score"])
+    wp2.replace_with_retry(L["score_tmp"], L["score"])
 
     extra = {"n": len(data.ids), "labels_sha256": labels_sha256, "score_manifest": score_manifest}
     if role == "dry":

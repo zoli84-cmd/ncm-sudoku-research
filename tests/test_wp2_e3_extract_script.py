@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -166,6 +167,31 @@ def test_wp2_e3_extract_crash_leaves_no_score_dir(tmp_path, monkeypatch):
     assert rec["complete"] is True and rec["valid"] is True
     assert (d / "score" / "L06.npy").exists() and not (d / "score.tmp").exists()
     assert set(rec["score_manifest"]) >= {"L06.npy", "empty.npy", "mask.npy", "ids.json"}
+
+
+def test_wp2_e3_extract_publish_survives_transient_permission_error(tmp_path, monkeypatch):
+    """The score.tmp/ -> score/ rename meets a transient PermissionError (e.g. a virus scanner holding
+    a freshly written file on Windows); it is retried and the run still completes valid."""
+    env = _setup(tmp_path, monkeypatch)
+    _write_probe_val(tmp_path, IDS, PUZZLES, SOLUTIONS)
+    real, calls = os.replace, []
+
+    def flaky(src, dst):
+        if Path(src).name == "score.tmp":
+            calls.append(Path(dst).name)
+            if len(calls) <= 2:
+                raise PermissionError(13, "Access is denied", str(src))
+        return real(src, dst)
+    monkeypatch.setattr(os, "replace", flaky)
+    sleeps = []
+    monkeypatch.setattr(wp2, "_sleep", sleeps.append)
+    env.mod.main(["--role", "dry"])
+    assert calls == ["score", "score", "score"] and len(sleeps) == 2
+    d = env.raw / "dry" / "e3data"
+    assert (d / "score" / "L06.npy").exists() and not (d / "score.tmp").exists()
+    rec = _rec(env)
+    assert rec["complete"] is True and rec["valid"] is True
+    assert rec["score_manifest"] == wp2.manifest({n: d / "score" / n for n in env.mod.FILE_NAMES})
 
 
 def test_wp2_e3_extract_record_has_no_outcome(tmp_path, monkeypatch):
