@@ -356,3 +356,16 @@ def test_run_pilot2_and_summarize2_report_noop_max_tv(monkeypatch):
     assert s["level1_noop_mismatch"] == N_TOY and s["level1_noop_max_tv"] == {"tv": 0.25, "tv_empty": 0.25}
     legacy = {k: v for k, v in out.items() if k not in ("level1_noop_mismatch", "level1_noop_max_tv")}
     assert summarize2(legacy, n_boot=50)["level1_noop_max_tv"] is None
+
+
+# --- WP2 Task 2: summary helpers, resumable stages, chunked decoding, diagnostics ---
+
+from pathlib import Path  # noqa: E402
+
+GOLDEN = Path(__file__).parent / "golden" / "summarize2_toy.json"
+
+
+def test_summarize2_matches_golden():
+    # tests/golden/summarize2_toy.json was written from the pre-WP2 summarize2 on _toy_out() (n_boot=200)
+    got = json.loads(json.dumps(summarize2(_toy_out(), n_boot=200)))
+    assert got == json.loads(GOLDEN.read_text(encoding="utf-8"))

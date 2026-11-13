@@ -1,0 +1,447 @@
+{
+ "auc": {
+  "2-11": {
+   "auc_a": null,
+   "auc_b": null,
+   "range": null,
+   "reason": "fewer than two distinct damage values"
+  },
+  "6-11": {
+   "auc_a": null,
+   "auc_b": null,
+   "range": null,
+   "reason": "fewer than two distinct damage values"
+  }
+ },
+ "configurations": [
+  {
+   "dose": 1,
+   "excluded_share": 0.0,
+   "format_error_share": {
+    "C": 0.0,
+    "D": 0.0
+   },
+   "level": 2,
+   "n_records": 6,
+   "policy": "frequency",
+   "quantiles": {
+    "codebook_rms": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "hamming_CA": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "hamming_CA_empty": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "latent": [
+     0.5,
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "requant_ratio": [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "tv": [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "tv_empty": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ]
+   },
+   "solve_mean": {
+    "A": 1.0,
+    "B": 1.0,
+    "C": 1.0,
+    "D": 1.0
+   }
+  },
+  {
+   "dose": 1,
+   "excluded_share": 0.0,
+   "format_error_share": {
+    "C": 0.0,
+    "D": 0.0
+   },
+   "level": 11,
+   "n_records": 6,
+   "policy": "frequency",
+   "quantiles": {
+    "codebook_rms": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "hamming_CA": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "hamming_CA_empty": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "latent": [
+     0.5,
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "requant_ratio": [
+     0.2,
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "tv": [
+     1.1,
+     1.1,
+     1.1,
+     1.1,
+     1.1
+    ],
+    "tv_empty": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ]
+   },
+   "solve_mean": {
+    "A": 1.0,
+    "B": 1.0,
+    "C": 1.0,
+    "D": 0.8333333333333334
+   }
+  }
+ ],
+ "contrasts": {
+  "theta2": {
+   "frequency": {
+    "ci95": {
+     "ci": [
+      -0.9746794344808964,
+      0.9746794344808964
+     ],
+     "estimate": -0.20833333333333334,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    },
+    "estimate": -0.20833333333333334,
+    "family": {
+     "ci": [
+      -0.9916316520429012,
+      0.9916316520429012
+     ],
+     "estimate": -0.20833333333333334,
+     "level": 0.9833333333333333,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    }
+   },
+   "uniform": {
+    "ci95": {
+     "ci": [
+      -1.0,
+      1.0
+     ],
+     "estimate": null,
+     "method": "bound",
+     "n": 0,
+     "n_nonzero": 0
+    },
+    "estimate": null,
+    "family": null
+   }
+  },
+  "theta2_prime": {
+   "frequency": {
+    "ci95": {
+     "ci": [
+      -0.9746794344808964,
+      0.9746794344808964
+     ],
+     "estimate": 0.16666666666666666,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    },
+    "estimate": 0.16666666666666666,
+    "family": null,
+    "tost90": {
+     "ci": [
+      -0.9746794344808964,
+      0.9746794344808964
+     ],
+     "estimate": 0.16666666666666666,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    }
+   },
+   "uniform": {
+    "ci95": {
+     "ci": [
+      -1.0,
+      1.0
+     ],
+     "estimate": null,
+     "method": "bound",
+     "n": 0,
+     "n_nonzero": 0
+    },
+    "estimate": null,
+    "family": null,
+    "tost90": {
+     "ci": [
+      -1.0,
+      1.0
+     ],
+     "estimate": null,
+     "method": "bound",
+     "n": 0,
+     "n_nonzero": 0
+    }
+   }
+  },
+  "theta_comp": {
+   "frequency": {
+    "ci95": {
+     "ci": [
+      -0.9746794344808964,
+      0.9746794344808964
+     ],
+     "estimate": 0.125,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    },
+    "estimate": 0.125,
+    "family": {
+     "ci": [
+      -0.9916316520429012,
+      0.9916316520429012
+     ],
+     "estimate": 0.125,
+     "level": 0.9833333333333333,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    }
+   },
+   "uniform": {
+    "ci95": {
+     "ci": [
+      -0.9746794344808964,
+      0.9746794344808964
+     ],
+     "estimate": 0.125,
+     "method": "bound",
+     "n": 2,
+     "n_nonzero": 1
+    },
+    "estimate": 0.125,
+    "family": null
+   }
+  }
+ },
+ "equivalence_tost": false,
+ "freqs_level1": [
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625,
+  0.0625
+ ],
+ "level1": {
+  "frequency": {
+   "excluded_share": 0.0,
+   "format_error_share": {
+    "C": 0.0,
+    "D": 0.0
+   },
+   "n_eligible": 2,
+   "quantiles": {
+    "codebook_rms": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "hamming_CA": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "hamming_CA_empty": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "latent": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "requant_ratio": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "tv": [
+     0.01,
+     0.01,
+     0.01,
+     0.01,
+     0.01
+    ],
+    "tv_empty": [
+     0.01,
+     0.01,
+     0.01,
+     0.01,
+     0.01
+    ]
+   },
+   "solve_mean": {
+    "A": 1.0,
+    "B1": 1.0,
+    "C": 0.5,
+    "D": 0.625
+   }
+  },
+  "uniform": {
+   "excluded_share": 0.0,
+   "format_error_share": {
+    "C": 0.0,
+    "D": 0.0
+   },
+   "n_eligible": 2,
+   "quantiles": {
+    "codebook_rms": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "hamming_CA": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "hamming_CA_empty": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "latent": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "requant_ratio": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "tv": [
+     0.01,
+     0.01,
+     0.01,
+     0.01,
+     0.01
+    ],
+    "tv_empty": [
+     0.01,
+     0.01,
+     0.01,
+     0.01,
+     0.01
+    ]
+   },
+   "solve_mean": {
+    "A": 1.0,
+    "B1": 1.0,
+    "C": 0.5,
+    "D": 0.625
+   }
+  }
+ },
+ "level1_noop_max_tv": null,
+ "level1_noop_mismatch": null,
+ "non_confirmatory": true,
+ "sham_mismatch": {
+  "level1_B1": 0,
+  "levels_B": {
+   "11": 0,
+   "2": 0
+  }
+ }
+}
