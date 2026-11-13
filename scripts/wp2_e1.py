@@ -17,6 +17,14 @@ role). The TEST role never deletes outputs, so a complete TEST record refuses a 
 (single-look); an interrupted TEST run can only continue with `--resume`, and a fresh TEST start
 over existing outputs is refused.
 
+A fresh start marks the record with `wp2.mark_outputs_started` right after `clear_outputs`
+succeeds, before `e1.json` is computed. `--resume` checks that marker with
+`wp2.prepare_resume_outputs` before touching `e1_json`: `guard_start` writes the (incomplete) run
+record before a fresh start's `clear_outputs` call, so a refused fresh TEST start over an
+unrecorded leftover `e1.json` (e.g. a complete prior run whose record was separately lost, say to
+`git clean`) still leaves an incomplete, markerless record behind; a later `--resume` must not
+read that leftover as this run's own partial state and overwrite it.
+
 Outputs (raw, git-ignored) under `runs/wp2/<role>/`: `e1.json` (`role`, `ids`, `note`, `records`,
 `batch_size`). Run record: `experiments/wp2/<role>/runs/e1.json` (technical fields only: `n`,
 `batch_size`, `outputs` SHA-256 of `e1.json`). No outcome metric (solve share, format-error
@@ -51,8 +59,11 @@ def run(argv: list[str] | None = None) -> int:
               "solutions_sha256": sha256_array(data.solutions), "batch_size": BATCH_SIZE}
     rec = wp2.guard_start(RUNNER, role, args.force, args.resume, inputs)
     L = _layout(role)
-    if not args.resume:
+    if args.resume:
+        wp2.prepare_resume_outputs(RUNNER, role, rec, [L["e1_json"]])
+    else:
         wp2.clear_outputs(RUNNER, role, [L["e1_json"]])
+        rec = wp2.mark_outputs_started(RUNNER, role)
     m = load_model(CKPT_DIR)
 
     records = e1_records(m, data.puzzles, data.solutions, data.ids, batch_size=BATCH_SIZE)

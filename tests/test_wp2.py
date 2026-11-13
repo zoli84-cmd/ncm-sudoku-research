@@ -617,3 +617,64 @@ def test_clear_outputs_test_role_never_deletes(tmp_path, monkeypatch):
         wp2.clear_outputs("e2", "test", [raw / "e2" / "missing.npy", f])
     assert f.exists()
     wp2.clear_outputs("e2", "test", [raw / "e2" / "missing.npy"])  # nothing present: no-op
+
+
+# --- outputs_started marker and the resume gate ---------------------------------------------
+
+def test_mark_outputs_started_sets_marker_only_on_incomplete_record(tmp_path, state):
+    with pytest.raises(wp2.DataIntegrityError):
+        wp2.mark_outputs_started("e2", "dry")  # no record yet
+    wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    rec = wp2.mark_outputs_started("e2", "dry")
+    assert rec["outputs_started"] is True
+    stored = json.loads(_record_path(tmp_path, "dry").read_text(encoding="utf-8"))
+    assert stored["outputs_started"] is True
+    final = wp2.finish_run("e2", "dry", rec, 1.0, {"outputs": {}})
+    assert final["outputs_started"] is True  # carried into the finished record, harmlessly
+    with pytest.raises(wp2.DataIntegrityError):
+        wp2.mark_outputs_started("e2", "dry")  # complete record refuses
+
+
+def test_outputs_started_is_reserved(tmp_path, state):
+    wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    with pytest.raises(ValueError):
+        wp2.update_run("e2", "dry", {"outputs_started": True})
+    with pytest.raises(ValueError):
+        wp2.finish_run("e2", "dry", {}, 1.0, {"outputs_started": True})
+
+
+def test_prepare_resume_outputs_blocks_without_marker(tmp_path, state):
+    rec = wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    raw = wp2.paths("dry")[1]
+    target = raw / "e2" / "A.npy"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"x")
+    with pytest.raises(wp2.DataIntegrityError, match="A.npy"):
+        wp2.prepare_resume_outputs("e2", "dry", rec, [target])
+    assert target.exists()  # the gate never deletes
+    wp2.prepare_resume_outputs("e2", "dry", rec, [raw / "e2" / "missing.npy"])  # nothing exists: passes
+
+
+def test_prepare_resume_outputs_allows_with_marker(tmp_path, state):
+    wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    rec = wp2.mark_outputs_started("e2", "dry")
+    raw = wp2.paths("dry")[1]
+    target = raw / "e2" / "A.npy"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"x")
+    wp2.prepare_resume_outputs("e2", "dry", rec, [target])  # permitted; still does not delete
+    assert target.exists()
+
+
+def test_prepare_resume_outputs_path_confinement(tmp_path, state):
+    wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    rec = wp2.mark_outputs_started("e2", "dry")
+    outside = tmp_path / "runs" / "lock" / "test" / "ids.json"
+    outside.parent.mkdir(parents=True)
+    outside.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError):
+        wp2.prepare_resume_outputs("e2", "dry", rec, [outside])
+    exp = wp2.paths("dry")[0]
+    with pytest.raises(ValueError):
+        wp2.prepare_resume_outputs("e2", "dry", rec, [exp / "runs" / "e2.json"])
+    assert outside.exists()

@@ -17,12 +17,21 @@ stage's technical dict), `e2/diag/<same>.npz` (the stage's D78 arrays), `e2/part
 diag file name -> SHA-256, rewritten after every stage). Run record:
 `experiments/wp2/<role>/runs/e2.json` (technical fields only).
 
-`--resume` continues an incomplete run from the stages listed in `parts.json` (each part and diag
-file checked against it, each part's A_sha256 against the record); unlisted part files are
-recomputed. A resume without a recorded A_sha256 starts the stages afresh (no stage can have run);
-an `A.npy` left by the crash is hashed first and the run record's `A_regenerated_matches` says
-whether the regenerated A equals it (null: no file existed or the run did not resume).
-The TEST role never deletes outputs: stale unlisted files are replaced by the atomic rewrites.
+A fresh start marks the record with `wp2.mark_outputs_started` right after `clear_outputs`
+succeeds, before any stage runs. `--resume` checks that marker first with
+`wp2.prepare_resume_outputs` (over `e2.json`, `A.npy`, `parts/`, `diag/` and `parts.json`):
+`guard_start` writes the incomplete run record before a fresh start's `clear_outputs` call, so a
+refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run whose record was
+separately lost, say to `git clean`) still leaves an incomplete, markerless record behind, and a
+later `--resume` must not treat those leftovers as this run's own partial state.
+
+With the marker confirmed, `--resume` continues an incomplete run from the stages listed in
+`parts.json` (each part and diag file checked against it, each part's A_sha256 against the
+record); unlisted part files are recomputed. A resume without a recorded A_sha256 starts the
+stages afresh (no stage can have run); an `A.npy` left by the crash is hashed first and the run
+record's `A_regenerated_matches` says whether the regenerated A equals it (null: no file existed
+or the run did not resume). The TEST role never deletes outputs: stale unlisted files are
+replaced by the atomic rewrites.
 
 Identity gate (spec ambiguity 23): any nonzero `level1_noop_mismatch`, `sham_mismatch` or
 `code_mismatch` count finishes the record as complete, `valid: false`, status
@@ -131,8 +140,17 @@ def run(argv: list[str] | None = None) -> int:
     rec = wp2.guard_start(RUNNER, role, args.force, args.resume, inputs)
     L = _layout(role)
     stage_outputs = [L["parts"], L["diag"], L["manifest"]]
-    if not args.resume:
-        wp2.clear_outputs(RUNNER, role, [L["e2_json"], L["A"], *stage_outputs])
+    all_outputs = [L["e2_json"], L["A"], *stage_outputs]
+    if args.resume:
+        # `guard_start` writes the (incomplete) run record before a fresh start's `clear_outputs`
+        # call, so a refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run
+        # whose record was separately lost, say to `git clean`) still leaves an incomplete,
+        # markerless record behind. This --resume must not read those leftovers (A.npy, parts,
+        # diag, e2.json) as this run's own partial state and reuse or overwrite them.
+        wp2.prepare_resume_outputs(RUNNER, role, rec, all_outputs)
+    else:
+        wp2.clear_outputs(RUNNER, role, all_outputs)
+        rec = wp2.mark_outputs_started(RUNNER, role)
     m = load_model(CKPT_DIR)
 
     A_sha = rec.get("A_sha256")

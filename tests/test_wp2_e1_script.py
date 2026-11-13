@@ -192,4 +192,14 @@ def test_wp2_e1_test_role_fresh_start_over_existing_outputs_refused(tmp_path, mo
     with pytest.raises(SystemExit, match="single-look"):
         env.mod.main(["--role", "test"])
     assert leftover.read_bytes() == content
+    rec = _rec(env)
+    assert rec["complete"] is False
+    assert "outputs_started" not in rec  # the refused attempt never earned the resume marker
+
+    # A later --resume must not treat that leftover (possibly a complete, valid prior run whose
+    # record was separately lost, e.g. to `git clean`) as this run's own partial state.
+    monkeypatch.setattr(env.mod, "load_model", lambda d: pytest.fail("model loaded over an unmarked leftover"))
+    with pytest.raises(SystemExit, match="outputs_started"):
+        env.mod.main(["--role", "test", "--resume"])
+    assert leftover.read_bytes() == content
     assert _rec(env)["complete"] is False

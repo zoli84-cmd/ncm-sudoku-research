@@ -254,4 +254,39 @@ def test_wp2_e3_extract_test_role_fresh_start_over_existing_outputs_refused(tmp_
     with pytest.raises(SystemExit, match="single-look"):
         env.mod.main(["--role", "test"])
     assert (leftover / "marker.npy").exists()
+    rec = _rec(env, "test")
+    assert rec["complete"] is False
+    assert "outputs_started" not in rec  # the refused attempt never earned the resume marker
+
+    # A later --resume must not treat that leftover (possibly a complete, valid prior run whose
+    # record was separately lost, e.g. to `git clean`) as this run's own partial state.
+    monkeypatch.setattr(env.mod, "load_model", lambda d: pytest.fail("model loaded over an unmarked leftover"))
+    with pytest.raises(SystemExit, match="outputs_started"):
+        env.mod.main(["--role", "test", "--resume"])
+    assert (leftover / "marker.npy").exists()
     assert _rec(env, "test")["complete"] is False
+
+
+def test_wp2_e3_extract_test_role_resume_republishes_stale_score_dir(tmp_path, monkeypatch):
+    """A crash between the rename to score/ and finish_run must not block a TEST --resume: the
+    stale, fully-populated score/ is still this run's own (the marker was set at this run's own
+    fresh start) and gets discarded and rewritten, not treated as already valid."""
+    env = _setup(tmp_path, monkeypatch)
+    _freeze_for_test(env, tmp_path)
+    data = wp2.RoleData(ids=IDS, puzzles=PUZZLES, solutions=SOLUTIONS, source="test")
+    monkeypatch.setattr(wp2, "verify_test_data", lambda *a, **k: data)
+    real_finish_run = wp2.finish_run
+
+    def boom(*a, **k):
+        raise RuntimeError("simulated crash after rename")
+    monkeypatch.setattr(wp2, "finish_run", boom)
+    with pytest.raises(RuntimeError, match="simulated crash after rename"):
+        env.mod.main(["--role", "test"])
+    assert (_score_dir(env, "test") / "L06.npy").exists()  # the rename succeeded before the crash
+    assert _rec(env, "test")["complete"] is False
+
+    monkeypatch.setattr(wp2, "finish_run", real_finish_run)
+    env.mod.main(["--role", "test", "--resume"])
+    rec = _rec(env, "test")
+    assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"
+    assert (_score_dir(env, "test") / "L06.npy").exists()

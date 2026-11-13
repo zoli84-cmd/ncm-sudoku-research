@@ -47,7 +47,7 @@ TECHNICAL_KEYS = ("runner", "role", "stage", "seconds", "complete", "valid", "st
 RESERVED_KEYS = frozenset({
     "runner", "role", "note", "started", "environment", "code", "freeze", "inputs", "resumes", "finished",
     "seconds", "environment_end", "code_end", "freeze_end", "code_changed_during_run", "complete", "valid",
-    "invalid_reasons", "status"})
+    "invalid_reasons", "status", "outputs_started"})
 
 
 class DataIntegrityError(RuntimeError):
@@ -396,7 +396,13 @@ def status_line(**fields) -> None:
 
 def clear_outputs(runner: str, role: str, targets: list[Path]) -> None:
     """Deletes listed outputs of a previous run; only inside this role's output dirs, never run records.
-    In the TEST role it never deletes: any existing target raises DataIntegrityError."""
+    In the TEST role it never deletes: any existing target raises DataIntegrityError.
+
+    Fresh-start only: `guard_start` writes the (incomplete) run record *before* this is called, so
+    a refusal here still leaves that record on disk, with no `outputs_started` marker. A later
+    `--resume` must go through `prepare_resume_outputs`, not this function, or it could treat a
+    genuine prior run's outputs (whose record was separately lost, e.g. to `git clean`) as this
+    run's own partial state and destroy single-look TEST outputs."""
     roots = [p.resolve() for p in paths(role)]
     records = (paths(role)[0] / "runs").resolve()
     resolved = [Path(t).resolve() for t in targets]
@@ -414,3 +420,43 @@ def clear_outputs(runner: str, role: str, targets: list[Path]) -> None:
             shutil.rmtree(t)
         elif t.exists():
             t.unlink()
+
+
+def mark_outputs_started(runner: str, role: str) -> dict:
+    """Records, right after a fresh start's `clear_outputs` succeeds and before any output is
+    written, that this run's own attempt now owns its output targets. `prepare_resume_outputs`
+    uses the marker to tell a genuine in-progress run's partial state (safe to discard or
+    overwrite on `--resume`) from a stale, markerless incomplete record: `guard_start` writes the
+    record before a fresh start calls `clear_outputs`, so a refused fresh TEST start over
+    unrecorded leftover outputs (e.g. a prior complete run whose record was lost) still leaves an
+    incomplete record behind, with no marker. Only this function sets the key; `outputs_started`
+    is reserved so ordinary `update_run`/`finish_run` extras cannot set it."""
+    rec_path = _record_path(runner, role)
+    if not rec_path.is_file():
+        raise DataIntegrityError(f"{runner}: no run record at {rec_path}")
+    rec = _read(rec_path)
+    if rec.get("complete") is not False:
+        raise DataIntegrityError(f"{runner}: run record at {rec_path} is not incomplete")
+    rec["outputs_started"] = True
+    atomic_json(rec_path, rec)
+    return rec
+
+
+def prepare_resume_outputs(runner: str, role: str, record: dict, targets: list[Path]) -> None:
+    """Resume-time safety gate for output targets, path-confined exactly like `clear_outputs`
+    (never a run record) but never deleting anything itself. Raises `DataIntegrityError` naming
+    the first existing target unless `record` (as returned by `guard_start`) carries the
+    `outputs_started` marker; with the marker, every target is this run's own partial state and
+    the runner is free to discard or atomically overwrite it with its usual resume logic."""
+    roots = [p.resolve() for p in paths(role)]
+    records = (paths(role)[0] / "runs").resolve()
+    resolved = [Path(t).resolve() for t in targets]
+    for t in resolved:
+        if not any(t.is_relative_to(r) and t != r for r in roots) or t.is_relative_to(records):
+            raise ValueError(f"{runner}: refusing to touch {t} (outside the {role} outputs or a run record)")
+    if record.get("outputs_started") is not True:
+        present = [t for t in resolved if t.exists()]
+        if present:
+            raise DataIntegrityError(
+                f"{runner}: {present[0]} exists but this run's record has no outputs_started marker; "
+                "refusing to resume over outputs that may belong to a run whose record was lost")

@@ -18,10 +18,16 @@ against the reference `runs/e3prep/probe_val/` -> `finish_run` -> `status_line`.
 
 `score.tmp/` and `score/` are restart-from-scratch state (spec ambiguity 21), like `wp2_e1.py`:
 on a fresh start they are cleared through `wp2.clear_outputs` (refuses if either already exists
-in the TEST role: single-look). On a validated `--resume`, both are discarded unconditionally
-(even in the TEST role, bypassing `clear_outputs`'s "never deletes" rule) before recomputing,
-because neither a leftover `score.tmp/` nor a `score/` left by a crash between the rename and
-`finish_run` is ever read as valid; the whole extraction restarts and republishes atomically.
+in the TEST role: single-look), and the record is then marked with `wp2.mark_outputs_started`,
+before any output is written. On `--resume`, `wp2.prepare_resume_outputs` checks that marker
+first: `guard_start` writes the (incomplete) run record before a fresh start's `clear_outputs`
+call, so a refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run whose
+record was separately lost, say to `git clean`) still leaves an incomplete, markerless record
+behind, and `--resume` must not read that leftover as this run's own partial state. Only once the
+marker is confirmed are both directories discarded unconditionally (even in the TEST role,
+bypassing `clear_outputs`'s "never deletes" rule) and the whole extraction restarts and
+republishes atomically — neither a leftover `score.tmp/` nor a `score/` left by a crash between
+the rename and `finish_run` is ever read as valid on its own.
 
 Outputs (raw, git-ignored) under `runs/wp2/<role>/e3data/score/`: the PROBE layout (`ids.json`,
 `puzzles.npy`, `solutions.npy`, `solve.npy`, `mask.npy`, `empty.npy`, `depth.npy`, `L01.npy` ..
@@ -137,13 +143,20 @@ def run(argv: list[str] | None = None) -> int:
     L = _layout(role)
     if args.resume:
         # Neither a partial score.tmp/ nor a score/ left by a crash between the rename and
-        # finish_run is ever read as valid (Task 7 controller ruling): discard both and restart,
-        # even in the TEST role, where clear_outputs would otherwise refuse because they exist.
+        # finish_run is ever read as valid (Task 7 controller ruling): discard both and restart.
+        # `prepare_resume_outputs` gates this on the outputs_started marker first: `guard_start`
+        # writes the (incomplete) run record before a fresh start's `clear_outputs` call, so a
+        # refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run whose
+        # record was separately lost, say to `git clean`) still leaves an incomplete, markerless
+        # record behind, and this --resume must not treat that leftover as this run's own partial
+        # state and discard it.
+        wp2.prepare_resume_outputs(RUNNER, role, rec, [L["score_tmp"], L["score"]])
         for d in (L["score_tmp"], L["score"]):
             if d.exists():
                 shutil.rmtree(d)
     else:
         wp2.clear_outputs(RUNNER, role, [L["score_tmp"], L["score"]])
+        rec = wp2.mark_outputs_started(RUNNER, role)
     m = load_model(CKPT_DIR)
 
     lab = labels(data.puzzles)

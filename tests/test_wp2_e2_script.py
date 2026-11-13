@@ -454,4 +454,14 @@ def test_wp2_e2_test_role_fresh_start_over_existing_outputs_refused(env, tmp_pat
     with pytest.raises(SystemExit, match="single-look"):
         env.mod.main(["--role", "test"])
     assert leftover.read_bytes() == content and len(env.pilot.calls) == n_calls
+    rec = _rec(env)
+    assert rec["complete"] is False
+    assert "outputs_started" not in rec  # the refused attempt never earned the resume marker
+
+    # A later --resume must not treat that leftover (possibly a complete, valid prior run whose
+    # record was separately lost, e.g. to `git clean`) as this run's own partial state: it must
+    # not regenerate A, rerun any stage, or overwrite A.npy/parts/diag.
+    with pytest.raises(SystemExit, match="outputs_started"):
+        env.mod.main(["--role", "test", "--resume"])
+    assert leftover.read_bytes() == content and len(env.pilot.calls) == n_calls
     assert _rec(env)["complete"] is False
