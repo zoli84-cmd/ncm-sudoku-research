@@ -133,6 +133,7 @@ def run(argv: list[str] | None = None) -> int:
     fits = _read(L["e3_fits"])
     probe_manifest = _check_probe_files(L, fits)
     _check_score(role, L)
+    wp2.verify_checkpoints(CKPT_DIR)
 
     inputs = {"n_equiv": N_EQUIV, "k_elements": K_ELEMENTS, "seed": SEED, "acceptable": ACCEPTABLE,
               "fits_sha256": e3_rec["fits_sha256"], "probe_files_sha256": probe_manifest,
@@ -144,7 +145,6 @@ def run(argv: list[str] | None = None) -> int:
         wp2.clear_outputs(RUNNER, role, [L["equiv"]])
         rec = wp2.mark_outputs_started(RUNNER, role)
 
-    wp2.verify_checkpoints(CKPT_DIR)
     probes, pca, meta = wp2e3.load_probe(L["out"], "wl_L12", "generated")
     m = load_model(CKPT_DIR)
     ids = _read(L["score"] / "ids.json")
