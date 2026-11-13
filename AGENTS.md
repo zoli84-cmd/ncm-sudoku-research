@@ -57,7 +57,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
-- [src/ncm_sudoku/AGENTS.md](src/ncm_sudoku/AGENTS.md): own package; per-module contracts (frozen `grid.PEER_ORDER`, pinned by `tests/test_peer_order.py`; never reorder)
+- [src/ncm_sudoku/AGENTS.md](src/ncm_sudoku/AGENTS.md): own package; per-module contracts (frozen `grid.PEER_ORDER`, pinned by `tests/test_peer_order.py`; never reorder; `wp2.py` is the WP2 freeze guard and run-record layer every WP2 runner uses)
 - [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures, `e2p2_fakes.py` deterministic fakes of the model pieces `e2p2` uses; `-m slow` runs real-data checks
 - [scripts/AGENTS.md](scripts/AGENTS.md): run scripts; most result writers are rerun-guarded (`--force` / `--resume`); read the per-script contract there before forcing a rerun
 - [experiments/g0/](experiments/g0/): committed G0 results (`reproduction.json`, `cost.json`)
@@ -70,6 +70,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - `checkpoints/` (git-ignored): downloaded by `scripts/fetch_checkpoints.py`; load only through `ncm_sudoku.model.load_model` (weights_only=True)
 - `runs/` (git-ignored): per-puzzle raw run outputs
 - `runs/e3prep/<probe_train|probe_val>/` (git-ignored): PROBE subset arrays from `scripts/e3_extract.py` (`ids.json`, `puzzles.npy`, `solutions.npy`, `solve.npy`, `mask.npy`, `empty.npy`, `depth.npy`, `L01.npy`..`L12.npy`, `T02.npy`, `T06.npy`, `T12.npy`); about 3 GB total across both subsets
+- `experiments/wp2/<role>/` and `runs/wp2/<role>/` (created by the WP2 runners, `role` = `test` or `dry`): committed WP2 outputs and git-ignored raw outputs; run records in `experiments/wp2/<role>/runs/<runner>.json`; the dry approval is `experiments/wp2/dry/check.json`; see `ncm_sudoku.wp2`
 - `runs/lock/test/` (git-ignored): TEST subset from `scripts/lock_test_set.py` (`ids.json`, `puzzles.npy`, `solutions.npy`, uint8); its hashes are in `experiments/lock/test_set.json`
 - `runs/lock/equiv_l12/` (git-ignored): level-12 whole-layer seed probes from `scripts/lock_equiv_l12.py` (`L12_wholelayer_seed{0,1,2}.pt` state dicts, `pca.pt` tensors, `L12_wholelayer.json` config); reload with `load_saved` (`torch.load(weights_only=True)`)
 - `runs/e3prep/models/` (git-ignored): selected level-6 linear seed probes from `scripts/e3_probes.py` (`L06_linear_seed{0,1,2}.pt` state dicts, `L06_linear.json` config); loaded with `torch.load(weights_only=True)`

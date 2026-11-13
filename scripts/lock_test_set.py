@@ -12,7 +12,6 @@ and of the puzzle and solution arrays (uint8, C order), the screen, generator ha
 code state. Refuses to overwrite experiments/lock/test_set.json unless --force.
 """
 
-import hashlib
 import json
 import os
 import sys
@@ -24,7 +23,7 @@ from ncm_sudoku.g0 import code_state
 from ncm_sudoku.gate import GATE_N
 from ncm_sudoku.model import ROOT
 from ncm_sudoku.released import load_released
-from ncm_sudoku.subsets import FROZEN_NUMPY, FROZEN_SHA256, SEEDS, generate_subset
+from ncm_sudoku.subsets import FROZEN_NUMPY, FROZEN_SHA256, SEEDS, generate_subset, sha256_array, sha256_ids
 from ncm_sudoku.symmetry import screen_canonical
 
 N_TEST = 600
@@ -38,15 +37,6 @@ NOTE = ("TEST subset identity for the lock (plan v3.6 §12.2); generated before 
 def guard(force: bool) -> None:
     if OUT.exists() and not force:
         sys.exit(f"{OUT} exists: the TEST set is rerun-guarded; use --force to overwrite")
-
-
-def sha256_ids(ids) -> str:
-    """SHA-256 of json.dumps(ids) (generation order, default separators, ensure_ascii), UTF-8."""
-    return hashlib.sha256(json.dumps(list(ids)).encode("utf-8")).hexdigest()
-
-
-def sha256_array(a) -> str:
-    return hashlib.sha256(np.ascontiguousarray(np.asarray(a, dtype=np.uint8)).tobytes(order="C")).hexdigest()
 
 
 def _atomic(path, text: str) -> None:

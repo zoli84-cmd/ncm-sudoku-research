@@ -1,6 +1,7 @@
 """Analysis subsets: seed namespaces, frozen-generator guard, duplicate screening (D33, D36)."""
 
 import hashlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -29,6 +30,15 @@ def assert_generator_frozen() -> None:
 def generate_subset(name: str, n: int) -> list[GeneratedPuzzle]:
     assert_generator_frozen()
     return generate_many(SEEDS[name], n)
+
+
+def sha256_ids(ids) -> str:
+    """SHA-256 of json.dumps(ids) (generation order, default separators, ensure_ascii), UTF-8."""
+    return hashlib.sha256(json.dumps(list(ids)).encode("utf-8")).hexdigest()
+
+
+def sha256_array(a) -> str:
+    return hashlib.sha256(np.ascontiguousarray(np.asarray(a, dtype=np.uint8)).tobytes(order="C")).hexdigest()
 
 
 def solution_signature(solution: np.ndarray) -> tuple:
