@@ -19,10 +19,20 @@ POLICIES = ("frequency", "uniform")
 N_SEEDS = 3
 
 
-def _eval(puzzles, solutions, codes, m):
-    tokens = decode_codes(m, codes)
+def _eval_tokens(puzzles, solutions, codes, m, decode_chunk: int | None = None):
+    """Decoded tokens [rows, 89], parsed outputs and metrics of `codes`. With `decode_chunk`
+    None the whole tensor is decoded in one `decode_codes` call; with an int, in row blocks of
+    that size (WP2, spec ambiguity 11)."""
+    if decode_chunk is None:
+        tokens = decode_codes(m, codes)
+    else:
+        tokens = _chunked(lambda s: decode_codes(m, codes[s]), len(codes), decode_chunk)
     parsed = [parse_output_tokens(t.tolist()) for t in tokens]
-    return parsed, [evaluate(p, o, s) for p, o, s in zip(puzzles, parsed, solutions)]
+    return tokens, parsed, [evaluate(p, o, s) for p, o, s in zip(puzzles, parsed, solutions)]
+
+
+def _eval(puzzles, solutions, codes, m, decode_chunk: int | None = None):
+    return _eval_tokens(puzzles, solutions, codes, m, decode_chunk)[1:]
 
 
 def _chunked(fn, n, chunk):

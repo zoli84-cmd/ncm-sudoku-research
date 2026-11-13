@@ -7,24 +7,32 @@ regenerated. Damage measures compare C against A on the final cumulative state.
 
 import json
 import math
+import time
 from collections import defaultdict
+from collections.abc import Callable
 
 import numpy as np
 import torch
 
 from ncm_sudoku.damage import codebook_rms, latent_distance, requantize, tv_damage
-from ncm_sudoku.e2 import POLICIES, _chunked, _eval
-from ncm_sudoku.intervene import continue_generation
+from ncm_sudoku.e2 import POLICIES, _chunked, _eval_tokens
+from ncm_sudoku.grid import CELL_TOKEN_INDICES
+from ncm_sudoku.intervene import continue_generation, level_logits
 from ncm_sudoku.model import NcmModel, level_slices
 from ncm_sudoku.perturb import (
     DOSE_FRACTIONS_V36, N_CODES, code_frequencies, dose_grid, level1_weights, perturb_level, run_seed,
 )
 from ncm_sudoku.runner import generate_codes, puzzle_tensor
-from ncm_sudoku.states import cumulative_states, decode_state_logits
+from ncm_sudoku.states import cumulative_states, decode_state, decode_state_logits
 from ncm_sudoku.validate import cell_hamming
 
 LEVELS_P2 = (2, 6, 11)
 SEEDS_P2 = (0, 1, 2)
+# Stages with the "full" diagnostics (spec ambiguity 22, D78): every level-1 value and the
+# primary level-11 configuration (frequency policy, dose 1, seeds 0-2)
+PRIMARY_STAGES = (tuple(f"level1/v{v:02d}" for v in range(N_CODES))
+                  + tuple(f"L11/frequency/d01/s{s}" for s in (0, 1, 2)))
+_CELL_IDX = torch.as_tensor(CELL_TOKEN_INDICES)
 FAMILY_LEVEL = 1 - 0.05 / 3  # Bonferroni over the three E2 contrasts
 TOST_MARGIN = 0.03
 QUANTILES = (0.0, 0.25, 0.5, 0.75, 1.0)
@@ -76,33 +84,131 @@ def load_frozen_freqs(path) -> dict[int, np.ndarray]:
 
 @torch.no_grad()
 def branch_context(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, A: torch.Tensor,
-                   chunk: int = 50) -> dict:
+                   chunk: int = 50, decode_chunk: int | None = None, diagnostics: bool = False) -> dict:
     """What `compare` needs about branch A: prefixes, level slices, empty mask, parsed and
-    evaluated A, and A's final cumulative state and decoded logits (in A's chunks)."""
+    evaluated A, and A's final cumulative state and decoded logits (in A's chunks).
+    `decode_chunk` is the outcome-decoding batch of every later `_eval_tokens` call (None:
+    one call per branch tensor). With `diagnostics`, also A's decoded tokens (`tokens_A`) and
+    `code_probs[level]`: the temperature-1 softmax of `level_logits(prefix, A, level)`, float32
+    [n, n_level, 16], for every level in (1, *LEVELS_P2) (read at call time), in `chunk` blocks."""
     n = len(puzzles)
-    parsed_A, met_A = _eval(puzzles, solutions, A, m)
+    tokens_A, parsed_A, met_A = _eval_tokens(puzzles, solutions, A, m, decode_chunk)
     z_A = _chunked(lambda s: cumulative_states(m, A[s])[-1], n, chunk)
-    return {
+    prefix = puzzle_tensor(puzzles)
+    ctx = {
         "m": m, "puzzles": puzzles, "solutions": solutions, "A": A, "chunk": chunk,
-        "prefix": puzzle_tensor(puzzles), "slices": level_slices(m.levels),
+        "decode_chunk": decode_chunk,
+        "prefix": prefix, "slices": level_slices(m.levels),
         "empty": torch.as_tensor(np.asarray(puzzles) == 0),
         "parsed_A": parsed_A, "met_A": met_A, "z_A": z_A,
         "logits_A": _chunked(lambda s: decode_state_logits(m, z_A[s]), n, chunk),
     }
+    if diagnostics:
+        ctx["tokens_A"] = tokens_A
+        ctx["code_probs"] = {
+            lv: _chunked(lambda s: torch.softmax(level_logits(m, prefix[s], A[s], lv).float(), dim=-1), n, chunk)
+            for lv in (1, *LEVELS_P2)}
+    return ctx
+
+
+def _rel_dist(z: torch.Tensor, z_a: torch.Tensor) -> torch.Tensor:
+    return (z - z_a).flatten(1).norm(dim=-1) / z_a.flatten(1).norm(dim=-1)
+
+
+def _state_diag(m, st_C: list, st_D: list, st_A: list, acc: dict) -> None:
+    """Appends, for one row block, the per-level relative state distances [rows, L] and the
+    cell-level differences of the level-k intermediate decodings [rows, L, 81] of C and D vs A."""
+    dec_A = [decode_state(m, z)[:, _CELL_IDX] for z in st_A]
+    for X, b in ((st_C, "C"), (st_D, "D")):
+        acc[f"state_dist_{b}"].append(torch.stack([_rel_dist(x, a) for x, a in zip(X, st_A)], dim=1).float().numpy())
+        acc[f"level_changed_{b}"].append(
+            torch.stack([decode_state(m, x)[:, _CELL_IDX] != d for x, d in zip(X, dec_A)], dim=1).numpy())
+
+
+def _basic_diag(ctx: dict, idx: torch.Tensor, C: torch.Tensor, D: torch.Tensor, tok_C: torch.Tensor,
+                tok_D: torch.Tensor, level: int) -> dict[str, np.ndarray]:
+    """Per-record diagnostic arrays of one stage (spec ambiguity 22, D78); see `compare`."""
+    m, slices = ctx["m"], ctx["slices"]
+    A_rows, tok_A = ctx["A"][idx], ctx["tokens_A"][idx]
+    k = len(idx)
+    later = torch.zeros(k, len(slices), dtype=torch.int16)
+    for j in range(level, len(slices)):  # levels after the intervention level
+        later[:, j] = (D[:, slices[j]] != A_rows[:, slices[j]]).sum(dim=1).to(torch.int16)
+    sl = slices[level - 1]
+    old, new = A_rows[:, sl], C[:, sl]
+    changed = old != new
+    if level == 1:  # one position; no-op rows (new == old) keep it, with norm 0
+        valid = torch.ones(k, dtype=torch.bool)
+        pos = torch.zeros(k, 1, dtype=torch.long)
+    else:  # perturb_level: eligible rows replace exactly `dose` positions, ineligible rows none
+        counts = changed.sum(dim=1)
+        dose = int(counts.max()) if k else 0
+        valid = counts > 0
+        if not bool((counts[valid] == dose).all()):
+            raise ValueError("every changed row must replace the same number of positions")
+        pos = torch.zeros(k, dose, dtype=torch.long)
+        if dose:
+            pos[valid] = changed[valid].nonzero()[:, 1].view(-1, dose)
+    orig, repl = old.gather(1, pos), new.gather(1, pos)
+    probs = ctx["code_probs"][level][idx]
+    at_pos = probs.gather(1, pos[:, :, None].expand(-1, -1, probs.shape[-1]))  # [k, dose, 16]
+    E = m.vqvae.vq.embeddings[level - 1].weight
+    norm = torch.sqrt(((E[new] - E[old]).pow(2).sum(dim=-1) * changed).sum(dim=1))
+
+    def f32(t):
+        t = t.to(torch.float32).clone()
+        t[~valid] = float("nan")
+        return t.numpy()
+
+    def i16(t):
+        t = t.clone()
+        t[~valid] = -1
+        return t.to(torch.int16).numpy()
+
+    return {
+        "changed_C": (tok_C[:, _CELL_IDX] != tok_A[:, _CELL_IDX]).numpy(),
+        "changed_D": (tok_D[:, _CELL_IDX] != tok_A[:, _CELL_IDX]).numpy(),
+        "later_changes_D": later.numpy(),
+        "positions": i16(pos), "orig": i16(orig), "new": i16(repl),
+        "p_new": f32(at_pos.gather(2, repl[:, :, None])[..., 0]),
+        "p_orig": f32(at_pos.gather(2, orig[:, :, None])[..., 0]),
+        "freq_new": f32(ctx["freqs"][level].to(torch.float32)[repl]),
+        "replacement_norm": f32(norm),
+    }
 
 
 @torch.no_grad()
-def compare(ctx: dict, idx: torch.Tensor, C: torch.Tensor, level: int) -> list[dict]:
+def compare(ctx: dict, idx: torch.Tensor, C: torch.Tensor, level: int,
+            diag: str | None = None) -> list[dict] | tuple[list[dict], dict[str, np.ndarray]]:
     """Branches C (given) and D (regenerated from C's levels <= `level`) for puzzle rows `idx`,
-    in chunks of `ctx["chunk"]`; one dict per row."""
+    in chunks of `ctx["chunk"]`, decoded with `ctx["decode_chunk"]`; one dict per row.
+
+    `diag` "basic" or "full" (needs `branch_context(..., diagnostics=True)` and `ctx["freqs"]`
+    {level: [16]}, set by `run_pilot2`) also returns the stage's diagnostic arrays (D78), rows in
+    record order, L = len(m.levels): `changed_C`/`changed_D` bool [k, 81] (the argmax token at
+    each cell's output position differs from A's); `later_changes_D` int16 [k, L] (D codes that
+    differ from A per level after `level`; row sum = downstream_changes_D); `positions`/`orig`/
+    `new` int16 [k, dose] (level 1: position 0, new = the set value); `p_new`/`p_orig` float32
+    [k, dose] (`code_probs[level]` at the position); `freq_new` float32 [k, dose] (`ctx["freqs"]`
+    of the new value); `replacement_norm` float32 [k] (sqrt of the summed ||E[new] - E[orig]||^2
+    over changed positions, from the level's embedding table). Rows without a replacement
+    (ineligible, level > 1) hold -1 and NaN. "full" adds `state_dist_C`/`state_dist_D` float32
+    [k, L] (||z_k^X - z_k^A|| / ||z_k^A|| of the full-length cumulative state after level k) and
+    `level_changed_C`/`level_changed_D` bool [k, L, 81] (the level-k intermediate decoding differs
+    from A's at the cell), with A's states recomputed per `chunk` block. Time spent on
+    diagnostics is added to `ctx["diag_seconds"]`; the records never depend on `diag`."""
+    if diag not in (None, "basic", "full"):
+        raise ValueError(f"unknown diag {diag!r}")
     m, puzzles, solutions, A, chunk = (ctx[k] for k in ("m", "puzzles", "solutions", "A", "chunk"))
-    prefix, slices, empty = ctx["prefix"], ctx["slices"], ctx["empty"]
+    prefix, slices, empty, decode_chunk = ctx["prefix"], ctx["slices"], ctx["empty"], ctx["decode_chunk"]
     parsed_A, met_A, z_A, logits_A = (ctx[k] for k in ("parsed_A", "met_A", "z_A", "logits_A"))
     k, end = len(idx), slices[level - 1].stop
     D = _chunked(lambda s: continue_generation(m, prefix[idx[s]], C[s, :end], level), k, chunk)
     p_sub, s_sub = puzzles[idx.numpy()], solutions[idx.numpy()]
-    parsed_C, met_C = _eval(p_sub, s_sub, C, m)
-    _, met_D = _eval(p_sub, s_sub, D, m)
+    tok_C, parsed_C, met_C = _eval_tokens(p_sub, s_sub, C, m, decode_chunk)
+    tok_D, _, met_D = _eval_tokens(p_sub, s_sub, D, m, decode_chunk)
+    t_diag = 0.0
+    full = {f"{q}_{b}": [] for q in ("state_dist", "level_changed") for b in "CD"} if diag == "full" else None
     tv, tv_e, lat, ratio = [], [], [], []
     for i in range(0, k, chunk):
         s = slice(i, min(i + chunk, k))
@@ -113,6 +219,10 @@ def compare(ctx: dict, idx: torch.Tensor, C: torch.Tensor, level: int) -> list[d
         tv_e.append(tv_damage(logits_C, logits_A[rows], empty[rows]))
         lat.append(latent_distance(states[-1], z_A[rows]))
         ratio.append(requantize(m, z_A[rows] - states[level - 1], level + 1)[1])
+        if full is not None:
+            t0 = time.perf_counter()
+            _state_diag(m, states, cumulative_states(m, D[s]), cumulative_states(m, A[rows]), full)
+            t_diag += time.perf_counter() - t0
     tv, tv_e, lat, ratio = (torch.cat(t).tolist() for t in (tv, tv_e, lat, ratio))
     sl = slices[level - 1]
     rms = codebook_rms(m, level, A[idx][:, sl], C[:, sl]).tolist()
@@ -131,18 +241,53 @@ def compare(ctx: dict, idx: torch.Tensor, C: torch.Tensor, level: int) -> list[d
             "latent": lat[j], "codebook_rms": rms[j], "requant_ratio": ratio[j],
             "downstream_changes_D": int(changes[j]),
         })
-    return out
+    if diag is None:
+        return out
+    t0 = time.perf_counter()
+    arrays = _basic_diag(ctx, idx, C, D, tok_C, tok_D, level)
+    if full is not None:
+        arrays.update({key: np.concatenate(v) for key, v in full.items()})
+    ctx["diag_seconds"] = ctx.get("diag_seconds", 0.0) + t_diag + time.perf_counter() - t0
+    return out, arrays
 
 
 @torch.no_grad()
+def _baseline_b1(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
+                 ctx: dict) -> tuple[list[dict], torch.Tensor]:
+    n, chunk, A, prefix = len(puzzles), ctx["chunk"], ctx["A"], ctx["prefix"]
+    B1 = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :1], 1), n, chunk)
+    _, _, met_B1 = _eval_tokens(puzzles, solutions, B1, m, ctx["decode_chunk"])
+    return [{"puzzle_id": puzzle_ids[i], "solve_A": int(ctx["met_A"][i].solve), "solve_B1": int(met_B1[i].solve)}
+            for i in range(n)], B1
+
+
 def baseline_b1(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
                 ctx: dict) -> list[dict]:
     """Sham B1 (restart from A's level-1 code) on the full batch: per puzzle solve_A and solve_B1."""
-    n, chunk, A, prefix = len(puzzles), ctx["chunk"], ctx["A"], ctx["prefix"]
-    B1 = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :1], 1), n, chunk)
-    _, met_B1 = _eval(puzzles, solutions, B1, m)
-    return [{"puzzle_id": puzzle_ids[i], "solve_A": int(ctx["met_A"][i].solve), "solve_B1": int(met_B1[i].solve)}
-            for i in range(n)]
+    return _baseline_b1(m, puzzles, solutions, puzzle_ids, ctx)[0]
+
+
+def _level1_value(ctx: dict, a1: torch.Tensor, w: dict[str, torch.Tensor], puzzle_ids: list[str], v: int,
+                  diag: str | None = None) -> tuple[list[dict], dict | None]:
+    C = ctx["A"].clone()
+    C[:, 0] = v
+    res = compare(ctx, torch.arange(len(a1)), C, 1, diag)
+    recs, arrays = res if diag is not None else (res, None)
+    out = []
+    for i, rec in enumerate(recs):
+        noop = int(a1[i]) == v
+        out.append({"puzzle_id": puzzle_ids[i], "value": v, "noop": noop,
+                    "w_frequency": 0.0 if noop else float(w["frequency"][i, v]),
+                    "w_uniform": 0.0 if noop else float(w["uniform"][i, v]),
+                    **rec})
+    return out, arrays
+
+
+def level1_value(ctx: dict, a1: torch.Tensor, w: dict[str, torch.Tensor], puzzle_ids: list[str],
+                 v: int) -> list[dict]:
+    """Records of level-1 value `v` on the full ordered batch: C = A with every row's level-1
+    code set to v; `a1` is A's level-1 code per row, `w` the per-policy `level1_weights`."""
+    return _level1_value(ctx, a1, w, puzzle_ids, v)[0]
 
 
 @torch.no_grad()
@@ -157,18 +302,7 @@ def level1_enumeration(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, 
     ctx = branch_context(m, puzzles, solutions, A, chunk) if ctx is None else ctx
     a1 = A[:, ctx["slices"][0]].squeeze(1)  # level 1 has a single code
     w = {p: level1_weights(a1, freqs1, p) for p in POLICIES}
-    all_rows = torch.arange(len(puzzles))
-    level1 = []
-    for v in range(N_CODES):
-        C = A.clone()
-        C[:, 0] = v
-        for i, rec in enumerate(compare(ctx, all_rows, C, 1)):
-            noop = int(a1[i]) == v
-            level1.append({"puzzle_id": puzzle_ids[i], "value": v, "noop": noop,
-                           "w_frequency": 0.0 if noop else float(w["frequency"][i, v]),
-                           "w_uniform": 0.0 if noop else float(w["uniform"][i, v]),
-                           **rec})
-    return level1
+    return [r for v in range(N_CODES) for r in level1_value(ctx, a1, w, puzzle_ids, v)]
 
 
 def level1_noop_mismatch(level1: list[dict], base: list[dict]) -> int:
@@ -186,41 +320,120 @@ def level1_noop_max_tv(level1: list[dict]) -> dict:
     return {k: (max(r[k] for r in noop) if noop else None) for k in ("tv", "tv_empty")}
 
 
+def stage_keys(levels: tuple[int, ...]) -> list[str]:
+    """Stage keys of `run_pilot2` in run order for a model with `levels`: "base", "level1/v00" ..
+    "level1/v15", then per level in LEVELS_P2 "LXX/B" and "LXX/<policy>/dDD/s<seed>" in
+    POLICIES x dose grid x SEEDS_P2 order."""
+    slices = level_slices(levels)
+    keys = ["base", *(f"level1/v{v:02d}" for v in range(N_CODES))]
+    for level in LEVELS_P2:
+        sl = slices[level - 1]
+        keys.append(f"L{level:02d}/B")
+        keys += [f"L{level:02d}/{policy}/d{dose:02d}/s{seed}" for policy in POLICIES
+                 for dose in dose_grid(sl.stop - sl.start, DOSE_FRACTIONS_V36) for seed in SEEDS_P2]
+    return keys
+
+
 @torch.no_grad()
 def run_pilot2(m: NcmModel, puzzles: np.ndarray, solutions: np.ndarray, puzzle_ids: list[str],
-               chunk: int = 50, frozen_freqs: dict[int, np.ndarray] | None = None) -> dict:
+               chunk: int = 50, frozen_freqs: dict[int, np.ndarray] | None = None,
+               A: torch.Tensor | None = None, done: dict[str, list] | None = None,
+               on_stage: Callable[[str, list, dict | None, dict], None] | None = None,
+               decode_chunk: int | None = None, diagnostics: bool = False) -> dict:
     """`frozen_freqs` (optional): per-level code frequencies used for the level-1 weights and
     the level 2/6/11 frequency-policy draws instead of the input's own (`pilot_freqs`);
     the output records `freq_source` ("input" or "frozen"). Level 1 runs on the full ordered
-    batch (`level1_enumeration`); `level1_noop_mismatch` counts in-batch sham violations."""
+    batch (`level1_enumeration`); `level1_noop_mismatch` counts in-batch sham violations.
+
+    Runs in stages (`stage_keys`): "base" (the `baseline_b1` list), "level1/vXX" (the
+    `level1_value` list), "LXX/B" (list of solve_B), configuration stages (their records).
+    `A` (optional) skips the clean generation; stages in `done` (from a validated resume) are
+    reused without computation. `on_stage(key, value, diag, technical)` follows every newly
+    computed stage: `diag` is the stage's diagnostic arrays (`compare`; "full" for the stages in
+    PRIMARY_STAGES, read at call time) or None (no `diagnostics`, "base", "LXX/B"); `technical`
+    holds `seconds`, `diag_seconds` and `code_mismatch` (spec ambiguity 23; None for
+    configuration stages and without `diagnostics`): rows whose B1 ("base") or B ("LXX/B")
+    codes differ from A anywhere, or level-1 no-op rows with downstream_changes_D > 0
+    ("level1/vXX"; D equals A exactly when it is 0). `decode_chunk` is passed to every outcome
+    decoding. The output dict does not depend on `decode_chunk`, `diagnostics`, `A` (if it is
+    the clean generation), `done` (if it holds this run's stages) or `on_stage`."""
     n = len(puzzles)
-    A = clean_codes(m, puzzles, chunk)
-    ctx = branch_context(m, puzzles, solutions, A, chunk)
+    done = {} if done is None else done
+    A = clean_codes(m, puzzles, chunk) if A is None else A
+    ctx = branch_context(m, puzzles, solutions, A, chunk, decode_chunk, diagnostics)
     slices, prefix, met_A = ctx["slices"], ctx["prefix"], ctx["met_A"]
     level_freqs, freq_source = pilot_freqs(A, m.levels, frozen_freqs)
+    ctx["freqs"] = level_freqs
     freqs1 = level_freqs[1]
+    primary = set(PRIMARY_STAGES)
 
-    base = baseline_b1(m, puzzles, solutions, puzzle_ids, ctx)
-    level1 = level1_enumeration(m, puzzles, solutions, puzzle_ids, A, freqs1, chunk, ctx)
+    def mode(key):
+        return None if not diagnostics else ("full" if key in primary else "basic")
+
+    def n_diff(X):
+        return int((X != A).any(dim=1).sum()) if diagnostics else None
+
+    def stage(key, compute):
+        if key in done:
+            return done[key]
+        ctx["diag_seconds"] = 0.0
+        t0 = time.perf_counter()
+        value, diag, mismatch = compute()
+        technical = {"seconds": time.perf_counter() - t0, "diag_seconds": ctx["diag_seconds"],
+                     "code_mismatch": mismatch}
+        if on_stage is not None:
+            on_stage(key, value, diag, technical)
+        return value
+
+    def base_stage():
+        recs, B1 = _baseline_b1(m, puzzles, solutions, puzzle_ids, ctx)
+        return recs, None, n_diff(B1)
+
+    base = stage("base", base_stage)
+
+    a1 = A[:, slices[0]].squeeze(1)  # level 1 has a single code
+    w = {p: level1_weights(a1, freqs1, p) for p in POLICIES}
+    level1 = []
+    for v in range(N_CODES):
+        key = f"level1/v{v:02d}"
+
+        def value_stage():
+            recs, arrays = _level1_value(ctx, a1, w, puzzle_ids, v, mode(key))
+            noop_d = sum(1 for r in recs if r["noop"] and r["downstream_changes_D"] > 0)
+            return recs, arrays, noop_d if diagnostics else None
+
+        level1 += stage(key, value_stage)
 
     records = []
     all_rows = torch.arange(n)
     for level in LEVELS_P2:
         sl, end = slices[level - 1], slices[level - 1].stop
-        B = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :end], level), n, chunk)
-        _, met_B = _eval(puzzles, solutions, B, m)
+
+        def b_stage():
+            B = _chunked(lambda s: continue_generation(m, prefix[s], A[s, :end], level), n, chunk)
+            _, _, met_B = _eval_tokens(puzzles, solutions, B, m, decode_chunk)
+            return [int(x.solve) for x in met_B], None, n_diff(B)
+
+        solve_B = stage(f"L{level:02d}/B", b_stage)
         freqs = level_freqs[level]
         for policy in POLICIES:
             for dose in dose_grid(sl.stop - sl.start, DOSE_FRACTIONS_V36):
                 for seed in SEEDS_P2:
-                    gen = torch.Generator().manual_seed(run_seed(level, policy, dose, seed))
-                    new_level, eligible = perturb_level(A[:, sl], dose, policy, freqs, gen)
-                    C = A.clone()
-                    C[:, sl] = new_level
-                    for i, rec in enumerate(compare(ctx, all_rows, C, level)):
-                        records.append({"puzzle_id": puzzle_ids[i], "level": level, "policy": policy,
-                                        "dose": dose, "seed": seed, "eligible": bool(eligible[i]),
-                                        "solve_A": int(met_A[i].solve), "solve_B": int(met_B[i].solve), **rec})
+                    key = f"L{level:02d}/{policy}/d{dose:02d}/s{seed}"
+
+                    def config_stage():
+                        gen = torch.Generator().manual_seed(run_seed(level, policy, dose, seed))
+                        new_level, eligible = perturb_level(A[:, sl], dose, policy, freqs, gen)
+                        C = A.clone()
+                        C[:, sl] = new_level
+                        res = compare(ctx, all_rows, C, level, mode(key))
+                        recs, arrays = res if diagnostics else (res, None)
+                        return [{"puzzle_id": puzzle_ids[i], "level": level, "policy": policy,
+                                 "dose": dose, "seed": seed, "eligible": bool(eligible[i]),
+                                 "solve_A": int(met_A[i].solve), "solve_B": int(solve_B[i]), **rec}
+                                for i, rec in enumerate(recs)], arrays, None
+
+                    records += stage(key, config_stage)
 
     return {"freqs_level1": freqs1.tolist(), "freq_source": freq_source, "base": base, "level1": level1,
             "level1_noop_mismatch": level1_noop_mismatch(level1, base),
@@ -372,24 +585,21 @@ def _mean(vals):
     return float(np.mean(vals)) if len(vals) else None
 
 
-def summarize2(out: dict, n_boot: int = 10000) -> dict:
-    """Non-confirmatory pilot-2 summary: contrasts with intervals, configuration tables, level-1 means, AUC."""
-    contrasts = {}
-    for c in ("theta2", "theta_comp", "theta2_prime"):
-        contrasts[c] = {}
-        for policy in POLICIES:
-            v = np.array(list(puzzle_values(out, c, policy).values()))
-            ci95 = interval(v, 0.95, n_boot)
-            entry = {"estimate": ci95["estimate"], "ci95": ci95, "family": None}
-            if c != "theta2_prime" and policy == "frequency":
-                entry["family"] = {"level": FAMILY_LEVEL, **interval(v, FAMILY_LEVEL, n_boot)}
-            if c == "theta2_prime":
-                tost = interval(v, 0.90, n_boot)
-                # TOST at 5% per side: the rare-event bound uses the one-sided 0.95 limit
-                entry["tost90"] = ci95 if tost["method"] == "bound" else tost
-            contrasts[c][policy] = entry
-    tost = contrasts["theta2_prime"]["frequency"]["tost90"]
+def sham_mismatch_counts(out: dict) -> dict:
+    """Solve-based sham mismatches: puzzles with solve_B1 != solve_A, and per level the puzzles with
+    solve_B != solve_A in any record (the `sham_mismatch` block of `summarize2`)."""
+    # Instrumentation check: the sham B must reproduce A; otherwise theta_comp can leave [-1, 1]
+    return {
+        "level1_B1": sum(b["solve_B1"] != b["solve_A"] for b in out["base"]),
+        "levels_B": {str(level): len({r["puzzle_id"] for r in out["records"]
+                                      if r["level"] == level and r["solve_B"] != r["solve_A"]})
+                     for level in sorted({r["level"] for r in out["records"]})},
+    }
 
+
+def configuration_table(out: dict) -> list[dict]:
+    """Per (level, policy, dose): record count, excluded share, solve means, format-error shares and
+    damage quantiles over eligible records (the `configurations` list of `summarize2`)."""
     groups = defaultdict(list)
     for r in out["records"]:
         groups[(r["level"], r["policy"], r["dose"])].append(r)
@@ -404,7 +614,12 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
             # codebook_rms scales differ between levels: compare within a configuration only
             "quantiles": {k: _quantiles(ok, k) for k in DAMAGE_KEYS},
         })
+    return configurations
 
+
+def level1_table(out: dict) -> dict:
+    """Per policy: weighted level-1 solve means, format-error shares and damage quantiles over
+    eligible puzzles, no-op rows ignored (the `level1` dict of `summarize2`)."""
     base = {b["puzzle_id"]: b for b in out["base"]}
     level1 = {}
     for policy in POLICIES:
@@ -424,25 +639,37 @@ def summarize2(out: dict, n_boot: int = 10000) -> dict:
             "quantiles": {k: _quantiles(_level1_weighted(out["level1"], policy, k, set(pids)), k)
                           for k in DAMAGE_KEYS},
         }
+    return level1
 
-    # Instrumentation check: the sham B must reproduce A; otherwise theta_comp can leave [-1, 1]
-    sham = {
-        "level1_B1": sum(b["solve_B1"] != b["solve_A"] for b in out["base"]),
-        "levels_B": {str(level): len({r["puzzle_id"] for r in out["records"]
-                                      if r["level"] == level and r["solve_B"] != r["solve_A"]})
-                     for level in sorted({r["level"] for r in out["records"]})},
-    }
+
+def summarize2(out: dict, n_boot: int = 10000) -> dict:
+    """Non-confirmatory pilot-2 summary: contrasts with intervals, configuration tables, level-1 means, AUC."""
+    contrasts = {}
+    for c in ("theta2", "theta_comp", "theta2_prime"):
+        contrasts[c] = {}
+        for policy in POLICIES:
+            v = np.array(list(puzzle_values(out, c, policy).values()))
+            ci95 = interval(v, 0.95, n_boot)
+            entry = {"estimate": ci95["estimate"], "ci95": ci95, "family": None}
+            if c != "theta2_prime" and policy == "frequency":
+                entry["family"] = {"level": FAMILY_LEVEL, **interval(v, FAMILY_LEVEL, n_boot)}
+            if c == "theta2_prime":
+                tost = interval(v, 0.90, n_boot)
+                # TOST at 5% per side: the rare-event bound uses the one-sided 0.95 limit
+                entry["tost90"] = ci95 if tost["method"] == "bound" else tost
+            contrasts[c][policy] = entry
+    tost = contrasts["theta2_prime"]["frequency"]["tost90"]
 
     return {
         "non_confirmatory": True,
-        "sham_mismatch": sham,
+        "sham_mismatch": sham_mismatch_counts(out),
         # in-batch level-1 sham (no-op rows); None for outputs from before the full-batch enumeration
         "level1_noop_mismatch": out.get("level1_noop_mismatch"),
         "level1_noop_max_tv": out.get("level1_noop_max_tv"),
         "freqs_level1": out["freqs_level1"],
         "contrasts": contrasts,
         "equivalence_tost": bool(-TOST_MARGIN < tost["ci"][0] and tost["ci"][1] < TOST_MARGIN),
-        "configurations": configurations,
-        "level1": level1,
+        "configurations": configuration_table(out),
+        "level1": level1_table(out),
         "auc": {f"{a}-{b}": auc_pair(dose_nodes(out, a), dose_nodes(out, b)) for a, b in ((6, 11), (2, 11))},
     }

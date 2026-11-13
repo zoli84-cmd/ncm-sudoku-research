@@ -369,3 +369,299 @@ def test_summarize2_matches_golden():
     # tests/golden/summarize2_toy.json was written from the pre-WP2 summarize2 on _toy_out() (n_boot=200)
     got = json.loads(json.dumps(summarize2(_toy_out(), n_boot=200)))
     assert got == json.loads(GOLDEN.read_text(encoding="utf-8"))
+
+
+def test_summary_helpers_equal_summarize2_blocks():
+    s = summarize2(_toy_out(), n_boot=200)
+    assert e2p2.sham_mismatch_counts(_toy_out()) == s["sham_mismatch"]
+    assert e2p2.configuration_table(_toy_out()) == s["configurations"]
+    assert e2p2.level1_table(_toy_out()) == s["level1"]
+
+
+from e2p2_fakes import toy_model  # noqa: E402
+
+FULL_DESIGN = (1, 2, 4, 6, 9, 13, 18, 26, 37, 50, 67, 89)
+BASIC_KEYS = {"changed_C", "changed_D", "later_changes_D", "positions", "orig", "new", "p_new", "p_orig",
+              "freq_new", "replacement_norm"}
+FULL_KEYS = {"state_dist_C", "state_dist_D", "level_changed_C", "level_changed_D"}
+
+
+def _run(monkeypatch, calls=None, fakes=None, m=None, **kw):
+    calls = [] if calls is None else calls
+    install_fakes(monkeypatch, calls, **(fakes or {}))
+    pz = toy_puzzles()
+    m = toy_model() if m is None else m
+    return e2p2.run_pilot2(m, pz, pz.copy(), [f"p{i}" for i in range(N_TOY)], chunk=2, **kw)
+
+
+def _collect():
+    """on_stage callback storing value, diag and technical per key."""
+    slots = {"value": {}, "diag": {}, "tech": {}}
+
+    def cb(k, v, d, t):
+        slots["value"][k], slots["diag"][k], slots["tech"][k] = v, d, t
+    return cb, slots
+
+
+def test_stage_keys_cover_full_design():
+    keys = e2p2.stage_keys(FULL_DESIGN)
+    assert len(keys) == 1 + 16 + 3 + 78 and keys[0] == "base" and keys[1] == "level1/v00"
+    assert keys[16] == "level1/v15" and keys[17] == "L02/B"
+    assert "L11/frequency/d67/s2" in keys and keys.index("L02/B") < keys.index("L02/frequency/d01/s0")
+    assert keys.index("L02/frequency/d02/s2") < keys.index("L02/uniform/d01/s0") < keys.index("L06/B")
+    assert len(set(keys)) == len(keys)
+
+
+def test_primary_stages():
+    assert e2p2.PRIMARY_STAGES == tuple(f"level1/v{v:02d}" for v in range(16)) + tuple(
+        f"L11/frequency/d01/s{s}" for s in range(3))
+    assert set(e2p2.PRIMARY_STAGES) <= set(e2p2.stage_keys(FULL_DESIGN))
+
+
+def test_run_pilot2_stage_keys_follow_stage_keys(monkeypatch):
+    cb, slots = _collect()
+    _run(monkeypatch, on_stage=cb)
+    assert list(slots["value"]) == e2p2.stage_keys(TOY_LEVELS)
+
+
+def test_run_pilot2_stages_resume_identical(monkeypatch):
+    calls = []
+    cb, slots = _collect()
+    full = _run(monkeypatch, calls, on_stage=cb)
+    stages = slots["value"]
+    n_D_full = len([c for c in calls if c[0] == "D"])
+    keys = list(stages)
+    half = {k: stages[k] for k in keys[: len(keys) // 2]}
+    seen = []
+    calls.clear()
+    again = _run(monkeypatch, calls, done=half, on_stage=lambda k, v, d, t: seen.append(k))
+    assert again == full and seen == keys[len(keys) // 2:]
+    assert len([c for c in calls if c[0] == "D"]) < n_D_full
+
+
+def test_run_pilot2_stages_compose_output(monkeypatch):
+    cb, slots = _collect()
+    out = _run(monkeypatch, on_stage=cb)
+    st = slots["value"]
+    assert st["base"] == out["base"]
+    assert [r for v in range(16) for r in st[f"level1/v{v:02d}"]] == out["level1"]
+    assert st["L02/B"] == [r["solve_B"] for r in out["records"][:N_TOY]]
+    cfg = [k for k in st if k.count("/") == 3]
+    assert [r for k in cfg for r in st[k]] == out["records"]
+
+
+def test_run_pilot2_given_A_skips_generation(monkeypatch):
+    full = _run(monkeypatch)
+    A_full = e2p2.clean_codes(None, toy_puzzles(), chunk=2)
+    monkeypatch.setattr(e2p2, "generate_codes", lambda *a, **k: pytest.fail("A was given"))
+    pz = toy_puzzles()
+    again = e2p2.run_pilot2(toy_model(), pz, pz.copy(), [f"p{i}" for i in range(N_TOY)], chunk=2, A=A_full)
+    assert again == full
+
+
+def test_level1_enumeration_equals_concatenated_level1_value(monkeypatch):
+    install_fakes(monkeypatch, [])
+    pz, ids = toy_puzzles(), [f"p{i}" for i in range(N_TOY)]
+    m = toy_model()
+    A = e2p2.clean_codes(m, pz, chunk=2)
+    freqs1 = e2p2.pilot_freqs(A, m.levels)[0][1]
+    ctx = e2p2.branch_context(m, pz, pz.copy(), A, 2)
+    a1 = A[:, 0]
+    w = {p: e2p2.level1_weights(a1, freqs1, p) for p in e2p2.POLICIES}
+    parts = [r for v in range(16) for r in e2p2.level1_value(ctx, a1, w, ids, v)]
+    assert e2p2.level1_enumeration(m, pz, pz.copy(), ids, A, freqs1, 2, ctx) == parts
+
+
+def test_decode_chunk_reaches_every_eval(monkeypatch):
+    calls = []
+    _run(monkeypatch, calls, decode_chunk=50)
+    chunks = [c[2] for c in calls if c[0] == "eval"]
+    assert chunks and set(chunks) == {50}
+    calls.clear()
+    _run(monkeypatch, calls)
+    assert set(c[2] for c in calls if c[0] == "eval") == {None}
+
+
+def test_decode_chunk_does_not_change_output(monkeypatch):
+    assert _run(monkeypatch, decode_chunk=2) == _run(monkeypatch)
+
+
+def test_diagnostics_do_not_change_records(monkeypatch):
+    plain = _run(monkeypatch)
+    cb, slots = _collect()
+    with_diag = _run(monkeypatch, diagnostics=True, decode_chunk=2, on_stage=cb)
+    diags = slots["diag"]
+    assert with_diag == plain and diags["base"] is None and diags["L02/B"] is None
+    assert set(diags["L02/frequency/d01/s0"]) == BASIC_KEYS
+    assert set(diags["level1/v03"]) == BASIC_KEYS | FULL_KEYS
+    plain_cb, plain_slots = _collect()
+    _run(monkeypatch, on_stage=plain_cb)
+    assert all(d is None for d in plain_slots["diag"].values())
+    assert all(t["code_mismatch"] is None and t["diag_seconds"] == 0.0 for t in plain_slots["tech"].values())
+
+
+def test_output_dict_unchanged_by_diagnostics(monkeypatch):
+    assert set(_run(monkeypatch, diagnostics=True)) == set(_run(monkeypatch))
+
+
+def test_diagnostic_arrays_consistent_with_records(monkeypatch):
+    cb, slots = _collect()
+    out = _run(monkeypatch, diagnostics=True, on_stage=cb)
+    diags, st = slots["diag"], slots["value"]
+    A = torch.as_tensor(toy_puzzles()[:, 1:4].astype(np.int64))
+    L = len(TOY_LEVELS)
+    for key, d in diags.items():
+        if d is None:
+            continue
+        recs = st[key]
+        n = len(recs)
+        assert d["changed_C"].shape == (n, 81) and d["changed_C"].dtype == np.bool_
+        assert d["changed_D"].shape == (n, 81) and d["changed_D"].dtype == np.bool_
+        assert d["later_changes_D"].shape == (n, L) and d["later_changes_D"].dtype == np.int16
+        assert d["later_changes_D"].sum(axis=1).tolist() == [r["downstream_changes_D"] for r in recs]
+        for k in ("positions", "orig", "new"):
+            assert d[k].dtype == np.int16 and d[k].shape[0] == n
+        for k in ("p_new", "p_orig", "freq_new", "replacement_norm"):
+            assert d[k].dtype == np.float32
+        if "state_dist_C" in d:
+            assert d["state_dist_C"].shape == (n, L) and d["state_dist_D"].dtype == np.float32
+            assert d["level_changed_D"].shape == (n, L, 81) and d["level_changed_C"].dtype == np.bool_
+    freqs1 = np.asarray(out["freqs_level1"], dtype=np.float32)
+    for v in range(16):
+        d, recs = diags[f"level1/v{v:02d}"], st[f"level1/v{v:02d}"]
+        noop = np.array([r["noop"] for r in recs])
+        assert not d["changed_C"][noop].any()  # C equals A on no-op rows
+        assert d["changed_C"][~noop].any(axis=1).all()  # the level-1 code is visible in the fake tokens
+        assert (d["positions"] == 0).all() and (d["new"][:, 0] == v).all()
+        assert d["orig"][:, 0].tolist() == A[:, 0].tolist()
+        assert (d["replacement_norm"][noop] == 0).all() and (d["replacement_norm"][~noop] > 0).all()
+        assert d["level_changed_C"][~noop, 0].any(axis=1).all() and (d["state_dist_C"][noop] == 0).all()
+        assert np.array_equal(d["freq_new"][:, 0], np.full(len(recs), freqs1[v], dtype=np.float32))
+    # level 2: positions/orig/new agree with A vs C; ineligible rows -1 and NaN
+    for key in [k for k in diags if k.startswith("L02/") and k.count("/") == 3]:
+        d, recs = diags[key], st[key]
+        dose = int(key.split("/")[2][1:])
+        assert d["positions"].shape == (N_TOY, dose)
+        for i, r in enumerate(recs):
+            if r["eligible"]:
+                pos = d["positions"][i]
+                assert (pos >= 0).all() and (d["orig"][i] == A[i, 1 + pos].numpy()).all()
+                assert (d["new"][i] != d["orig"][i]).all() and d["changed_C"][i].any()
+                assert np.isfinite(d["p_new"][i]).all() and np.isfinite(d["replacement_norm"][i])
+            else:
+                assert (d["positions"][i] == -1).all() and np.isnan(d["p_new"][i]).all()
+                assert np.isnan(d["freq_new"][i]).all() and np.isnan(d["replacement_norm"][i])
+
+
+def test_ineligible_rows_marked(monkeypatch):
+    # frozen frequencies with all mass on code 2: rows whose replaced level-2 code is 2 are ineligible
+    frozen = {lv: np.eye(16, dtype=np.float32)[2] for lv in (1, 2, 6, 11)}
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb, frozen_freqs=frozen)
+    d, recs = slots["diag"]["L02/frequency/d02/s0"], slots["value"]["L02/frequency/d02/s0"]
+    elig = np.array([r["eligible"] for r in recs])
+    assert elig.any() and not elig.all()
+    assert (d["positions"][~elig] == -1).all() and (d["orig"][~elig] == -1).all()
+    assert np.isnan(d["p_orig"][~elig]).all() and np.isnan(d["replacement_norm"][~elig]).all()
+    assert (d["new"][elig] == 2).all() and (d["freq_new"][elig] == 1.0).all()
+
+
+def test_code_probs_are_softmax_of_level_logits(monkeypatch):
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb)
+    d = slots["diag"]["level1/v05"]
+    pz = toy_puzzles()
+    logits = 0.1 * torch.arange(16.0) + 0.01 * torch.as_tensor(pz[:, 0], dtype=torch.float32)[:, None]
+    p = torch.softmax(logits, dim=-1)
+    assert np.allclose(d["p_new"][:, 0], p[:, 5].numpy())
+    assert np.allclose(d["p_orig"][:, 0], p[torch.arange(N_TOY), torch.as_tensor(pz[:, 1].astype(np.int64))].numpy())
+
+
+def test_replacement_norm_from_embeddings(monkeypatch):
+    from ncm_sudoku import damage
+    E1 = torch.zeros(16, 4)
+    E2 = torch.zeros(16, 4)
+    for v in range(16):
+        E2[v] = torch.tensor([v, 2.0 * v, v * v / 10, 1.0])
+    m = toy_model([E1, E2])
+    cb, slots = _collect()
+    _run(monkeypatch, m=m, diagnostics=True, on_stage=cb)
+    d = slots["diag"]["L02/uniform/d02/s0"]
+    A = torch.as_tensor(toy_puzzles()[:, 1:4].astype(np.int64))
+    for i in range(N_TOY):
+        old, new = A[i, 1:3], torch.as_tensor(d["new"][i].astype(np.int64))
+        assert d["positions"][i].tolist() == [0, 1]
+        assert torch.equal(old, torch.as_tensor(d["orig"][i].astype(np.int64)))
+        d1, d2 = ((E2[new[j]] - E2[old[j]]).norm() for j in range(2))
+        assert d["replacement_norm"][i] == pytest.approx(float(torch.sqrt(d1 ** 2 + d2 ** 2)), rel=1e-6)
+        rms = damage.codebook_rms(m, 2, old[None], new[None])[0]
+        assert d["replacement_norm"][i] == pytest.approx(float(rms) * math.sqrt(2), rel=1e-6)
+
+
+def test_full_diagnostics_only_for_primary_stages(monkeypatch):
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb)
+    diags = slots["diag"]
+    assert {k for k, d in diags.items() if d and "state_dist_C" in d} == set(e2p2.PRIMARY_STAGES) & set(diags)
+    monkeypatch.setattr(e2p2, "PRIMARY_STAGES", ("L02/frequency/d01/s0",))  # read at call time
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb)
+    assert {k for k, d in slots["diag"].items() if d and "state_dist_C" in d} == {"L02/frequency/d01/s0"}
+
+
+def test_full_diagnostics_state_distances(monkeypatch):
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb, fakes={"exact_restart": True})
+    d = slots["diag"]["level1/v06"]
+    A = torch.as_tensor(toy_puzzles()[:, 1:4].astype(np.int64)).float()
+    for i in range(N_TOY):
+        z1 = A[i].clone()
+        z1[1:] = 0
+        c1 = z1.clone()
+        c1[0] = 6
+        assert d["state_dist_C"][i, 0] == pytest.approx(float((c1 - z1).norm() / z1.norm()))
+        assert d["state_dist_D"][i, 1] == d["state_dist_C"][i, 1]  # exact restart: D = C
+        assert (d["level_changed_D"][i] == d["level_changed_C"][i]).all()
+
+
+def test_code_mismatch_zero_for_exact_restart(monkeypatch):
+    cb, slots = _collect()
+    _run(monkeypatch, diagnostics=True, on_stage=cb, fakes={"exact_restart": True})
+    tech = slots["tech"]
+    keyed = [k for k in tech if k == "base" or k.endswith("/B") or k.startswith("level1/")]
+    assert len(keyed) == 1 + 16 + 1
+    assert all(tech[k]["code_mismatch"] == 0 for k in keyed)
+    assert all(tech[k]["code_mismatch"] is None for k in tech if k not in keyed)
+
+
+def test_code_mismatch_counts_changed_sham_suffix(monkeypatch):
+    install_fakes(monkeypatch, [], exact_restart=True)
+    inner = e2p2.continue_generation
+
+    def cont(m, prefix, codes_prefix, level):
+        out = inner(m, prefix, codes_prefix, level).clone()
+        out[prefix[:, 1] == 1, -1] += 1  # row p0: the last code changes; the fake solve ignores it
+        return out
+
+    monkeypatch.setattr(e2p2, "continue_generation", cont)
+    pz = toy_puzzles()
+    cb, slots = _collect()
+    out = e2p2.run_pilot2(toy_model(), pz, pz.copy(), [f"p{i}" for i in range(N_TOY)], chunk=2,
+                          diagnostics=True, on_stage=cb)
+    tech = slots["tech"]
+    assert tech["L02/B"]["code_mismatch"] == 1 and tech["base"]["code_mismatch"] == 1
+    assert all(r["solve_B"] == r["solve_A"] for r in out["records"] if r["level"] == 2)
+    assert all(b["solve_B1"] == b["solve_A"] for b in out["base"]) and out["level1_noop_mismatch"] == 0
+    # p0's own level-1 code is 3: only that value has p0 as a no-op row
+    assert tech["level1/v03"]["code_mismatch"] == 1
+    assert all(tech[f"level1/v{v:02d}"]["code_mismatch"] == 0 for v in range(16) if v != 3)
+
+
+def test_stage_technical_has_timings(monkeypatch):
+    for diagnostics in (False, True):
+        cb, slots = _collect()
+        _run(monkeypatch, diagnostics=diagnostics, on_stage=cb)
+        tech = slots["tech"]
+        assert all(t["seconds"] >= t["diag_seconds"] >= 0.0 for t in tech.values())
+        assert all(set(t) == {"seconds", "diag_seconds", "code_mismatch"} for t in tech.values())
+        assert any(t["diag_seconds"] > 0.0 for t in tech.values()) == diagnostics

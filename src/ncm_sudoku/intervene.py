@@ -43,7 +43,7 @@ def _prefix_embedding(net, prefix_tokens):
 
 
 @torch.no_grad()
-def _level0_from_queries(net, prefix_emb, B):
+def _level0_logits(net, prefix_emb, B):
     P, l0, dev = net.prefix_len, net.levels[0], prefix_emb.device
     q0 = net.build_l0_query_input(B, prefix_emb.dtype)
     if net.use_post_upsample_conv:
@@ -60,7 +60,12 @@ def _level0_from_queries(net, prefix_emb, B):
     for block in net.transformer.blocks:
         h = block(h, attn_mask=m0, rope_cos_sin=rope_0)
     h = net.transformer.ln_f(h)
-    return _argmax(net, net.lm_heads[0](h[:, P:, :]))
+    return net.lm_heads[0](h[:, P:, :])
+
+
+@torch.no_grad()
+def _level0_from_queries(net, prefix_emb, B):
+    return _argmax(net, _level0_logits(net, prefix_emb, B))
 
 
 @torch.no_grad()
@@ -124,6 +129,45 @@ def continue_generation(
 
 
 forward_with_intervention = continue_generation
+
+
+@torch.no_grad()
+def level_logits(m: NcmModel, prefix_tokens: torch.Tensor, given_codes: torch.Tensor, level: int) -> torch.Tensor:
+    """Generator logits [B, n_level, 16] for plan level `level` (1..12) given the puzzle prefix
+    and `given_codes` levels 1..level-1 (extra columns are ignored), computed exactly as
+    `continue_generation` computes them before its argmax: level 1 from the level-0 queries,
+    later levels from the downsampled cumulative state of the given levels. Their argmax is
+    the greedy code of that level."""
+    net, levels = m.net, m.levels
+    _check_supported(net)
+    if not 1 <= level <= len(levels):
+        raise ValueError(f"level must be in 1..{len(levels)}")
+    slices = level_slices(levels)
+    if level > 1 and given_codes.shape[1] < slices[level - 2].stop:
+        raise ValueError("given_codes must cover levels 1..level-1")
+    B = prefix_tokens.shape[0]
+    prefix_emb = _prefix_embedding(net, prefix_tokens)
+    if level == 1:
+        return _level0_logits(net, prefix_emb, B)
+    vq = net.vqvae_local[0].vq
+    z_hat = torch.zeros(B, levels[-1], net.vqvae_local[0].embed_dim, device=prefix_tokens.device)
+    if net.config.use_level_encoding:
+        level_pos_embed = net.transformer.wle(net.lvl_1L)
+    else:
+        level_pos_embed = torch.zeros(1, net.L - levels[0], net.config.n_embd, device=prefix_tokens.device)
+    if not net.use_rope:
+        level_pos_embed = level_pos_embed + net.wpe(net.wp_1L)
+    level_acum = levels[0]
+    for level_idx in range(level - 1):
+        z_q_level = vq.embeddings[level_idx](given_codes[:, slices[level_idx]])
+        z_hat, x = vq.get_next_autoregressive_input(level_idx, z_hat, z_q_level)
+        if level_idx == level - 2:
+            hi = level_idx + (1 - net._lvl_first)
+            if net.use_post_upsample_conv:
+                x = net._apply_post_upsample_conv_single(x, hi)
+            x = net.transformer.wte(x) + level_pos_embed[:, level_acum : level_acum + levels[level_idx + 1], :]
+            return net._decode_level_logits(x, prefix_emb, level_idx, None, hidx=hi)
+        level_acum += levels[level_idx + 1]
 
 
 @dataclass(frozen=True)

@@ -102,3 +102,17 @@ def test_batch_size_effect_recorded(model, batch, released):
     _, clean = batch
     alone = generate_codes(model, released[0][:1], batch_size=1)
     assert torch.equal(alone[0], clean[0])
+
+
+@pytest.mark.parametrize("level", [1, 2, 6, 11])
+def test_level_logits_argmax_reproduces_greedy_codes(model, released, level):
+    from ncm_sudoku.e2p2 import clean_codes
+    from ncm_sudoku.intervene import level_logits
+
+    A = clean_codes(model, released[0][:4])
+    prefix = puzzle_tensor(released[0][:4])
+    sl = level_slices(model.levels)[level - 1]
+    logits = level_logits(model, prefix, A, level)
+    assert logits.shape == (4, sl.stop - sl.start, 16)
+    assert torch.equal(logits.argmax(-1), A[:, sl])
+    assert torch.equal(level_logits(model, prefix, A[:, : sl.start], level), logits)  # levels 1..level-1 suffice

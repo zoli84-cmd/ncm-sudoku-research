@@ -70,3 +70,33 @@ def test_dose_overlap_degenerate_when_all_medians_zero():
     assert e2.dose_overlap({2: (0.0, 0.02), 11: (0.01, 0.03)}) is True
     assert e2.dose_overlap({2: (0.0, 0.01), 11: (0.02, 0.03)}) is False
     assert e2.dose_overlap({2: (0.0, 0.01)}) is None
+
+
+def test_eval_tokens_decode_chunk(monkeypatch):
+    import numpy as np
+    import torch
+
+    sizes = []
+
+    def decode(m, codes):
+        sizes.append(len(codes))
+        return (codes[:, :1] * 7 + torch.arange(89)) % 13  # row-wise deterministic tokens
+
+    monkeypatch.setattr(e2, "decode_codes", decode)
+    codes = torch.arange(120 * 3).reshape(120, 3)
+    p = np.zeros((120, 81), dtype=np.int8)
+    s = np.ones((120, 81), dtype=np.int8)
+    whole = e2._eval_tokens(p, s, codes, None)
+    assert sizes == [120] and whole[0].shape == (120, 89)
+    sizes.clear()
+    chunked = e2._eval_tokens(p, s, codes, None, decode_chunk=50)
+    assert sizes == [50, 50, 20] and torch.equal(chunked[0], whole[0])
+    def same(a, b):  # ParsedOutput holds numpy arrays: compare field by field
+        (pa, ma), (pb, mb) = a, b
+        return ma == mb and all(np.array_equal(x.cells, y.cells) and x.format_error == y.format_error
+                                for x, y in zip(pa, pb, strict=True))
+
+    assert same(chunked[1:], whole[1:])
+    sizes.clear()
+    assert same(e2._eval(p, s, codes, None), whole[1:]) and sizes == [120]
+    assert same(e2._eval(p, s, codes, None, decode_chunk=50), whole[1:])

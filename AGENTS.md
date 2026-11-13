@@ -58,7 +58,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
 - [src/ncm_sudoku/AGENTS.md](src/ncm_sudoku/AGENTS.md): own package; per-module contracts (frozen `grid.PEER_ORDER`, pinned by `tests/test_peer_order.py`; never reorder; `wp2.py` is the WP2 freeze guard and run-record layer every WP2 runner uses)
-- [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures, `e2p2_fakes.py` deterministic fakes of the model pieces `e2p2` uses; `-m slow` runs real-data checks
+- [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures, `e2p2_fakes.py` deterministic fakes of the model pieces `e2p2` uses (`toy_model` with embedding tables, `exact_restart` for code-identity tests); `golden/` holds outputs generated from earlier code that pin refactors (`summarize2_toy.json`); `-m slow` runs real-data checks
 - [scripts/AGENTS.md](scripts/AGENTS.md): run scripts; most result writers are rerun-guarded (`--force` / `--resume`); read the per-script contract there before forcing a rerun
 - [experiments/g0/](experiments/g0/): committed G0 results (`reproduction.json`, `cost.json`)
 - [experiments/wp1/](experiments/wp1/): committed WP1 results (`gate.json`, `e1_released.json`, `e1_cal.json`, `pilot_summary.json`, `pilot_report.md`, `screen.json`); `gate.json` must never be regenerated
