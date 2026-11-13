@@ -19,7 +19,9 @@ diag file name -> SHA-256, rewritten after every stage). Run record:
 
 `--resume` continues an incomplete run from the stages listed in `parts.json` (each part and diag
 file checked against it, each part's A_sha256 against the record); unlisted part files are
-recomputed. A resume without a recorded A_sha256 starts the stages afresh (no stage can have run).
+recomputed. A resume without a recorded A_sha256 starts the stages afresh (no stage can have run);
+an `A.npy` left by the crash is hashed first and the run record's `A_regenerated_matches` says
+whether the regenerated A equals it (null: no file existed or the run did not resume).
 The TEST role never deletes outputs: stale unlisted files are replaced by the atomic rewrites.
 
 Identity gate (spec ambiguity 23): any nonzero `level1_noop_mismatch`, `sham_mismatch` or
@@ -142,14 +144,17 @@ def run(argv: list[str] | None = None) -> int:
             sys.exit(f"{RUNNER}: --resume refused: {L['A']} has dtype {A.dtype} and {len(A)} rows")
         done, parts, manifest = _load_done(role, L, A_sha)
     else:
+        previous_sha = None
         if args.resume:  # crash before A was recorded: no stage can have run
+            previous_sha = wp2.file_sha256(L["A"]) if L["A"].is_file() else None
             _discard(role, [L["A"], *stage_outputs])
         t0 = time.perf_counter()
         A = e2p2.clean_codes(m, data.puzzles, CHUNK).to(torch.int64)
         A_seconds = time.perf_counter() - t0
         wp2.atomic_npy(L["A"], A.numpy())
         A_sha = wp2.file_sha256(L["A"])
-        wp2.update_run(RUNNER, role, {"A_sha256": A_sha, "A_seconds": A_seconds})
+        wp2.update_run(RUNNER, role, {"A_sha256": A_sha, "A_seconds": A_seconds,
+                                      "A_regenerated_matches": None if previous_sha is None else previous_sha == A_sha})
         done, parts, manifest = {}, {}, {}
 
     write = {"seconds": 0.0}

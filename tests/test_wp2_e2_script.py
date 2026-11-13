@@ -227,6 +227,7 @@ def test_wp2_e2_crash_before_A(env):
     env.mod.main(["--role", "dry", "--resume"])
     assert env.clean == [N] and env.pilot.calls[0]["done"] == {}
     assert _rec(env)["A_sha256"] == wp2.file_sha256(env.e2 / "A.npy")
+    assert _rec(env)["A_regenerated_matches"] is None
 
 
 def test_wp2_e2_crash_between_A_and_record(env):
@@ -244,6 +245,7 @@ def test_wp2_e2_crash_between_A_and_record(env):
     assert env.clean == [N, N] and env.pilot.calls[0]["done"] == {}
     assert not stale_part.exists() and not stale_diag.exists()
     assert _rec(env)["A_sha256"] == wp2.file_sha256(env.e2 / "A.npy")
+    assert _rec(env)["A_regenerated_matches"] is True
 
 
 def test_wp2_e2_resume_rejects_altered_A_or_part(env):
@@ -375,3 +377,81 @@ def test_wp2_e2_stdout_is_technical_only(env, capsys):
     assert lines
     for line in lines:
         assert set(json.loads(line)) <= set(wp2.TECHNICAL_KEYS)
+
+
+# --- TEST role ------------------------------------------------------------------------------
+
+def _freeze_for_test(env, tmp_path):
+    """Valid dry record of the runner plus a passing dry check, so the TEST guard passes; toy TEST data."""
+    env.mod.main(["--role", "dry"])
+    compared = tmp_path / "experiments" / "wp2" / "dry" / "compare.json"
+    compared.write_text("{}\n", encoding="utf-8")
+    probe = tmp_path / "runs" / "e3prep" / "probe_val" / "ids.json"
+    probe.parent.mkdir(parents=True, exist_ok=True)
+    probe.write_text("[]\n", encoding="utf-8")
+    rel = lambda p: p.relative_to(tmp_path).as_posix()  # noqa: E731
+    snap = {"dry_records": {rel(env.record): wp2.file_sha256(env.record)},
+            "compared": {rel(compared): wp2.file_sha256(compared)},
+            "probe_inputs": {rel(probe): wp2.file_sha256(probe)}}
+    wp2.atomic_json(wp2.DRY_CHECK, {"technical_success": True, "code": {"commit": TAG}, "snapshot": snap})
+    d = tmp_path / "test"
+    d.mkdir()
+    ids = [f"t{i}" for i in range(N)]
+    rng = np.random.default_rng(2)
+    p, s = rng.integers(0, 10, (N, 81)).astype(np.uint8), rng.integers(1, 10, (N, 81)).astype(np.uint8)
+    (d / "ids.json").write_text(json.dumps(ids), encoding="utf-8")
+    np.save(d / "puzzles.npy", p)
+    np.save(d / "solutions.npy", s)
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps({"count": N, "ids": ids, "sha256": {
+        "ids": subsets.sha256_ids(ids), "puzzles": subsets.sha256_array(p),
+        "solutions": subsets.sha256_array(s)}}), encoding="utf-8")
+    env.mp.setattr(wp2, "verify_test_data", functools.partial(wp2.verify_test_data, d, lock))
+    exp, raw = tmp_path / "experiments" / "wp2" / "test", tmp_path / "runs" / "wp2" / "test"
+    env.record, env.raw, env.e2 = exp / "runs" / "e2.json", raw, raw / "e2"
+    env.clean.clear()
+    return ids, p, s
+
+
+def _files(root):
+    return {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+
+
+def test_wp2_e2_test_role_resume_ignores_unlisted_part(env, tmp_path):
+    ids, p, s = _freeze_for_test(env, tmp_path)
+    _use(env, Pilot(fail_after=2))
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        env.mod.main(["--role", "test"])
+    stale = env.e2 / "parts" / "L06__B.json"
+    stale_obj = {"key": "L06/B", "A_sha256": _rec(env)["A_sha256"], "value": [0] * N,
+                 "technical": {"seconds": 9.0, "diag_seconds": 0.0, "code_mismatch": 7}}
+    wp2.atomic_json(stale, stale_obj, indent=None)
+    before = _files(env.raw)
+    pilot = _use(env, Pilot())
+    env.mod.main(["--role", "test", "--resume"])
+    assert set(pilot.calls[0]["done"]) == {"base", "level1/v00"}
+    assert before <= _files(env.raw)  # nothing deleted
+    part = json.loads(stale.read_text(encoding="utf-8"))
+    assert part["value"] == [1] * N and part["technical"]["code_mismatch"] == 0  # overwritten, not read
+    expected = Pilot()(SimpleNamespace(levels=(1, 2)), p, s, ids, frozen_freqs={1: 0, 2: 0, 6: 0, 11: 0},
+                       A=torch.zeros(1), done={}, on_stage=lambda *a: None)
+    raw = json.loads((env.raw / "e2.json").read_text(encoding="utf-8"))
+    assert {k: raw[k] for k in expected} == expected
+    assert raw["code_mismatch"] == {"level1_B1": 0, "levels_B": {"6": 0}, "level1_noop_D": 0}
+    assert raw["note"] is None and raw["role"] == "test" and raw["ids"] == ids
+    rec = _rec(env)
+    assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"
+    assert env.clean == [N]
+
+
+def test_wp2_e2_test_role_fresh_start_over_existing_outputs_refused(env, tmp_path):
+    _freeze_for_test(env, tmp_path)
+    leftover = env.e2 / "A.npy"
+    leftover.parent.mkdir(parents=True, exist_ok=True)
+    np.save(leftover, np.zeros((N, 3), np.int64))
+    content, n_calls = leftover.read_bytes(), len(env.pilot.calls)
+    env.mp.setattr(env.mod, "load_model", lambda d: pytest.fail("model loaded over existing TEST outputs"))
+    with pytest.raises(SystemExit, match="single-look"):
+        env.mod.main(["--role", "test"])
+    assert leftover.read_bytes() == content and len(env.pilot.calls) == n_calls
+    assert _rec(env)["complete"] is False
