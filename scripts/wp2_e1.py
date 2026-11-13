@@ -18,12 +18,15 @@ role). The TEST role never deletes outputs, so a complete TEST record refuses a 
 over existing outputs is refused.
 
 A fresh start marks the record with `wp2.mark_outputs_started` right after `clear_outputs`
-succeeds, before `e1.json` is computed. `--resume` checks that marker with
-`wp2.prepare_resume_outputs` before touching `e1_json`: `guard_start` writes the (incomplete) run
-record before a fresh start's `clear_outputs` call, so a refused fresh TEST start over an
-unrecorded leftover `e1.json` (e.g. a complete prior run whose record was separately lost, say to
-`git clean`) still leaves an incomplete, markerless record behind; a later `--resume` must not
-read that leftover as this run's own partial state and overwrite it.
+succeeds, before `e1.json` is computed. `--resume` reassigns `rec = wp2.prepare_resume_outputs(...)`
+before touching `e1.json`: `guard_start` writes the (incomplete) run record before a fresh start's
+`clear_outputs` call, so a refused fresh TEST start over an unrecorded leftover `e1.json` (e.g. a
+complete prior run whose record was separately lost, say to `git clean`) still leaves an
+incomplete, markerless record behind; a later `--resume` must not read that leftover as this run's
+own partial state and overwrite it. Without the marker but also without an existing `e1.json` (a
+crash between `clear_outputs` succeeding and `mark_outputs_started` running, in this very run's own
+earlier attempt), the gate marks the record itself before returning, so a further crash after that
+resume has written `e1.json` does not wedge every later `--resume`.
 
 Outputs (raw, git-ignored) under `runs/wp2/<role>/`: `e1.json` (`role`, `ids`, `note`, `records`,
 `batch_size`). Run record: `experiments/wp2/<role>/runs/e1.json` (technical fields only: `n`,
@@ -60,7 +63,7 @@ def run(argv: list[str] | None = None) -> int:
     rec = wp2.guard_start(RUNNER, role, args.force, args.resume, inputs)
     L = _layout(role)
     if args.resume:
-        wp2.prepare_resume_outputs(RUNNER, role, rec, [L["e1_json"]])
+        rec = wp2.prepare_resume_outputs(RUNNER, role, rec, [L["e1_json"]])
     else:
         wp2.clear_outputs(RUNNER, role, [L["e1_json"]])
         rec = wp2.mark_outputs_started(RUNNER, role)

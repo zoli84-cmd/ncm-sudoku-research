@@ -18,12 +18,16 @@ diag file name -> SHA-256, rewritten after every stage). Run record:
 `experiments/wp2/<role>/runs/e2.json` (technical fields only).
 
 A fresh start marks the record with `wp2.mark_outputs_started` right after `clear_outputs`
-succeeds, before any stage runs. `--resume` checks that marker first with
-`wp2.prepare_resume_outputs` (over `e2.json`, `A.npy`, `parts/`, `diag/` and `parts.json`):
-`guard_start` writes the incomplete run record before a fresh start's `clear_outputs` call, so a
-refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run whose record was
-separately lost, say to `git clean`) still leaves an incomplete, markerless record behind, and a
-later `--resume` must not treat those leftovers as this run's own partial state.
+succeeds, before any stage runs. `--resume` reassigns `rec = wp2.prepare_resume_outputs(...)`
+first (over `e2.json`, `A.npy`, `parts/`, `diag/` and `parts.json`): `guard_start` writes the
+incomplete run record before a fresh start's `clear_outputs` call, so a refused fresh TEST start
+over unrecorded leftovers (e.g. a complete prior run whose record was separately lost, say to
+`git clean`) still leaves an incomplete, markerless record behind, and a later `--resume` must not
+treat those leftovers as this run's own partial state. Without the marker but also without any of
+those files existing yet (a crash between `clear_outputs` succeeding and `mark_outputs_started`
+running, in this very run's own earlier attempt), the gate marks the record itself before
+returning, so a further crash after that resume has written `A.npy`/parts does not wedge every
+later `--resume`.
 
 With the marker confirmed, `--resume` continues an incomplete run from the stages listed in
 `parts.json` (each part and diag file checked against it, each part's A_sha256 against the
@@ -147,7 +151,7 @@ def run(argv: list[str] | None = None) -> int:
         # whose record was separately lost, say to `git clean`) still leaves an incomplete,
         # markerless record behind. This --resume must not read those leftovers (A.npy, parts,
         # diag, e2.json) as this run's own partial state and reuse or overwrite them.
-        wp2.prepare_resume_outputs(RUNNER, role, rec, all_outputs)
+        rec = wp2.prepare_resume_outputs(RUNNER, role, rec, all_outputs)
     else:
         wp2.clear_outputs(RUNNER, role, all_outputs)
         rec = wp2.mark_outputs_started(RUNNER, role)

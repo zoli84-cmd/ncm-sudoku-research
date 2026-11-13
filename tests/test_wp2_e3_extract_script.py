@@ -284,9 +284,48 @@ def test_wp2_e3_extract_test_role_resume_republishes_stale_score_dir(tmp_path, m
         env.mod.main(["--role", "test"])
     assert (_score_dir(env, "test") / "L06.npy").exists()  # the rename succeeded before the crash
     assert _rec(env, "test")["complete"] is False
+    stale = _score_dir(env, "test") / "stale_extra.npy"
+    stale.write_bytes(b"x")  # a stray leftover file in the stale score/; must not survive the republish
 
     monkeypatch.setattr(wp2, "finish_run", real_finish_run)
     env.mod.main(["--role", "test", "--resume"])
     rec = _rec(env, "test")
     assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"
     assert (_score_dir(env, "test") / "L06.npy").exists()
+    assert not stale.exists()
+
+
+def test_wp2_e3_extract_test_role_resume_recovers_from_crash_before_marker(tmp_path, monkeypatch):
+    """A crash between `clear_outputs` and `mark_outputs_started` leaves an incomplete, markerless
+    record with no outputs yet. A --resume must still be able to proceed: the gate passes (no
+    targets exist) and marks the record itself. A further crash after that --resume has written
+    score/ must not wedge the run: a second --resume must still complete."""
+    env = _setup(tmp_path, monkeypatch)
+    _freeze_for_test(env, tmp_path)
+    data = wp2.RoleData(ids=IDS, puzzles=PUZZLES, solutions=SOLUTIONS, source="test")
+    monkeypatch.setattr(wp2, "verify_test_data", lambda *a, **k: data)
+    real_mark = wp2.mark_outputs_started
+
+    def boom_mark(*a, **k):
+        raise RuntimeError("simulated crash before marker")
+    monkeypatch.setattr(wp2, "mark_outputs_started", boom_mark)
+    with pytest.raises(RuntimeError, match="simulated crash before marker"):
+        env.mod.main(["--role", "test"])
+    rec = _rec(env, "test")
+    assert rec["complete"] is False and "outputs_started" not in rec
+    assert not _score_dir(env, "test").exists()
+
+    monkeypatch.setattr(wp2, "mark_outputs_started", real_mark)
+    real_finish = wp2.finish_run
+    monkeypatch.setattr(wp2, "finish_run",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("simulated crash after write")))
+    with pytest.raises(RuntimeError, match="simulated crash after write"):
+        env.mod.main(["--role", "test", "--resume"])
+    rec = _rec(env, "test")
+    assert rec["complete"] is False and rec["outputs_started"] is True
+    assert (_score_dir(env, "test") / "L06.npy").exists()
+
+    monkeypatch.setattr(wp2, "finish_run", real_finish)
+    env.mod.main(["--role", "test", "--resume"])  # must not be wedged
+    rec = _rec(env, "test")
+    assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"

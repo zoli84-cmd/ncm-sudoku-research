@@ -666,6 +666,21 @@ def test_prepare_resume_outputs_allows_with_marker(tmp_path, state):
     assert target.exists()
 
 
+def test_prepare_resume_outputs_marks_when_no_targets_and_no_marker(tmp_path, state):
+    """A resume from a crash before this run's own fresh start ever reached
+    `mark_outputs_started` has no marker and no targets yet; the gate must mark the record itself
+    (and return the updated record) rather than leaving every later `--resume` wedged: once a
+    target exists and the record still lacks the marker, `prepare_resume_outputs` refuses
+    permanently and TEST's `clear_outputs` never deletes."""
+    rec = wp2.guard_start("e2", "dry", False, False, {"n": 50})
+    assert rec.get("outputs_started") is not True
+    raw = wp2.paths("dry")[1]
+    updated = wp2.prepare_resume_outputs("e2", "dry", rec, [raw / "e2" / "missing.npy"])
+    assert updated["outputs_started"] is True
+    stored = json.loads(_record_path(tmp_path, "dry").read_text(encoding="utf-8"))
+    assert stored["outputs_started"] is True
+
+
 def test_prepare_resume_outputs_path_confinement(tmp_path, state):
     wp2.guard_start("e2", "dry", False, False, {"n": 50})
     rec = wp2.mark_outputs_started("e2", "dry")

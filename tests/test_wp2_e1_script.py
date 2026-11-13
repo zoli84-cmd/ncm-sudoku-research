@@ -203,3 +203,37 @@ def test_wp2_e1_test_role_fresh_start_over_existing_outputs_refused(tmp_path, mo
         env.mod.main(["--role", "test", "--resume"])
     assert leftover.read_bytes() == content
     assert _rec(env)["complete"] is False
+
+
+def test_wp2_e1_test_role_resume_recovers_from_crash_before_marker(tmp_path, monkeypatch):
+    """A crash between `clear_outputs` and `mark_outputs_started` leaves an incomplete, markerless
+    record with no outputs yet. A --resume must still be able to proceed: the gate passes (no
+    targets exist) and marks the record itself. A further crash after that --resume has written
+    e1.json must not wedge the run: a second --resume must still complete."""
+    env = _setup(tmp_path, monkeypatch)
+    _freeze_for_test(env, tmp_path)
+    real_mark = wp2.mark_outputs_started
+
+    def boom_mark(*a, **k):
+        raise RuntimeError("simulated crash before marker")
+    monkeypatch.setattr(wp2, "mark_outputs_started", boom_mark)
+    with pytest.raises(RuntimeError, match="simulated crash before marker"):
+        env.mod.main(["--role", "test"])
+    rec = _rec(env)
+    assert rec["complete"] is False and "outputs_started" not in rec
+    assert not (env.raw / "e1.json").exists()
+
+    monkeypatch.setattr(wp2, "mark_outputs_started", real_mark)
+    real_finish = wp2.finish_run
+    monkeypatch.setattr(wp2, "finish_run",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("simulated crash after write")))
+    with pytest.raises(RuntimeError, match="simulated crash after write"):
+        env.mod.main(["--role", "test", "--resume"])
+    rec = _rec(env)
+    assert rec["complete"] is False and rec["outputs_started"] is True
+    assert (env.raw / "e1.json").exists()
+
+    monkeypatch.setattr(wp2, "finish_run", real_finish)
+    env.mod.main(["--role", "test", "--resume"])  # must not be wedged
+    rec = _rec(env)
+    assert rec["complete"] is True and rec["valid"] is True and rec["status"] == "valid"

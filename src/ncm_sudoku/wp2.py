@@ -442,21 +442,31 @@ def mark_outputs_started(runner: str, role: str) -> dict:
     return rec
 
 
-def prepare_resume_outputs(runner: str, role: str, record: dict, targets: list[Path]) -> None:
+def prepare_resume_outputs(runner: str, role: str, record: dict, targets: list[Path]) -> dict:
     """Resume-time safety gate for output targets, path-confined exactly like `clear_outputs`
-    (never a run record) but never deleting anything itself. Raises `DataIntegrityError` naming
-    the first existing target unless `record` (as returned by `guard_start`) carries the
-    `outputs_started` marker; with the marker, every target is this run's own partial state and
-    the runner is free to discard or atomically overwrite it with its usual resume logic."""
+    (never a run record). Raises `DataIntegrityError` naming the first existing target unless
+    `record` (as returned by `guard_start`) carries the `outputs_started` marker; with the marker,
+    returns `record` unchanged, since every target is this run's own partial state and the runner
+    is free to discard or atomically overwrite it with its usual resume logic.
+
+    Without the marker and with no target present, this is a resume from a crash before this
+    run's own fresh start ever reached `mark_outputs_started` (between `clear_outputs` succeeding
+    and the marker being written, or earlier still): nothing exists yet to confuse with a lost
+    prior run's outputs, so the gate marks the record itself, before the runner writes anything,
+    and returns the updated record. Skipping this would wedge the run: a later crash after this
+    resume has written its own (still markerless) outputs would make every further `--resume`
+    refuse permanently, with TEST's `clear_outputs` never able to delete them either."""
     roots = [p.resolve() for p in paths(role)]
     records = (paths(role)[0] / "runs").resolve()
     resolved = [Path(t).resolve() for t in targets]
     for t in resolved:
         if not any(t.is_relative_to(r) and t != r for r in roots) or t.is_relative_to(records):
             raise ValueError(f"{runner}: refusing to touch {t} (outside the {role} outputs or a run record)")
-    if record.get("outputs_started") is not True:
-        present = [t for t in resolved if t.exists()]
-        if present:
-            raise DataIntegrityError(
-                f"{runner}: {present[0]} exists but this run's record has no outputs_started marker; "
-                "refusing to resume over outputs that may belong to a run whose record was lost")
+    if record.get("outputs_started") is True:
+        return record
+    present = [t for t in resolved if t.exists()]
+    if present:
+        raise DataIntegrityError(
+            f"{runner}: {present[0]} exists but this run's record has no outputs_started marker; "
+            "refusing to resume over outputs that may belong to a run whose record was lost")
+    return mark_outputs_started(runner, role)

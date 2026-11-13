@@ -19,15 +19,19 @@ against the reference `runs/e3prep/probe_val/` -> `finish_run` -> `status_line`.
 `score.tmp/` and `score/` are restart-from-scratch state (spec ambiguity 21), like `wp2_e1.py`:
 on a fresh start they are cleared through `wp2.clear_outputs` (refuses if either already exists
 in the TEST role: single-look), and the record is then marked with `wp2.mark_outputs_started`,
-before any output is written. On `--resume`, `wp2.prepare_resume_outputs` checks that marker
-first: `guard_start` writes the (incomplete) run record before a fresh start's `clear_outputs`
-call, so a refused fresh TEST start over unrecorded leftovers (e.g. a complete prior run whose
-record was separately lost, say to `git clean`) still leaves an incomplete, markerless record
-behind, and `--resume` must not read that leftover as this run's own partial state. Only once the
-marker is confirmed are both directories discarded unconditionally (even in the TEST role,
-bypassing `clear_outputs`'s "never deletes" rule) and the whole extraction restarts and
-republishes atomically — neither a leftover `score.tmp/` nor a `score/` left by a crash between
-the rename and `finish_run` is ever read as valid on its own.
+before any output is written. On `--resume`, `rec = wp2.prepare_resume_outputs(...)` checks that
+marker first: `guard_start` writes the (incomplete) run record before a fresh start's
+`clear_outputs` call, so a refused fresh TEST start over unrecorded leftovers (e.g. a complete
+prior run whose record was separately lost, say to `git clean`) still leaves an incomplete,
+markerless record behind, and `--resume` must not read that leftover as this run's own partial
+state. Without the marker but also without `score.tmp/`/`score/` existing yet (a crash between
+`clear_outputs` succeeding and `mark_outputs_started` running, in this very run's own earlier
+attempt), the gate marks the record itself before returning, so a further crash after that resume
+has written `score/` does not wedge every later `--resume`. Once the marker is confirmed, both
+directories are discarded unconditionally (even in the TEST role, bypassing `clear_outputs`'s
+"never deletes" rule) and the whole extraction restarts and republishes atomically — neither a
+leftover `score.tmp/` nor a `score/` left by a crash between the rename and `finish_run` is ever
+read as valid on its own.
 
 Outputs (raw, git-ignored) under `runs/wp2/<role>/e3data/score/`: the PROBE layout (`ids.json`,
 `puzzles.npy`, `solutions.npy`, `solve.npy`, `mask.npy`, `empty.npy`, `depth.npy`, `L01.npy` ..
@@ -150,7 +154,7 @@ def run(argv: list[str] | None = None) -> int:
         # record was separately lost, say to `git clean`) still leaves an incomplete, markerless
         # record behind, and this --resume must not treat that leftover as this run's own partial
         # state and discard it.
-        wp2.prepare_resume_outputs(RUNNER, role, rec, [L["score_tmp"], L["score"]])
+        rec = wp2.prepare_resume_outputs(RUNNER, role, rec, [L["score_tmp"], L["score"]])
         for d in (L["score_tmp"], L["score"]):
             if d.exists():
                 shutil.rmtree(d)
