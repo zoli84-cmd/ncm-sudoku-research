@@ -190,7 +190,7 @@ def freeze_state(root: Path | None = None) -> dict:
     """Code-freeze state (D76(2)); a missing tag or upstream worktree means "not frozen", never an error."""
     root = ROOT if root is None else Path(root)
     try:
-        tag_commit = _git(root, "rev-list", "-n", "1", FREEZE_TAG) or None
+        tag_commit = _git(root, "rev-parse", "--verify", "--quiet", f"refs/tags/{FREEZE_TAG}^{{commit}}") or None
     except subprocess.CalledProcessError:
         tag_commit = None
     head = _git(root, "rev-parse", "HEAD")
@@ -395,13 +395,20 @@ def status_line(**fields) -> None:
 
 
 def clear_outputs(runner: str, role: str, targets: list[Path]) -> None:
-    """Deletes listed outputs of a previous run; only inside this role's output dirs, never run records."""
+    """Deletes listed outputs of a previous run; only inside this role's output dirs, never run records.
+    In the TEST role it never deletes: any existing target raises DataIntegrityError."""
     roots = [p.resolve() for p in paths(role)]
     records = (paths(role)[0] / "runs").resolve()
     resolved = [Path(t).resolve() for t in targets]
     for t in resolved:
         if not any(t.is_relative_to(r) and t != r for r in roots) or t.is_relative_to(records):
             raise ValueError(f"{runner}: refusing to delete {t} (outside the {role} outputs or a run record)")
+    if role == "test":
+        present = [t for t in resolved if t.exists()]
+        if present:
+            raise DataIntegrityError(f"{runner}: TEST outputs already exist ({present[0]}); TEST runs are "
+                                     "single-look and their outputs are never deleted")
+        return
     for t in resolved:
         if t.is_dir():
             shutil.rmtree(t)

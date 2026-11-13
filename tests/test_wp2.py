@@ -597,3 +597,23 @@ def test_clear_outputs_deletes_only_role_outputs(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         wp2.clear_outputs("e2", "dry", [wp2.paths("test")[0] / "x.json"])
     assert outside.exists()
+
+
+def test_freeze_state_branch_named_like_tag_is_not_a_tag(tmp_path, monkeypatch):
+    _repos(tmp_path, monkeypatch, tag=False)
+    _git(tmp_path, "branch", "wp2-code")
+    s = wp2.freeze_state(tmp_path)
+    assert s["tag_commit"] is None and s["frozen"] is False
+
+
+def test_clear_outputs_test_role_never_deletes(tmp_path, monkeypatch):
+    monkeypatch.setattr(wp2, "ROOT", tmp_path)
+    exp, raw = wp2.paths("test")
+    f = raw / "e2" / "A.npy"
+    f.parent.mkdir(parents=True)
+    f.write_bytes(b"x")
+    assert not (exp / "runs" / "e2.json").exists()
+    with pytest.raises(wp2.DataIntegrityError, match="A.npy"):
+        wp2.clear_outputs("e2", "test", [raw / "e2" / "missing.npy", f])
+    assert f.exists()
+    wp2.clear_outputs("e2", "test", [raw / "e2" / "missing.npy"])  # nothing present: no-op
