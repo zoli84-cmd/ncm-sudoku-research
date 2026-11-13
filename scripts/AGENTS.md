@@ -14,7 +14,35 @@ Command-line entry points that fetch data, generate subsets, run experiments, an
 
 - Most result writers are rerun-guarded and refuse to overwrite unless `--force` (or `--resume`) is given; check the per-script contract below before forcing a rerun
 - `wp1_gate.py` is single-look: `experiments/wp1/gate.json` must never be regenerated
-- WP2 runners take `--role test|dry` and `--force | --resume` through `ncm_sudoku.wp2.parse_args` and are guarded by `wp2.guard_start`; the TEST role never accepts `--force` and is single-look
+- WP2 runners take `--role test|dry` and `--force | --resume` through `ncm_sudoku.wp2.parse_args` and are guarded by `wp2.guard_start`
+- TEST-role runs are single-look: no `--force`; `--resume` only for incomplete runs; any other rerun is a logged deviation; only valid run records count
+
+## Work Guidance
+
+WP2 freeze/dry/TEST runbook:
+
+1. Whole-branch review.
+2. `git tag wp2-code` on the reviewed commit.
+3. Dry run, in this order:
+   - `wp2_e3_extract.py --role dry`
+   - `wp2_e3.py --role dry`
+   - `wp2_equiv.py --role dry`
+   - `wp2_e2.py --role dry`
+   - `wp2_e1.py --role dry`
+   - `wp2_evaluate.py --role dry`
+   - `wp2_dry_check.py`
+4. If `technical_success` is false: stop and investigate. Any fix needs re-review and re-tagging before any TEST run, logged in `DECISIONS.md`. The TEST guard refuses to start without a passing `check.json` at the tag commit.
+5. Do not commit anything, and do not edit `src/`, `scripts/`, `pyproject.toml`, `uv.lock` or `third_party/ncm`, between the tag and the end of step 7; any such change makes the affected records invalid.
+6. TEST run, sequentially in the background (D76(5)):
+   - `wp2_e3_extract.py --role test`
+   - `wp2_e3.py --role test`
+   - `wp2_equiv.py --role test`
+   - `wp2_e2.py --role test`
+   - `wp2_e1.py --role test`
+
+   Between runs, check only the exit code and the `complete`, `valid` and `status` fields of the run record. An interrupted run continues with `--resume`. Exit code 3 (E2 `identity-failure`) or any `valid: false`: stop the sequence, keep every artifact, and log a deviation in `DECISIONS.md` before anything else.
+7. `wp2_evaluate.py --role test`; results are read only now.
+8. Commit `experiments/wp2/`, then add the `DECISIONS.md` entry.
 
 ## Verification
 
