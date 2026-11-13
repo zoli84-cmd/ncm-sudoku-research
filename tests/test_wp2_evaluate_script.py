@@ -337,3 +337,39 @@ def test_wp2_evaluate_h1_negative_reports_equivalence_also_held(setup):
     rows = {r["row"] for r in res["readings"] if r["hypothesis"] == "H1"}
     assert rows == {"h1_negative"} and res["primary"]["H1"]["tost"]["equivalent"] is True
     assert env.mod.EQUIV_BOTH_NOTE in (env.exp / "report.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("existing", ["results.json", "report.md"])
+def test_wp2_evaluate_test_role_is_single_look(setup, existing):
+    env = setup(role="test")
+    _run(env, "test")
+    before = {n: (env.exp / n).read_bytes() for n in ("results.json", "report.md")}
+    if existing == "report.md":
+        (env.exp / "results.json").unlink()
+    with pytest.raises(SystemExit, match=r"single-look.*" + existing.replace(".", r"\.")):
+        env.mod.main(["--role", "test"])
+    for n, b in before.items():
+        if (env.exp / n).exists():
+            assert (env.exp / n).read_bytes() == b
+    assert not (existing == "report.md" and (env.exp / "results.json").exists())
+
+
+def test_wp2_evaluate_dry_role_may_rerun(default):
+    default.mod.main(["--role", "dry"])
+    assert json.loads((default.exp / "results.json").read_text(encoding="utf-8"))["role"] == "dry"
+
+
+def test_wp2_evaluate_report_labels_tost_by_its_level_and_method(default):
+    res, report = default.res, default.report
+    t2p = res["secondary"]["theta2_prime"]["tost"]
+    assert t2p["method"] == "bound"
+    row = next(line for line in report.splitlines() if line.startswith("| theta2_prime |"))
+    assert "one-sided 95% rare-event bound" in row and "90%" not in row
+    assert "90% TOST interval" not in report
+
+
+def test_wp2_evaluate_report_labels_h1_tost_by_its_level_and_method(default):
+    assert default.res["primary"]["H1"]["tost"]["method"] == "bootstrap"
+    row = next(line for line in default.report.splitlines() if line.startswith("| H1 |"))
+    assert "96.67% interval (bootstrap)" in row
+    assert "96.67% TOST interval (H1)" not in default.report

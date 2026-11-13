@@ -3,6 +3,9 @@ WP2 plan spec ambiguities 2, 3, 7-10, 18, 19, 22-24).
 
 Usage: uv run python scripts/wp2_evaluate.py --role test|dry
 
+Single look: the TEST role refuses to run (named exit, nothing written) if
+`experiments/wp2/test/results.json` or `report.md` already exists; the dry role may rerun.
+
 Reads only raw outputs of the five WP2 runners and never loads the model:
 `runs/wp2/<role>/{e1.json, e2.json, e2/diag/*.npz, e3/preds/*.npz, e3data/score/*.npy}`,
 `experiments/wp2/<role>/{e3_fits.json, e3_budget.json, equivariance.json}`, the role's puzzles
@@ -53,6 +56,7 @@ NAME = "wp2_evaluate"
 RUNNERS = ("e3_extract", "e3", "equiv", "e2", "e1")
 N_BOOT = wp2eval.N_BOOT
 ALPHA = 0.05  # per side, theta2' and theta_T TOST (§11.4, §8.3)
+OUTPUT_FILES = ("results.json", "report.md")
 SCORE_FILES = ("ids.json", "puzzles.npy", "mask.npy", "empty.npy", "depth.npy")
 TEST_NOTE = "WP2 confirmatory evaluation on TEST (plan v3.7); single look, read only after all TEST runs are complete"
 DEVIATION_REQUIRED = "a logged deviation (DECISIONS.md) is required before any E2 inference"
@@ -168,6 +172,16 @@ def gate(role: str, freeze: dict) -> tuple[dict, dict, bool]:
                 sys.exit(f"{NAME}: the {runner} run record is not valid: {why}")
         records[runner], reasons[runner] = rec, why
     return records, reasons, identity
+
+
+def single_look(role: str, exp: Path) -> None:
+    """TEST role: refuses to run if a results.json or report.md already exists (single look); dry may rerun."""
+    if role != "test":
+        return
+    for name in OUTPUT_FILES:
+        if (exp / name).exists():
+            sys.exit(f"{NAME}: the TEST evaluation is single-look and {_rel(exp / name)} already exists; "
+                     "nothing was written")
 
 
 def _outputs(rec: dict, name: str) -> str | None:
@@ -596,6 +610,14 @@ def _ci(block) -> str:
     return "n/a" if not block or block.get("ci") is None else f"[{_f(block['ci'][0])}, {_f(block['ci'][1])}]"
 
 
+def _tost_label(tost: dict) -> str:
+    """The interval the TOST verdict actually used: two-sided 1 - 2 alpha (bootstrap) or, on the
+    rare-event path, the one-sided 1 - alpha bound (`wp2eval.tost`)."""
+    if tost.get("method") == "bound":
+        return f"one-sided {round(100 * (1 + tost['level']) / 2, 2):g}% rare-event bound"
+    return f"{round(100 * tost['level'], 2):g}% interval ({tost.get('method')})"
+
+
 def _table(header: list[str], rows: list[list]) -> list[str]:
     out = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     out += ["| " + " | ".join(_f(c) if not isinstance(c, str) else c for c in r) + " |" for r in rows]
@@ -621,11 +643,11 @@ def report(res: dict) -> str:
             continue
         tost = x.get("tost") or {}
         rows.append([name, x["estimate"], _ci(x["family"]), _ci(x["ci95"]), x["ci95"]["method"], x["n"],
-                     x["n_nonzero"], _ci(tost) if tost else "-",
+                     x["n_nonzero"], f"{_ci(tost)}, {_tost_label(tost)}" if tost else "-",
                      ("equivalent" if tost.get("equivalent") else "not equivalent") if tost else "-"])
         notes.append(f"- {name}: the 95% interval is the {x['ci95_label']}.")
     L += _table(["Contrast", "Estimate", "98.33% interval", "95% interval", "Method", "n", "n nonzero",
-                 "96.67% TOST interval (H1)", "TOST verdict"], rows) + notes + [""]
+                 "H1 TOST interval (level, method)", "TOST verdict"], rows) + notes + [""]
     if any("status" in x for x in res["primary"].values()):
         blk = res["primary"]["H2"]
         L += ["**E2 identity failure (spec ambiguity 23).** No E2 interval, TOST, AUC or reading is computed: "
@@ -655,9 +677,9 @@ def report(res: dict) -> str:
                 continue
             tost = x.get("tost")
             rows.append([name, x["estimate"], _ci(x["ci95"]), x["ci95"]["method"], x["n"],
-                         _ci(tost) if tost else "-",
+                         f"{_ci(tost)}, {_tost_label(tost)}" if tost else "-",
                          ("equivalent" if tost["equivalent"] else "not equivalent") if tost else "-"])
-    L += _table(["Contrast", "Estimate", "95% interval", "Method", "n", "90% TOST interval", "TOST verdict"], rows)
+    L += _table(["Contrast", "Estimate", "95% interval", "Method", "n", "TOST interval (level, method)", "TOST verdict"], rows)
 
     L += ["## AUC over the frozen range (§7.3, §12.2)", ""]
     for k, a in res["auc"].items():
@@ -734,9 +756,10 @@ def run(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--role", choices=wp2.ROLES, required=True)
     role = ap.parse_args(sys.argv[1:] if argv is None else argv).role
+    exp, raw = wp2.paths(role)
+    single_look(role, exp)
     freeze = wp2.freeze_state()
     records, reasons, identity = gate(role, freeze)
-    exp, raw = wp2.paths(role)
     inputs = Inputs()
 
     e1 = inputs.json(raw / "e1.json", _outputs(records["e1"], "e1.json"), "e1 run record")
