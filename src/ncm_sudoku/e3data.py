@@ -9,6 +9,7 @@ process never holds all 12 x n level arrays in memory at once (about 207 MB per
 level per 2,500 puzzles).
 """
 
+import gc
 import json
 from pathlib import Path
 
@@ -82,10 +83,11 @@ def extract_streamed(m: NcmModel, out_dir, puzzles: np.ndarray, solutions: np.nd
         for lv in TEACHER_LEVELS:
             teacher_files[lv][sl] = t_chunk[lv]
         solve[sl] = solve_chunk
-    for f in level_files:
-        f.flush()
-    for f in teacher_files.values():
-        f.flush()
+    # Flush by index, so no loop variable stays bound to a memmap after the loops.
+    for i in range(len(level_files)):
+        level_files[i].flush()
+    for lv in TEACHER_LEVELS:
+        teacher_files[lv].flush()
     # Explicit cleanup: np.memmap has no close(); dropping every reference here forces
     # CPython's immediate refcounting deallocation (closing the file/mapping now) instead
     # of relying on whenever the GC happens to run, for the ~1-hour production run's 15
@@ -95,6 +97,11 @@ def extract_streamed(m: NcmModel, out_dir, puzzles: np.ndarray, solutions: np.nd
     for lv in list(teacher_files):
         teacher_files[lv] = None
     del level_files, teacher_files
+    # Windows locks a file (and its directory against rename) while any mapping of it
+    # is alive. With the real model a reference cycle kept the last teacher memmap
+    # alive past the return, so the caller's `score.tmp` -> `score` rename failed with
+    # WinError 5. Collecting here closes every remaining mapping before we return.
+    gc.collect()
     return solve
 
 

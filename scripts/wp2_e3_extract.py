@@ -42,6 +42,7 @@ files; Task 9 checks it) and, dry only, `matches_e3prep` ({array: {equal, max_ab
 solve share) is printed or written to the run record (D76(5)).
 """
 
+import gc
 import hashlib
 import json
 import shutil
@@ -168,6 +169,7 @@ def run(argv: list[str] | None = None) -> int:
     wp2.atomic_write(L["score_tmp"] / "ids.json", json.dumps(data.ids) + "\n")
 
     score_manifest = wp2.manifest({name: L["score_tmp"] / name for name in FILE_NAMES})
+    gc.collect()  # release any surviving memmap: Windows refuses to rename a directory with a mapped file
     wp2.replace_with_retry(L["score_tmp"], L["score"])
 
     extra = {"n": len(data.ids), "labels_sha256": labels_sha256, "score_manifest": score_manifest}

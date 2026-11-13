@@ -103,3 +103,17 @@ def test_save_and_load_level_roundtrip(model, released, tmp_path):
     assert np.array_equal(np.asarray(loaded), ext["states"][5])
     loaded_t = load_level(tmp_path, "probe_mini", 2, teacher=True)
     assert np.array_equal(np.asarray(loaded_t), ext["teacher"][2])
+
+
+@needs_model
+@pytest.mark.slow
+def test_extract_streamed_releases_mappings_on_return(model, released, tmp_path):
+    """On Windows a live memmap locks its file, so the WP2 directory publish
+    (`score.tmp` -> `score`) fails while any mapping survives the return. No
+    `gc.collect()` here: `extract_streamed` itself must release every mapping."""
+    import os
+
+    puzzles, sols = released
+    extract_streamed(model, tmp_path / "score.tmp", puzzles[:4], sols[:4], batch=4)
+    os.replace(tmp_path / "score.tmp", tmp_path / "score")
+    assert (tmp_path / "score" / "T12.npy").exists()
