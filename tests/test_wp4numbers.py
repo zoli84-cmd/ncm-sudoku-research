@@ -105,6 +105,20 @@ def test_collect_e2_keys(sources):
     assert nums["e2.prop.level1-frequency.L11"] == "3.3" and nums["e2.prop.L06-frequency-d13.L11"] == "8.4"
 
 
+def test_collect_e3_keys(sources):
+    nums = collect(sources)
+    assert nums["brier.wl.random"] == "0.2337" and nums["brier.wl.labelperm"] == "0.2328"
+    assert nums["brier.peercounts"] == "0.0142" and nums["brier.surface"] == "0.2253"
+    assert nums["brier.rule"] == "0.0000" and nums["brier.raw.mlp"] == "0.0000"
+    assert nums["depth.wl.d1"] == "0.2172" and nums["depth.wl.d4"] == "0.2387"
+    assert nums["depth.pos.d1"] == "31.4" and nums["depth.pos.d4"] == "39.9"
+    assert nums["ts.wl.n125"] == "0.2365" and nums["ts.wl.n2000"] == "0.2307"
+    assert nums["unit.gen.auc"] == "0.50" and nums["unit.raw.auc"] == "1.0"
+    assert nums["equiv.brier.trans"] == "0.1837" and nums["equiv.brier.orig"] == "0.1839"
+    assert nums["model.peers"] == "20" and nums["ts.size.min"] == "125" and nums["ts.size.max"] == "2000"
+    assert nums["level.thetaTtost"] == "90"
+
+
 def test_collect_none_interval_raises_naming_the_key(sources):
     broken = copy.deepcopy(sources)
     broken["results"]["primary"]["H3"]["family"] = None
@@ -137,3 +151,10 @@ def test_plan_constants_equal_wp2eval():
     for name in ("H1_MARGIN", "THETA2P_MARGIN", "THETA_T_MARGIN", "EQUIV_TOLERANCE"):
         assert getattr(wp4numbers, name) == getattr(wp2eval, name), name
     assert wp4numbers.DESIGN["nboot"] == wp2eval.N_BOOT
+
+
+def test_lookup_dict_keys_with_dots():
+    doc = {"depth": {"wl_L06.generated": {"brier": {">=4": {"brier": 0.5}}}}}
+    assert lookup(doc, "depth.wl_L06.generated.brier.>=4.brier") == 0.5
+    with pytest.raises(KeyError):
+        lookup(doc, "depth.wl_L06.missing.brier")
