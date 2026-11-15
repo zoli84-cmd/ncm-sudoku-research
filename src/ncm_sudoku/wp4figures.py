@@ -1,0 +1,193 @@
+"""WP4 figures from committed results; every function takes the parsed `results.json` and returns a Figure.
+
+No file is read here and no statistic is computed: intervals and estimates are the stored ones.
+"""
+
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+
+from ncm_sudoku.wp2eval import H1_MARGIN, THETA2P_MARGIN  # noqa: E402
+from ncm_sudoku.wp4numbers import H2_PRACTICAL, H3_PRACTICAL  # noqa: E402
+
+plt.rcParams.update({"pdf.fonttype": 42, "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8,
+                     "legend.fontsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7})
+# Okabe-Ito colour-blind-safe palette
+BLUE, ORANGE, GREEN, VERMILLION, PURPLE, GREY = "#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#999999"
+WIDTH = 6.3  # inches, single-column article text width
+
+
+def save_pdf(fig, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, format="pdf", bbox_inches="tight",
+                metadata={"CreationDate": None, "ModDate": None, "Producer": None, "Creator": None})
+    plt.close(fig)
+
+
+def dose_curves(results: dict):
+    """Solve share of branches C and D against dose for levels 2, 6, 11 under both policies (descriptive)."""
+    configs = results["tables"]["e2"]["configurations"]
+    fig, axes = plt.subplots(1, 3, figsize=(WIDTH, 2.2), sharey=True)
+    for ax, level in zip(axes, (2, 6, 11)):
+        for policy, style in (("frequency", "-"), ("uniform", "--")):
+            rows = sorted((c for c in configs if c["level"] == level and c["policy"] == policy),
+                          key=lambda c: c["dose"])
+            dose = [c["dose"] for c in rows]
+            for branch, colour in (("C", ORANGE), ("D", BLUE)):
+                ax.plot(dose, [100 * c["solve_mean"][branch] for c in rows], style, color=colour, marker="o",
+                        markersize=3, label=f"{branch}, {policy}")
+        ax.set_title(f"Level {level}")
+        ax.set_xscale("log")
+        ax.minorticks_off()
+        ax.set_xticks(dose, [str(d) for d in dose])
+        ax.set_xlabel("Dose (replaced codes)")
+    axes[0].set_ylabel("Solved (%), descriptive")
+    axes[0].legend(frameon=False)
+    fig.tight_layout()
+    return fig
+
+
+FOREST_ROWS = (
+    ("H2 (level 1 vs. 11)", "primary.H2", True),
+    ("H3 (compensation)", "primary.H3", True),
+    ("θ₂′ (level 2 vs. 11)", "secondary.theta2_prime", False),
+    ("Uniform: θ₂", "secondary.uniform.theta2", False),
+    ("Uniform: θ_comp", "secondary.uniform.theta_comp", False),
+    ("Uniform: θ₂′", "secondary.uniform.theta2_prime", False),
+    ("Correct baseline: θ₂", "secondary.correct_baseline.theta2", False),
+    ("Correct baseline: θ_comp", "secondary.correct_baseline.theta_comp", False),
+)
+
+
+def _get(doc: dict, path: str):
+    for part in path.split("."):
+        doc = doc[part]
+    return doc
+
+
+def contrasts_forest(results: dict):
+    """E2 contrasts in percentage points: family interval (primary, thick) and 95% interval (thin)."""
+    fig, ax = plt.subplots(figsize=(WIDTH, 2.8))
+    n = len(FOREST_ROWS)
+    for i, (label, path, primary) in enumerate(FOREST_ROWS):
+        y = n - 1 - i
+        c = _get(results, path)
+        lo, hi = (100 * v for v in c["ci95"]["ci"])
+        ax.plot([lo, hi], [y, y], color=GREY if not primary else BLUE, linewidth=1)
+        if primary:
+            flo, fhi = (100 * v for v in c["family"]["ci"])
+            ax.plot([flo, fhi], [y, y], color=BLUE, linewidth=3, alpha=0.5)
+        ax.plot([100 * c["estimate"]], [y], "o", color=BLUE if primary else "black", markersize=4)
+    ax.axvline(0, color="black", linewidth=0.6)
+    ax.axvline(-100 * H2_PRACTICAL, color=VERMILLION, linestyle=":", linewidth=0.8, label="H2 practical threshold")
+    ax.axvline(100 * H3_PRACTICAL, color=GREEN, linestyle=":", linewidth=0.8, label="H3 practical threshold")
+    for i, x in enumerate((-100 * THETA2P_MARGIN, 100 * THETA2P_MARGIN)):
+        ax.axvline(x, color=PURPLE, linestyle="--", linewidth=0.6, label="θ₂′ equivalence range" if i == 0 else None)
+    ax.set_yticks(range(n), [r[0] for r in reversed(FOREST_ROWS)])
+    ax.set_xlabel("Difference in solve share (percentage points)")
+    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
+    fig.tight_layout()
+    return fig
+
+
+PRIMARY_PROPAGATION = ("level1-frequency", "level1-uniform", "L11-frequency-d1")
+
+
+def propagation(results: dict):
+    """Mean later-level D code changes per configuration, and per-level state distances (primary configurations)."""
+    diag = results["tables"]["e2_diagnostics"]
+    changes = diag["later_level_changes"]
+    names = list(changes)
+    grid = np.full((len(names), 12), np.nan)
+    for i, name in enumerate(names):
+        for level, v in changes[name].items():
+            grid[i, int(level) - 1] = v
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(WIDTH, 4.2), gridspec_kw={"width_ratios": [1.3, 1]})
+    im = ax1.imshow(grid, aspect="auto", cmap="viridis", interpolation="nearest")
+    ax1.set_xticks(range(12), [str(i) for i in range(1, 13)])
+    ax1.set_yticks(range(len(names)), names, fontsize=5)
+    ax1.set_xlabel("Later level")
+    fig.colorbar(im, ax=ax1, label="Mean changed D codes")
+    prop = diag["propagation"]
+    for name, colour in zip(PRIMARY_PROPAGATION, (BLUE, ORANGE, GREEN)):
+        levels = range(1, 13)
+        ax2.plot(levels, prop[name]["state_dist_C"], "--", color=colour, label=f"{name}, C")
+        ax2.plot(levels, prop[name]["state_dist_D"], "-", color=colour, label=f"{name}, D")
+    ax2.set_xticks(range(1, 13), [str(i) for i in range(1, 13)])
+    ax2.set_xlabel("Level")
+    ax2.set_ylabel("Cumulative-state distance to A")
+    ax2.legend(frameon=False, fontsize=5)
+    fig.tight_layout()
+    return fig
+
+
+def _main_row(results: dict, row: str) -> float:
+    return next(r["brier"] for r in results["tables"]["e3_main"] if r["row"] == row)
+
+
+def e3_readability(results: dict):
+    """Brier by level (whole-layer generated, permuted, teacher; raw input) and θ₁ per level with the ±margin band."""
+    levels = results["tables"]["e3_levels"]
+    xs = (2, 6, 12)
+    keys = ("L02", "L06", "L12")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(WIDTH, 2.4))
+    ax1.plot(xs, [levels[k]["whole_layer"]["generated"] for k in keys], "o-", color=BLUE, label="Generated")
+    ax1.plot(xs, [levels[k]["whole_layer"]["permuted"] for k in keys], "s--", color=GREY, label="Permuted null")
+    ax1.plot((6, 12), (_main_row(results, "wl_teacher_L06.teacher"), _main_row(results, "wl_teacher_L12.teacher")),
+             "^:", color=ORANGE, label="Teacher")
+    ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input (linear)")
+    ax1.set_xticks(xs)
+    ax1.set_xlabel("Level")
+    ax1.set_ylabel("Brier (score set)")
+    ax1.legend(frameon=False)
+    sec = results["secondary"]
+    rows = ((2, sec["theta1_wl"]["L02"]["estimate"], sec["theta1_wl"]["L02"]["ci95"]["ci"]),
+            (6, results["primary"]["H1"]["estimate"], results["primary"]["H1"]["family"]["ci"]),
+            (12, sec["theta1_wl"]["L12"]["estimate"], sec["theta1_wl"]["L12"]["ci95"]["ci"]))
+    ax2.axhspan(-H1_MARGIN, H1_MARGIN, color=GREY, alpha=0.2, label="±practical threshold")
+    for x, est, ci in rows:
+        ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1)
+        ax2.plot([x], [est], "o", color=BLUE, markersize=4)
+    ax2.axhline(0, color="black", linewidth=0.6)
+    ax2.set_xticks(xs)
+    ax2.set_xlabel("Level")
+    ax2.set_ylabel("θ₁ (permuted − generated Brier)")
+    ax2.legend(frameon=False)
+    fig.tight_layout()
+    return fig
+
+
+DEPTHS = ("1", "2", "3", ">=4", "stuck")
+
+
+def e3_supporting(results: dict):
+    """Training-size curves (whole-layer primary, per-cell secondary) and the level-6 depth breakdown."""
+    ts = results["tables"]["training_size"]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(WIDTH, 2.4))
+    for curve, colour, label in (("whole_layer", BLUE, "Whole-layer (primary)"), ("per_cell", ORANGE, "Per-cell")):
+        pts = sorted((v["n_puzzles"], v["brier"]) for k, v in ts[curve].items() if isinstance(v, dict))
+        ax1.plot([p[0] for p in pts], [p[1] for p in pts], "o-", color=colour, label=label)
+    ax1.set_xscale("log")
+    ax1.minorticks_off()
+    ns = sorted(v["n_puzzles"] for v in ts["whole_layer"].values() if isinstance(v, dict))
+    ax1.set_xticks(ns, [str(n) for n in ns])
+    ax1.set_xlabel("Training puzzles")
+    ax1.set_ylabel("Brier (score set)")
+    ax1.legend(frameon=False)
+    depth = results["tables"]["depth"]
+    x = np.arange(len(DEPTHS))
+    for j, (row, colour, label) in enumerate((("wl_L06.generated", BLUE, "Whole-layer, level 6"),
+                                               ("pc_L06.linear", ORANGE, "Per-cell, level 6"))):
+        vals = [depth[row]["brier"][d]["brier"] if depth[row]["brier"].get(d) else np.nan for d in DEPTHS]
+        ax2.bar(x + (j - 0.5) * 0.35, vals, width=0.35, color=colour, label=label)
+    ax2.set_xticks(x, DEPTHS)
+    ax2.set_xlabel("Inference depth (descriptive)")
+    ax2.set_ylabel("Brier")
+    ax2.set_ylim(0, 0.3)
+    ax2.legend(frameon=False, loc="upper left", ncol=2)
+    fig.tight_layout()
+    return fig
