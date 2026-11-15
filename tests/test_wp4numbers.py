@@ -80,6 +80,15 @@ def test_collect_setup_keys(sources):
     assert nums["gate.ci.level"] == "90" and nums["stat.alpha"] == "5"
 
 
+def test_collect_e1_keys(sources):
+    nums = collect(sources)
+    assert nums["e1.wellformed"] == "100.0" and nums["e1.clues"] == "100.0"
+    assert nums["e1.cellacc.empty"] == "97.0" and nums["e1.violations"] == "0.44"
+    assert nums["e1.lv1.agree"] == "80.7" and nums["e1.lv1.cellacc"] == "14.6"
+    assert nums["e1.lv11.cellacc"] == "81.7" and nums["e1.lv12.agree"] == "94.7"
+    assert nums["e1.lv1.solve"] == "0.0" and nums["e1.lv11.solve"] == "0.0"
+
+
 def test_collect_none_interval_raises_naming_the_key(sources):
     broken = copy.deepcopy(sources)
     broken["results"]["primary"]["H3"]["family"] = None

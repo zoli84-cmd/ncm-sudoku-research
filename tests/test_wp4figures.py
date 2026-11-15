@@ -27,7 +27,7 @@ def no_file_reads(monkeypatch):
 
 
 @pytest.mark.parametrize("name,axes", [("dose_curves", 3), ("contrasts_forest", 1), ("propagation", 2),
-                                       ("e3_readability", 2), ("e3_supporting", 2)])
+                                       ("e3_readability", 2), ("e3_supporting", 2), ("e1_levels", 1)])
 def test_figure_axes(results, no_file_reads, name, axes):
     fig = getattr(f, name)(results)
     assert len([ax for ax in fig.axes if ax.get_label() != "<colorbar>"]) == axes
@@ -80,3 +80,10 @@ def test_depth_missing_stratum_names_the_path(results):
     del broken["tables"]["depth"]["wl_L06.generated"]["brier"]["2"]
     with pytest.raises(KeyError, match="depth"):
         f.e3_supporting(broken)
+
+
+def test_e1_levels_two_series_over_twelve_levels(results):
+    fig = f.e1_levels(results)
+    lines = fig.axes[0].get_lines()
+    assert len(lines) == 2 and all(len(line.get_xdata()) == 12 for line in lines)
+    f.plt.close(fig)

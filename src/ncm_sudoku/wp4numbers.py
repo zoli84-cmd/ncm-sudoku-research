@@ -154,7 +154,16 @@ def _keys() -> dict[str, tuple[str, str, str]]:
     k["e1.official"] = ("results", f"{e1}.official_exact_share", "pct1")
     k["e1.teacher"] = ("results", f"{e1}.teacher.exact_share", "pct1")
     k["e1.cellacc"] = ("results", f"{e1}.generated.cell_acc_all", "pct1")
-    k["e1.ham.token"] = ("results", f"{e1}.hamming.token_mean", "dec4")
+    k["e1.wellformed"] = ("results", f"{e1}.generated.well_formed", "pct1")
+    k["e1.clues"] = ("results", f"{e1}.generated.clue_preservation", "pct1")
+    k["e1.cellacc.empty"] = ("results", f"{e1}.generated.cell_acc_empty", "pct1")
+    k["e1.violations"] = ("results", f"{e1}.generated.mean_constraint_violations_well_formed", "sig2")
+    for lv in range(1, 13):  # per_level is ordered by level; e1_levels checks the order
+        base = f"{e1}.per_level.{lv - 1}"
+        k[f"e1.lv{lv}.agree"] = ("results", f"{base}.code_agreement", "pct1")
+        k[f"e1.lv{lv}.cellacc"] = ("results", f"{base}.cell_acc_all", "pct1")
+        k[f"e1.lv{lv}.solve"] = ("results", f"{base}.solve", "pct1")
+    k["e1.ham.token"] =("results", f"{e1}.hamming.token_mean", "dec4")
     k["e1.ham.cell"] = ("results", f"{e1}.hamming.cell_mean", "dec4")
     k["e1.ham.empty"] = ("results", f"{e1}.hamming.cell_empty_mean", "dec4")
     for lv in ("L02", "L06", "L12"):

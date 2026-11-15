@@ -190,3 +190,23 @@ def e3_supporting(results: dict):
     ax2.legend(frameon=False, loc="upper left", ncol=2)
     fig.tight_layout()
     return fig
+
+
+def e1_levels(results: dict):
+    """Per level: agreement of generated with teacher codes, and cell accuracy of the decoded partial state."""
+    per_level = req(results, "tables.e1.per_level")
+    levels = [row["level"] for row in per_level]
+    if levels != list(range(1, 13)):
+        raise KeyError(f"tables.e1.per_level must hold levels 1..12 in order, got {levels}")
+    fig, ax = plt.subplots(figsize=(WIDTH, 2.4))
+    ax.plot(levels, [100 * row["code_agreement"] for row in per_level], "o-", color=BLUE,
+            label="Generated codes equal to teacher codes")
+    ax.plot(levels, [100 * row["cell_acc_all"] for row in per_level], "s--", color=ORANGE,
+            label="Cell accuracy of the decoded cumulative state")
+    ax.set_xticks(levels, [str(lv) for lv in levels])
+    ax.set_xlabel("Level")
+    ax.set_ylabel("% (descriptive)")
+    ax.set_ylim(0, 100)
+    ax.legend(frameon=False, loc="lower right")
+    fig.tight_layout()
+    return fig
