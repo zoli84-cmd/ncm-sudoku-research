@@ -81,3 +81,17 @@ def test_missing_reading_raises(results):
     broken["readings"] = [r for r in broken["readings"] if r["hypothesis"] != "H3"]
     with pytest.raises(KeyError, match="H3"):
         t.primary_table(broken)
+
+
+def test_missing_interval_names_the_path(results):
+    broken = copy.deepcopy(results)
+    broken["primary"]["H3"]["family"] = None
+    with pytest.raises(KeyError, match="primary.H3.family"):
+        t.primary_table(broken)
+
+
+def test_missing_brier_is_an_error_not_a_dash(results):
+    broken = copy.deepcopy(results)
+    broken["tables"]["e3_main"][0]["brier"] = None
+    with pytest.raises((KeyError, ValueError), match="brier"):
+        t.e3_matrix_table(broken)

@@ -26,7 +26,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 
 - Regenerate after any input or generator change: `uv run --locked python scripts/wp4_figures.py`; `--check` verifies the committed `generated/` files are current
 - Build: `uv run --locked python scripts/wp4_build.py` (PDF in `paper/build/main.pdf`); `--arxiv` adds the placeholder check
-- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py` (the lint test checks every section file against `generated/numbers.json`)
+- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py` (the lint test checks `main.tex`, including the abstract, and every section file against `generated/numbers.json`)
 
 ## Child DOX Index
 

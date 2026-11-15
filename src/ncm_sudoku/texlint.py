@@ -15,7 +15,16 @@ SKIP_ARG = re.compile(
     r"\\(?:R|ref|eqref|cite[a-zA-Z]*\*?|label|input|url|includegraphics|href)"
     r"\s*(?:\[[^\]]*\])?\s*\{[^}]*\}"
 )
-NUMBER = re.compile(r"(?<![\w.,])(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(\s*\\%|\s*pp\b)?")
+_SEP = r"(?:,|\{,\}|\\,|~)"  # thousands separators: 2,000  2{,}000  2\,000  2~000
+_GAP = r"(?:\s|~|\\,)*"  # space before a unit: 5 \%  5~\%  5\,\%
+NUMBER = re.compile(
+    r"(?<![\w\\])(?<!\d[.,])"
+    r"(\d{1,3}(?:" + _SEP + r"\d{3})+"  # grouped
+    r"|\d+(?:\.\d+)?[eE][-+]?\d+"  # 1e-3
+    r"|\d+\^\{?[-+]?\d+\}?"  # 10^{-3}
+    r"|\d*\.\d+|\d+)"
+    r"(" + _GAP + r"(?:\\%|pp\b|percentage points\b|percent\b))?"
+)
 KEY = re.compile(r"\\R\{([^}]*)\}")
 MAX_PLAIN_INT = 12
 
@@ -38,6 +47,12 @@ def numeric_literals(tex: str) -> list[tuple[int, str]]:
 
 def used_keys(tex: str) -> set[str]:
     return set(KEY.findall(strip_comments(tex)))
+
+
+def manuscript_files(root: Path) -> list[Path]:
+    """`paper/main.tex` (title, abstract) first, then every section file in name order."""
+    paper = root / "paper"
+    return [paper / "main.tex", *sorted((paper / "sections").glob("*.tex"))]
 
 
 def lint(section_paths: list[Path], numbers: dict[str, str]) -> list[str]:

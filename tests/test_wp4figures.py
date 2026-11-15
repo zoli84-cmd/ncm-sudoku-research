@@ -53,3 +53,30 @@ def test_save_pdf_is_byte_identical(results, tmp_path):
         fig = f.contrasts_forest(results)
         f.save_pdf(fig, tmp_path / f"a{i}.pdf")
     assert (tmp_path / "a1.pdf").read_bytes() == (tmp_path / "a2.pdf").read_bytes()
+
+
+def test_forest_missing_interval_names_the_path(results):
+    import copy
+
+    broken = copy.deepcopy(results)
+    broken["secondary"]["uniform"]["theta2"]["ci95"] = None
+    with pytest.raises(KeyError, match="secondary.uniform.theta2.ci95"):
+        f.contrasts_forest(broken)
+
+
+def test_dose_curves_missing_level_raises(results):
+    import copy
+
+    broken = copy.deepcopy(results)
+    broken["tables"]["e2"]["configurations"] = [c for c in broken["tables"]["e2"]["configurations"] if c["level"] != 6]
+    with pytest.raises(KeyError, match="level 6"):
+        f.dose_curves(broken)
+
+
+def test_depth_missing_stratum_names_the_path(results):
+    import copy
+
+    broken = copy.deepcopy(results)
+    del broken["tables"]["depth"]["wl_L06.generated"]["brier"]["2"]
+    with pytest.raises(KeyError, match="depth"):
+        f.e3_supporting(broken)

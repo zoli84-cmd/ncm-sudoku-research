@@ -58,9 +58,39 @@ def test_unknown_key_and_literal_reported(tmp_path):
     assert any("0.25" in p and "s.tex:1" in p for p in problems)
 
 
-def test_repo_sections_are_clean():
+@pytest.mark.parametrize("tex,expected", [
+    (r"we used 2\,000 puzzles", [r"2\,000"]),
+    (r"and 10{,}000 draws", [r"10{,}000"]),
+    (r"a value of .5 here", [r".5"]),
+    (r"about 5\,\% of cells", [r"5\,\%"]),
+    (r"about 5~\% of cells", [r"5~\%"]),
+    (r"a drop of 11~pp", [r"11~pp"]),
+    (r"a drop of 11\,pp", [r"11\,pp"]),
+    (r"about 11 percentage points", [r"11 percentage points"]),
+    (r"about 5 percent", [r"5 percent"]),
+    (r"learning rate 1e-3", [r"1e-3"]),
+    (r"learning rate $10^{-3}$", [r"10^{-3}"]),
+])
+def test_common_latex_number_spellings_are_caught(tex, expected):
+    assert lits(tex) == expected
+
+
+def test_manuscript_files_include_main_with_abstract(tmp_path):
+    from ncm_sudoku.texlint import manuscript_files
+
+    (tmp_path / "paper" / "sections").mkdir(parents=True)
+    (tmp_path / "paper" / "main.tex").write_text(r"\begin{abstract}Solved 0.25 of them\end{abstract}" + "\n")
+    (tmp_path / "paper" / "sections" / "e1.tex").write_text(r"\section{E1}" + "\n")
+    files = manuscript_files(tmp_path)
+    assert files[0].name == "main.tex" and files[1].name == "e1.tex"
+    assert any("0.25" in p for p in lint(files, {}))
+
+
+def test_repo_manuscript_is_clean():
+    from ncm_sudoku.texlint import manuscript_files
+
     path = ROOT / "paper" / "generated" / "numbers.json"
-    if not path.exists():
-        pytest.skip("numbers.json not generated yet")
     nums = json.loads(path.read_text(encoding="utf-8"))
-    assert lint(sorted((ROOT / "paper" / "sections").glob("*.tex")), nums) == []
+    assert lint(manuscript_files(ROOT), nums) == []
+
+

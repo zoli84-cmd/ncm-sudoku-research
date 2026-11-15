@@ -7,7 +7,7 @@ The section file supplies the table float, caption and label. Values are formatt
 import re
 from pathlib import Path
 
-from ncm_sudoku.wp4numbers import fmt
+from ncm_sudoku.wp4numbers import fmt, lookup
 
 TEXT = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}",
         "~": r"\textasciitilde{}", "^": r"\textasciicircum{}", "\\": r"\textbackslash{}"}
@@ -42,6 +42,14 @@ def escape(text: str) -> str:
     return "".join(out)
 
 
+def req(doc: dict, path: str):
+    """Value at a dotted path that must exist and not be None; KeyError names the path otherwise."""
+    value = lookup(doc, path)
+    if value is None:
+        raise KeyError(path)
+    return value
+
+
 def _cell(x, kind: str) -> str:
     return "--" if x is None else fmt(x, kind)
 
@@ -60,12 +68,13 @@ def _interval(ci: list, kind: str) -> str:
 def primary_table(results: dict) -> str:
     rows = []
     for hyp, kind, scale in (("H1", "dec4", "Brier"), ("H2", "pp1", "pp"), ("H3", "pp1", "pp")):
-        p = results["primary"][hyp]
+        base = f"primary.{hyp}"
         reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
         if reading is None:
             raise KeyError(f"no §13 reading for {hyp}")
-        rows.append([hyp, scale, fmt(p["estimate"], kind), _interval(p["family"]["ci"], kind),
-                     _interval(p["ci95"]["ci"], kind), escape(reading["result"]),
+        rows.append([hyp, scale, fmt(req(results, f"{base}.estimate"), kind),
+                     _interval(req(results, f"{base}.family.ci"), kind),
+                     _interval(req(results, f"{base}.ci95.ci"), kind), escape(reading["result"]),
                      escape(reading["claim"]), escape(reading["does_not_follow"])])
     header = ["", "Scale", "Estimate", "Family interval", "95\\% interval", "Result", "Justified claim",
               "Does not follow"]
@@ -73,10 +82,11 @@ def primary_table(results: dict) -> str:
 
 
 def e3_matrix_table(results: dict) -> str:
-    rows = [[escape(r["row"]), escape(r["construction"]), _cell(r["brier"], "dec4"),
+    # Not applicable (None -> "--"): reference, relative_difference and n_params of label-free rows.
+    rows = [[escape(r["row"]), escape(r["construction"]), fmt(req(results, f"tables.e3_main.{i}.brier"), "dec4"),
              escape(r["reference"]) if r["reference"] else "--", _cell(r["relative_difference"], "pct1"),
              _cell(r["n_params"], "int")]
-            for r in results["tables"]["e3_main"]]
+            for i, r in enumerate(results["tables"]["e3_main"])]
     header = ["Row", "Construction", "Brier", "Reference", "Relative difference (\\%)", "Parameters"]
     return _tabular("llrlrr", header, rows)
 
