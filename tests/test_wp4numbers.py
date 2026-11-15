@@ -62,7 +62,7 @@ def test_collect_real_results_primary_values(sources):
     assert nums["h1.est"] == "0.0029" and nums["h1.fam.lo"] == "0.0025" and nums["h1.fam.hi"] == "0.0033"
     assert nums["h2.est"] == r"\ensuremath{-}11.1" and nums["h3.fam.lo"] == "0.1"
     assert nums["n.test"] == "600" and nums["plan.h1margin"] == "0.01"
-    assert nums["level.family"] == "98.33" and nums["level.tost"] == "96.67"
+    assert nums["level.family"] == "98.33" and nums["level.tost"] == "96.67" and nums["level.ci95"] == "95"
     assert nums["e1.solve"] == "87.7" and nums["g0.official"] == "86.3"
     assert nums["brier.teacher.L06"] == "0.2307" and nums["rawgen.proj.est"] == r"\ensuremath{-}0.2292"
     assert set(nums) == set(KEYS)
@@ -87,6 +87,22 @@ def test_collect_e1_keys(sources):
     assert nums["e1.lv1.agree"] == "80.7" and nums["e1.lv1.cellacc"] == "14.6"
     assert nums["e1.lv11.cellacc"] == "81.7" and nums["e1.lv12.agree"] == "94.7"
     assert nums["e1.lv1.solve"] == "0.0" and nums["e1.lv11.solve"] == "0.0"
+
+
+def test_lookup_selects_by_several_fields():
+    doc = {"c": [{"level": 2, "policy": "u", "v": 1}, {"level": 6, "policy": "u", "v": 2}]}
+    assert lookup(doc, "c[level=6,policy=u].v") == 2
+    with pytest.raises(KeyError):
+        lookup(doc, "c[level=6,policy=f].v")
+
+
+def test_collect_e2_keys(sources):
+    nums = collect(sources)
+    assert nums["e2.l1.frequency.C"] == "74.9" and nums["e2.l1.frequency.D"] == "76.5"
+    assert nums["e2.l1.uniform.fmtC"] == "13.9" and nums["e2.l1.frequency.A"] == "87.7"
+    assert nums["e2.cfg.L06.frequency.d13.D"] == "85.6" and nums["e2.cfg.L06.frequency.d13.C"] == "87.7"
+    assert nums["e2.cfg.L11.frequency.d67.C"] == "83.6" and nums["e2.cfg.L02.uniform.d2.C"] == "86.8"
+    assert nums["e2.prop.level1-frequency.L11"] == "3.3" and nums["e2.prop.L06-frequency-d13.L11"] == "8.4"
 
 
 def test_collect_none_interval_raises_naming_the_key(sources):
