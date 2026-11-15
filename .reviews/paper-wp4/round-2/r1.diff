@@ -1,0 +1,738 @@
+diff --git a/paper/main.tex b/paper/main.tex
+index 684714b..4ac638a 100644
+--- a/paper/main.tex
++++ b/paper/main.tex
+@@ -9,12 +9,13 @@
+ \maketitle
+ 
+ \begin{abstract}
+-Next-Concept Modeling (NCM) generates a Sudoku solution as a hierarchy of discrete codes, from one coarse code to many fine ones. We ask, in a preregistered confirmatory study on one released checkpoint and \R{n.test} fresh puzzles, where the logic of the puzzle shows up in this hierarchy. Decoding teacher codes reproduced every solution, so all failures came from generation. Replacing the single level-1 code lowered the solve share by \R{h2.est.abs} percentage points more than replacing one level-11 code (\R{level.family}\% family interval [\R{h2.fam.lo}, \R{h2.fam.hi}]), under a frequency-based replacement policy. Regenerating the later levels after a level-1 replacement attenuated the damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), consistent with the model's training against corrupted levels; it does not show logical error correction. The candidate mask of the puzzle was linearly readable from the level-6 state above a permuted control, but only by \R{h1.est} in Brier loss, inside the registered equivalence range of $\pm$\R{plan.h1margin}, while the same label is almost exactly readable from the raw puzzle. At the last level the readout matched the teacher state that encodes the solution and was not equivariant under Sudoku symmetries. The results locate a large sensitivity at the coarsest level, while the intermediate level-6 state exposes the puzzle's candidate structure to a linear readout only below the practical threshold; we report each result with the claims that do not follow from it.
++Next-Concept Modeling (NCM) generates a Sudoku solution as a hierarchy of discrete codes, from one coarse code to many fine ones. We ask, in a preregistered confirmatory study on one released checkpoint and \R{n.test} fresh puzzles, where the logic of the puzzle shows up in this hierarchy. Decoding teacher codes reproduced every solution, so all failures came from generation. Replacing the single level-1 code lowered the solve share by \R{h2.est.abs} percentage points more than replacing one level-11 code (\R{level.family}\% family interval [\R{h2.fam.abs.lo}, \R{h2.fam.abs.hi}]), under a frequency-based replacement policy. Regenerating the later levels after a level-1 replacement attenuated the damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), below the \R{plan.h3practical}-point practical threshold used for planning and consistent with the model's training against corrupted levels; it does not show logical error correction. The candidate mask of the puzzle was linearly readable from the level-6 state above a permuted control, but only by \R{h1.est} in Brier loss ([\R{h1.fam.lo}, \R{h1.fam.hi}]), inside the registered equivalence range of $\pm$\R{plan.h1margin}, while the same label is almost exactly readable from the raw puzzle and better readable from its surface statistics. At the last level the readout matched the teacher state that encodes the solution; in an exploratory analysis it was not equivariant under the sampled Sudoku symmetries. The results locate a large sensitivity at the coarsest level, while the intermediate level-6 state exposes the puzzle's candidate structure to a linear readout only below the practical threshold; we report each result with the claims that do not follow from it.
+ \end{abstract}
+ 
+ \input{sections/introduction.tex}
+ \input{sections/background.tex}
+ \input{sections/setup.tex}
++\input{sections/summary.tex}
+ \input{sections/e1.tex}
+ \input{sections/e2.tex}
+ \input{sections/e3.tex}
+diff --git a/paper/preamble.tex b/paper/preamble.tex
+index 82c0898..3f5eaef 100644
+--- a/paper/preamble.tex
++++ b/paper/preamble.tex
+@@ -4,6 +4,7 @@
+ \usepackage{amssymb}
+ \usepackage{booktabs}
+ \usepackage{graphicx}
++\usepackage{adjustbox}
+ \usepackage{xcolor}
+ \usepackage[numbers]{natbib}
+ \usepackage{hyperref}
+diff --git a/paper/sections/appendix.tex b/paper/sections/appendix.tex
+index 6d8feec..e5c3ef7 100644
+--- a/paper/sections/appendix.tex
++++ b/paper/sections/appendix.tex
+@@ -1,35 +1,85 @@
+ \section{Supplementary material}
+ \label{sec:appendix}
+-% TODO Phase 2
+ 
+-\begin{table}[t]
++\subsection{Post-registration decisions}
++\label{sec:appendix-deviations}
++
++Every decision taken after the registration is logged with its date and reason in the project's decision log; Table~\ref{tab:deviations} lists those that bear on the reported analyses. None changes a hypothesis, a threshold, a sample size or the evaluation of a confirmatory contrast. Three are readings of details the protocol text left open, fixed in writing before the code freeze; one is an implementation defect that stopped the dry run and was fixed before any model ran on TEST; the last is the decision not to run the conditional causal study. The design changes made before the registration are described in Section~\ref{sec:setup-stats}.
++
++\begin{table}[ht]
+ \centering
+-\caption{\placeholder{Caption}}
+-\label{tab:e3-matrix}
++\caption{Post-registration decisions that bear on the reported analyses (identifiers of the project's decision log).}
++\label{tab:deviations}
+ \small
+-\input{generated/tables/e3_matrix.tex}
++\adjustbox{max width=\linewidth}{\input{generated/tables/deviations.tex}}
++\end{table}
++
++\subsection{Reproducibility}
++\label{sec:appendix-repro}
++
++The protocol is registered at OSF (\url{https://osf.io/m28fx}) and frozen in the repository (\placeholder{repository URL}) under the tag \texttt{prereg-v3.7}; the analysis code that produced every TEST output is frozen under the tag \texttt{wp2-code} (commit \texttt{\R{code.commit}}). Each confirmatory run records its code commit, environment and input hashes, and the evaluation refused to start unless every run record was valid at the tag commit. All tables, figures and numbers in this paper are generated by one script from the committed result files, and a check verifies that the generated files are current.
++
++\subsection{Full result tables}
++\label{sec:appendix-tables}
++
++The tables below are descriptive; the confirmatory contrasts are those of Table~\ref{tab:summary}. Table~\ref{tab:e3-matrix} gives every E3 probe and control at level 6 together with the level-12 teacher and the raw-input rows, Table~\ref{tab:levels} the whole-layer and per-cell probes by level, Table~\ref{tab:secondary} the registered secondary candidate-mask metrics, and Table~\ref{tab:depth} the depth breakdown with its sample sizes. Table~\ref{tab:e2-dose} gives the E2 solve shares and Table~\ref{tab:e2-diagnostics} the initial damage and format errors per level, policy and dose; Table~\ref{tab:equivariance} gives the exploratory equivariance result.
++
++\begin{table}[ht]
++\centering
++\caption{E3 probes and controls on the TEST puzzles (Brier loss of the nine candidate bits; lower is better). The relative difference is (Brier $-$ reference) / reference against the named reference probe. Construction: whole-layer (cell and its peers), per-cell, or input (raw puzzle, peer counts, surface features); the rule and the marginal predictor are label-free.}
++\label{tab:e3-matrix}
++\scriptsize
++\setlength{\tabcolsep}{2pt}
++\adjustbox{max width=\linewidth}{\input{generated/tables/e3_matrix.tex}}
+ \end{table}
+ 
+-\begin{table}[t]
++\begin{table}[ht]
+ \centering
+-\caption{\placeholder{Caption}}
++\caption{E3 Brier loss by level for the whole-layer and the per-cell probes and their permuted controls.}
++\label{tab:levels}
++\footnotesize
++\adjustbox{max width=\linewidth}{\input{generated/tables/levels.tex}}
++\end{table}
++
++\begin{table}[ht]
++\centering
++\caption{Registered secondary candidate-mask metrics on TEST, thresholded at \R{probe.threshold} where a threshold is needed. The positive label rate of the candidate bits is \R{sec.wl.posrate}\%. Mask exact: share of cells whose nine predicted bits all match. The naked-single F1 follows the definition in Table~\ref{tab:deviations}; the hidden-single F1 counts (unit, digit) items.}
++\label{tab:secondary}
++\scriptsize
++\setlength{\tabcolsep}{3pt}
++\adjustbox{max width=\linewidth}{\input{generated/tables/secondary.tex}}
++\end{table}
++
++\begin{table}[ht]
++\centering
++\caption{Level-6 Brier loss by inference depth (descriptive): number of cells and puzzles per stratum, positive label rate, and the primary probe, the per-cell probe and the two raw-input probes.}
++\label{tab:depth}
++\footnotesize
++\setlength{\tabcolsep}{3pt}
++\adjustbox{max width=\linewidth}{\input{generated/tables/depth.tex}}
++\end{table}
++
++\begin{table}[ht]
++\centering
++\caption{E2 solve shares by level, policy and dose (descriptive). Branch A: clean run; C: replaced codes with replayed later levels; D: replaced codes with regenerated later levels. Level~1 enumerates every alternative value, weighted by the policy (runs: eligible puzzles); the other levels use three intervention seeds per puzzle (runs: puzzle--seed pairs).}
+ \label{tab:e2-dose}
+-\small
+-\input{generated/tables/e2_dose.tex}
++\footnotesize
++\adjustbox{max width=\linewidth}{\input{generated/tables/e2_dose.tex}}
+ \end{table}
+ 
+-\begin{table}[t]
++\begin{table}[ht]
+ \centering
+-\caption{\placeholder{Caption}}
+-\label{tab:equivariance}
+-\small
+-\input{generated/tables/equivariance.tex}
++\caption{E2 diagnostics per configuration (descriptive): initial damage as the mean cell-wise total variation distance between the decoder outputs of C and A (median and upper quartile over runs; median over originally empty cells), the median relative latent distance of the final state, and the format-error shares of C and D.}
++\label{tab:e2-diagnostics}
++\scriptsize
++\setlength{\tabcolsep}{3pt}
++\adjustbox{max width=\linewidth}{\input{generated/tables/e2_diagnostics.tex}}
+ \end{table}
+ 
+-\begin{table}[t]
++\begin{table}[ht]
+ \centering
+-\caption{\placeholder{Caption}}
+-\label{tab:deviations}
+-\small
+-\input{generated/tables/deviations.tex}
++\caption{Exploratory level-12 equivariance: mean deviation between the readout of a transformed puzzle and the transformed readout of the original, share of puzzles whose deviation (averaged over their transformations) stays within the fixed tolerance of \R{plan.equivtol}, and Brier loss on transformed and original puzzles. Full group: elements of the whole symmetry group; the other rows use only digit permutations or only grid transformations.}
++\label{tab:equivariance}
++\footnotesize
++\adjustbox{max width=\linewidth}{\input{generated/tables/equivariance.tex}}
+ \end{table}
+diff --git a/paper/sections/discussion.tex b/paper/sections/discussion.tex
+index 9fe97c5..9e472b7 100644
+--- a/paper/sections/discussion.tex
++++ b/paper/sections/discussion.tex
+@@ -4,14 +4,14 @@
+ \subsection{Where the Sudoku logic shows up}
+ \label{sec:discussion-summary}
+ 
+-The three confirmatory results give a consistent, if partly negative, picture of one coarse-to-fine Sudoku generator. Errors are most costly at the coarsest level: one replaced level-1 code lowered the solve share by \R{h2.est.abs} percentage points relative to one replaced level-11 code, while levels 2 and 11 were practically indistinguishable. Generating the later levels anew attenuated the damage of a level-1 replacement, by a small amount (\R{h3.est} points) whose practical relevance is not established. At the intermediate level~6, the candidate mask, a shallow rule that is exactly computable from the input, was readable with a linear probe only slightly above an unrelated state and below the registered practical threshold. At the last level the readout was good, but no better than from the teacher state that encodes the solution, and it was not equivariant under Sudoku symmetries.
++The three confirmatory results give a consistent, if partly negative, picture of one coarse-to-fine Sudoku generator. Errors are most costly at the coarsest level: one replaced level-1 code lowered the solve share by \R{h2.est.abs} percentage points relative to one replaced level-11 code, while levels 2 and 11 were practically indistinguishable. Generating the later levels anew attenuated the damage of a level-1 replacement, by a small amount (\R{h3.est} points) whose practical relevance is not established. At the intermediate level~6, the candidate mask, a shallow rule that is exactly computable from the input, was linearly readable above an unrelated state, but only by a small margin, below the registered practical threshold, and less well than from simple surface statistics of the puzzle. At the last level the readout was good, but no better than from the teacher state that encodes the solution; in an exploratory analysis its per-cell predictions were not equivariant under the sampled Sudoku symmetries at the fixed tolerance.
+ 
+-Taken together, the results are consistent with a hierarchy in which a coarse level carries something the solution depends on, while the cell content becomes decodable only in the late levels (Section~\ref{sec:e1}); the candidate structure of the puzzle is not visible in linearly readable form part-way through. Each part of this picture is conditional on the checkpoint, the replacement policy, the probe family and its training budget. In particular, none of the results shows that the coarse code is a plan of a solving algorithm, that the model repairs logical errors, or that the intermediate state lacks candidate information that another readout could find.
++Taken together, the results are consistent with a hierarchy in which a coarse level carries something the solution depends on, while the final decoder recovers most of the cell content only from the late levels (Section~\ref{sec:e1}); part-way through, the candidate structure of the puzzle is linearly readable only weakly, below the practical threshold. Each part of this picture is conditional on the checkpoint, the replacement policy, the probe family and its training budget. In particular, none of the results shows that the coarse code is a plan of a solving algorithm, that the model repairs logical errors, or that the intermediate state lacks candidate information that another readout could find.
+ 
+ \subsection{Relation to prior work}
+ \label{sec:discussion-related}
+ 
+-Linear readouts of Sudoku candidates, and a causally verified circuit for naked singles, have been reported for an autoregressive transformer trained on solver traces \citep{kniazev2026linear}; in that work unit-level probes reached perfect exact match while per-cell candidate probes did not. In a hierarchical reasoning model, probe directions for Sudoku were decodable but not more causal than random directions \citep{rodrigues2026hrm}. Our setting differs in the object of study: a non-autoregressive generator whose intermediate states are built from discrete, level-indexed codes. In this setting the candidate mask was barely linearly readable at level~6, and the unit-level target was not readable from the generated level-6 state, while both were readable from the input. Whether the difference comes from the architecture, the training objective or the readout cannot be decided from one checkpoint. Generated NCM codes have also been reported to be largely non-canonical under re-encoding \citep{khoury2026roundtrip}, which is one reason why we report cell-level outcomes next to every code-level count; the compensation we measure is related to, and kept distinct from, self-repair within a single forward pass \citep{ahmad2026dose}. The probing methodology follows the control-task tradition \citep{hewitt2019control,belinkov2022probing}.
++Linear readouts of Sudoku candidates, and a causally verified circuit for naked singles, have been reported for an autoregressive transformer trained on solver traces \citep{kniazev2026linear}; in that work both per-cell candidate probes and unit-level digit-placement probes reached perfect exact match in the middle layers. In a hierarchical reasoning model, probe directions for Sudoku were decodable but not more causal than random directions \citep{rodrigues2026hrm}. Our setting differs in the object of study: a non-autoregressive generator whose intermediate states are built from discrete, level-indexed codes. In this setting the candidate mask was only weakly linearly readable at level~6, and our pooled readout of the unit-level target was at chance on the generated level-6 state, while both were readable from the input. Whether the difference comes from the architecture, the training objective or the readout cannot be decided from one checkpoint. Generated NCM codes have also been reported, in a preprint that is not peer reviewed, to be largely non-canonical under re-encoding \citep{khoury2026roundtrip}, which is one reason why we report cell-level outcomes next to every code-level count; the compensation we measure is related to, and kept distinct from, self-repair within a single forward pass \citep{ahmad2026dose}. Candidate-set evidence in other work on logic puzzles comes from forcing outputs and comparing top-ranked predictions with a solver rather than from a learned probe \citep{shah2024logic}. The probing methodology follows the control-task tradition \citep{hewitt2019control,belinkov2022probing}.
+ 
+ \subsection{Limitations}
+ \label{sec:discussion-limitations}
+@@ -22,10 +22,10 @@ Linear readouts of Sudoku candidates, and a causally verified circuit for naked
+ 
+ \paragraph{Trained robustness.} The checkpoint was trained with corruption of earlier levels \citep{kumbong2026ncm}, so the compensation in H3 is consistent with what training rewards and is not evidence of spontaneous error handling.
+ 
+-\paragraph{Readout capacity.} The E3 probes are linear, trained with a fixed budget on \R{ts.size.max} puzzles, and the training-size curve had not levelled off. A per-cell MLP did not improve on the linear probe, but other readouts, larger training sets or other representations (residual codes, transformer activations) were not tested. The permuted control also scored slightly worse than a label-free marginal predictor (\R{brier.wl.perm.L06} against \R{brier.marginal}), so $\theta_1$ is a gain over this control, not over a trivial predictor; the Brier loss of the generated state was lower than that of the marginal predictor by a similarly small amount.
++\paragraph{Readout capacity.} The E3 probes are linear, trained with a fixed budget on \R{ts.size.max} puzzles, and the training-size curve had not levelled off. A per-cell MLP improved on the linear probe only marginally, but other readouts, larger training sets or other representations (residual codes, transformer activations) were not tested. Surface statistics of the puzzle were read better than the level-6 state, and the permuted control scored slightly worse than a label-free marginal predictor (\R{brier.wl.perm.L06} against \R{brier.marginal}), so $\theta_1$ is a gain over this control, not over a trivial predictor; the Brier loss of the generated state was lower than that of the marginal predictor by a similarly small amount.
+ 
+ \paragraph{Teacher and generated states.} At level~12 the generated and the teacher state were read equally well, so the level-12 readability cannot be separated from solution content.
+ 
+-\paragraph{Post-registration decisions.} The primary H2 level was moved from level~2 to level~1 before the lock, on calibration data only, after a pilot showed that levels 2 to 11 barely affected the solve share; TEST was untouched. After the lock, one implementation defect was fixed before any TEST run, two analysis readings were fixed in writing, and the registered comparison of dose curves over a common damage range could not be computed because the TEST nodes did not cover the frozen range. Appendix~\ref{sec:appendix} lists every such decision.
++\paragraph{Design changes and post-registration decisions.} Three design choices were changed before the lock after pilot results on non-TEST data (Section~\ref{sec:setup-stats}); the H2 and H3 levels were moved to where the pilot had shown an effect. After the lock, no hypothesis, threshold or sample size changed; the remaining decisions are listed in Appendix~\ref{sec:appendix-deviations}, and the registered dose-curve comparison could not be computed because the TEST damage values did not cover the frozen range.
+ 
+ \paragraph{The causal study was not run.} The registered plan included a conditional targeted patching study (E4), to be run only if a reproducible, interpretable logical readout and acceptable equivariance were found on a separate selection set. Given the level-6 readout below the practical threshold and the non-equivariant level-12 readout, we judged the entry condition very unlikely to hold and dropped the study without generating its selection or test sets. The decision was made after seeing the TEST results of E3; it does not change any confirmatory result, but it means that no causal claim about the readout directions is made here.
+diff --git a/paper/sections/e1.tex b/paper/sections/e1.tex
+index 0ab2fde..1e75043 100644
+--- a/paper/sections/e1.tex
++++ b/paper/sections/e1.tex
+@@ -3,7 +3,7 @@
+ 
+ A failure of the full model can come from two places: the tokenizer, which maps a solved grid to codes and back, or the generator, which has to produce those codes from the puzzle alone. E1 separates the two on the \R{e1.n} TEST puzzles. For each puzzle we decode two code sequences: the teacher codes, obtained by encoding the reference solution, and the generated codes, produced from the puzzle. We report both with the official exact-match metric and with our own validator, which checks the rules, clue preservation and format independently of the reference solution (Table~\ref{tab:e1}).
+ 
+-Decoding the teacher codes reproduced the reference solution exactly for \R{e1.teacher}\% of the puzzles, so on this set the tokenizer adds no error, and every failure of the full model is a failure of generation. The generated codes solved \R{e1.solve}\% of the puzzles, the same share as the official metric (\R{e1.official}\%). Every generated output was well formed (\R{e1.wellformed}\%) and kept every clue (\R{e1.clues}\%); cell accuracy was \R{e1.cellacc}\% over all cells and \R{e1.cellacc.empty}\% over the originally empty cells, and a generated grid contained on average \R{e1.violations} rule violations. Teacher reconstruction is not an upper bound on generation in general: a code sequence that differs from the teacher codes can still decode to a correct grid, and a differing code is not by itself a logical error.
++Decoding the teacher codes reproduced the reference solution exactly for \R{e1.teacher}\% of the puzzles, so on this set the tokenizer adds no error, and every failure of the full model is a failure of generation. The generated codes solved \R{e1.solve}\% of the puzzles, the same share as the official metric (\R{e1.official}\%). Every generated output was well formed (\R{e1.wellformed}\%) and kept every clue (\R{e1.clues}\%); cell accuracy was \R{e1.cellacc}\% over all cells and \R{e1.cellacc.empty}\% over the originally empty cells, and a generated grid contained on average \R{e1.violations} rule violations. Teacher reconstruction is not an upper bound on generation in general: a code sequence that differs from the teacher codes can still decode to a correct grid, and a differing code is not by itself a logical error. On the \R{rel.n} released hard puzzles, analysed before the registration and reported as a secondary, non-confirmatory stratum, teacher decoding was exact for \R{rel.teacher}\% and generation solved \R{rel.solve}\%.
+ 
+ Figure~\ref{fig:e1-levels} follows the two code sequences through the hierarchy. The share of generated codes equal to the teacher codes was \R{e1.lv1.agree}\% at level~1 and \R{e1.lv12.agree}\% at level~\R{model.levels}, without a monotone trend in between. Decoding the full-length cumulative state after each level with the final decoder gave a cell accuracy of \R{e1.lv1.cellacc}\% at level~1, \R{e1.lv11.cellacc}\% at level~11 and \R{e1.cellacc}\% after the last level; no partial state before the last level decoded to a solved grid. These curves describe what the final decoder reads from a partial state. They do not show what information the earlier levels carry in another form, which is the question of E3 (Section~\ref{sec:e3}).
+ 
+@@ -12,7 +12,7 @@ Figure~\ref{fig:e1-levels} follows the two code sequences through the hierarchy.
+ \caption{E1 on the TEST puzzles: generated output, official metric and teacher reconstruction. Hamming distances are the mean share of tokens or cells in which the generated output differs from the teacher reconstruction.}
+ \label{tab:e1}
+ \small
+-\input{generated/tables/e1.tex}
++\adjustbox{max width=\linewidth}{\input{generated/tables/e1.tex}}
+ \end{table}
+ 
+ \begin{figure}[t]
+diff --git a/paper/sections/e2.tex b/paper/sections/e2.tex
+index 214cec1..199e6d4 100644
+--- a/paper/sections/e2.tex
++++ b/paper/sections/e2.tex
+@@ -6,11 +6,13 @@
+ 
+ E2 asks how strongly the solve outcome depends on a single code at different levels, and whether generating the later levels after an intervention makes up for part of the damage. For each puzzle we record the clean run and then compare four branches that share every code before the intervention level. Branch A replays the clean codes. Branch B restarts generation after the intervention level without changing anything (a sham restart; in a deterministic run B must equal A). Branch C replaces codes at the intervention level and replays the original later levels, so it measures the direct effect of the replacement on decoding. Branch D makes the same replacement and generates the later levels anew, so it measures the total effect, including any adaptation of the later levels.
+ 
+-The primary edit is a single code replacement. A replacement value is drawn from the level's generated code frequencies estimated on the calibration set, excluding the original value (frequency policy); a uniform choice among the other values is the secondary policy. Level~1 has a single code, so instead of sampling we run all alternative values and weight them by their calibration frequencies, which gives the exact expectation over the policy. At the other levels one position and one value are drawn, with three intervention seeds per puzzle and dose. The two primary contrasts are
++The primary edit is a single code replacement. A replacement value is drawn from the level's generated code frequencies estimated on the calibration set, excluding the original value (frequency policy); a uniform choice among the other values is the secondary policy. Level~1 has a single code, so instead of sampling we run all alternative values and weight them by their calibration frequencies, which gives the exact expectation over the policy. At the other levels one position and one value are drawn, with three intervention seeds per puzzle and dose. For every replacement we also record its initial damage: the mean over all cells of the total variation distance between the decoder's output distributions in branches C and A, a continuous measure of how much the replacement changes the decoded output before any regeneration. The two primary contrasts are
+ \[
+ \theta_2 = \mathbb{E}\bigl[(Y_{D,1}-Y_A)-(Y_{D,11}-Y_A)\bigr],
+-\qquad
+-\theta_{\mathrm{comp}} = \mathbb{E}\bigl[(Y_D-Y_C)-(Y_B-Y_A)\bigr]\ \text{at level 1},
++\]
++and, at level~1,
++\[
++\theta_{\mathrm{comp}} = \mathbb{E}\bigl[(Y_D-Y_C)-(Y_B-Y_A)\bigr],
+ \]
+ where $Y$ is the binary solve outcome of a branch. A negative $\theta_2$ (H2) means that one replaced code costs more at level~1 than at level~11; a positive $\theta_{\mathrm{comp}}$ (H3) means that regenerating the later levels leaves the puzzle solved more often than replaying them, corrected for the sham restart. One code at each level is an equal number of discrete edits, not an equal semantic change. Level~1 is also architecturally distinct: its single code passes through a learned upsampler, so replacing it changes the whole level-1 state.
+ 
+@@ -33,12 +35,12 @@ NCM training corrupts earlier levels \citep{kumbong2026ncm}, so a positive compe
+ \subsection{Levels 2 and 11, doses and propagation}
+ \label{sec:e2-secondary}
+ 
+-A single replacement at level~2 and at level~11 gave practically the same solve outcome: the difference was \R{theta2p.est} points, and because only \R{theta2p.nnz} puzzles had a nonzero difference, the registered rare-event bound replaced the bootstrap, giving [\R{theta2p.tost.lo}, \R{theta2p.tost.hi}], inside the equivalence range of $\pm$\R{plan.theta2pmargin} points. This supports the absence of a practically relevant difference between levels 2 and 11 under the frequency policy; it does not show that level~2 carries no information or has no causal role.
++A single replacement at level~2 and at level~11 gave practically the same solve outcome: the difference was \R{theta2p.est} points, and because only \R{theta2p.nnz} puzzles had a nonzero difference, the registered rare-event bound replaced the bootstrap: at the one-sided \R{level.ci95}\% level the difference lies within [\R{theta2p.tost.lo}, \R{theta2p.tost.hi}], inside the equivalence range of $\pm$\R{plan.theta2pmargin} points. This supports the absence of a practically relevant difference between levels 2 and 11 under the frequency policy; it does not show that level~2 carries no information or has no causal role.
+ 
+ The dose curves (Figure~\ref{fig:dose-curves}; Table~\ref{tab:e2-dose}) are descriptive and carry no inference. At level~6, replacing codes and replaying the later levels (C) left the solve share at the baseline for every dose under both policies, whereas generating the later levels anew (D) lowered it, to \R{e2.cfg.L06.frequency.d13.D}\% when every level-6 code was replaced under the frequency policy.
+-At level~11 both branches declined with the dose, to \R{e2.cfg.L11.frequency.d67.C}\% (C) and \R{e2.cfg.L11.frequency.d67.D}\% (D) when every level-11 code was replaced under the frequency policy. The registered comparison of dose curves over a common damage range could not be computed: the TEST nodes did not cover the range frozen on the calibration set for levels 6 and 11, and no range had been frozen for levels 2 and 11. This is the pre-specified outcome, not a failure of the run.
++At level~11 both branches declined with the dose, to \R{e2.cfg.L11.frequency.d67.C}\% (C) and \R{e2.cfg.L11.frequency.d67.D}\% (D) when every level-11 code was replaced under the frequency policy. The registered comparison of dose curves plots, for each dose of a level, the mean solve change of D against the mean initial damage, and compares the areas under two such curves over a damage range frozen on the calibration set. It could not be computed: the mean damages of the TEST doses did not cover the frozen range for levels 6 and 11, and no range had been frozen for levels 2 and 11. This is a pre-specified outcome, not a failure of the run. Under the generator's own distribution, the original level-1 code had a median probability of \R{e2.l1.frequency.porig.med} and the frequency-policy replacement \R{e2.l1.frequency.pnew.med}, so the replacements are values the model itself would rarely produce; Table~\ref{tab:e2-diagnostics} gives the damage, latent distance and format errors per configuration.
+ 
+-Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels of branch D. A level-1 replacement changed on average \R{e2.prop.level1-frequency.L11} codes at level~11 under the frequency policy; replacing all level-6 codes changed \R{e2.prop.L06-frequency-d13.L11}. For the level-1 replacement, the distance of the cumulative state from the clean run was largest at the first levels and decreased towards the last level in both C and D. Full state tensors were not saved; these distances and the intermediate decodings exist only for the primary configurations (Appendix~\ref{sec:appendix}).
++Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels of branch D. A level-1 replacement changed on average \R{e2.prop.level1-frequency.L11} codes at level~11 under the frequency policy; replacing all level-6 codes changed \R{e2.prop.L06-frequency-d13.L11}. The right panel shows the distance of the cumulative state from the clean run relative to the norm of the clean state. In branch C the absolute difference is the same at every level, because the later levels are replayed and each level adds its own term, so the falling relative distance only reflects the growing clean state. In branch D the relative distance ended slightly above that of C, although D solved more puzzles. Full state tensors were not saved: the cumulative-state distances and intermediate decodings exist for the level-1 enumeration under both policies and for the single level-11 replacement, and the per-cell change maps recorded for every configuration are not shown here (Appendix~\ref{sec:appendix-deviations}).
+ 
+ \begin{figure}[t]
+ \centering
+@@ -57,6 +59,6 @@ Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels
+ \begin{figure}[t]
+ \centering
+ \includegraphics[width=\linewidth]{generated/figures/propagation.pdf}
+-\caption{E2 propagation (descriptive). Left: mean number of codes changed at each later level of branch D, per configuration. Right: distance of the cumulative state from the clean run after each level, branches C (dashed) and D (solid), for the primary configurations.}
++\caption{E2 propagation (descriptive). Left: mean number of codes changed at each later level of branch D, per configuration. Right: distance of the cumulative state from the clean run after each level, relative to the norm of the clean state, branches C (dashed) and D (solid), for the configurations with saved states.}
+ \label{fig:propagation}
+ \end{figure}
+diff --git a/paper/sections/e3.tex b/paper/sections/e3.tex
+index 468b27e..e49bdca 100644
+--- a/paper/sections/e3.tex
++++ b/paper/sections/e3.tex
+@@ -6,41 +6,36 @@
+ 
+ E3 asks whether the candidate mask of the puzzle can be read from the generated representation part-way through the hierarchy. The primary representation is the full-length cumulative state after level~6 of the generated codes. Level~6 is a capacity choice made before the lock: the cumulative state after level~2 is built from three codes and cannot hold a full candidate mask, whereas the level-6 state is built from many more codes; neither bound predicts readability.
+ 
+-All probes are linear, shared across cells, with nine sigmoid outputs, trained on PROBE-TRAIN, selected on PROBE-VAL and scored once on TEST, with three training seeds and a fixed grid of regularization settings. The primary H1 probe reads a cell together with its \R{model.peers} row, column and box peers: their states are projected on a whitened principal-component basis fitted on PROBE-TRAIN, and the cell's own state and position are appended. This cell-relative whole-layer probe replaced a per-cell probe before the lock, because levels below 12 reach the cell positions only by interpolation; the per-cell probe is kept as a secondary analysis. The metric is the Brier loss of the nine candidate bits, averaged per cell, then per puzzle over the originally empty cells, then over puzzles.
++The primary probes are linear, shared across cells, with nine sigmoid outputs; MLP probes appear only as secondary capacity checks. Every probe is trained on PROBE-TRAIN with binary cross-entropy and AdamW, over a fixed grid of five weight-decay values and two learning rates, with three training seeds. Each run trains for at least the larger of \R{probe.epochs} epochs and \R{probe.minsteps} optimizer steps at batch size \R{probe.batch}, with early stopping on the PROBE-VAL Brier loss; the configuration with the lowest mean PROBE-VAL Brier over the seeds is selected, and the three selected seed probes are scored once on TEST. Wherever a configuration had been selected before the lock, the confirmatory run selected the same one. The primary H1 probe reads a cell together with its \R{model.peers} row, column and box peers: their states are projected on a whitened principal-component basis with \R{model.dim} components fitted on the empty cells of PROBE-TRAIN, and the cell's own state and position are appended. This cell-relative whole-layer probe replaced a per-cell probe before the lock (Section~\ref{sec:setup-stats}); the per-cell probe is kept as a secondary analysis. The metric is the Brier loss of the nine candidate bits, averaged per cell, then per puzzle over the originally empty cells, then over puzzles; each probe's per-puzzle Brier loss is the mean over its three seeds.
+ 
+ The primary contrast is
+ \[
+ \theta_1 = \mathbb{E}\bigl[B_{\mathrm{permuted}} - B_{\mathrm{generated}}\bigr],
+ \]
+-where $B_{\mathrm{permuted}}$ is the Brier loss of the same probe construction retrained on representations paired with the labels of other puzzles. A positive $\theta_1$ means the generated state predicts the puzzle's own candidates better than an unrelated state does. H1 has two registered readings from the same estimate: a nonzero effect when the \R{level.family}\% family interval excludes zero, and practical equivalence, readability below the threshold of \R{plan.h1margin} in Brier loss, when the \R{level.tost}\% interval lies inside $\pm$\R{plan.h1margin}. Both can hold at once.
++where $B_{\mathrm{permuted}}$ is the Brier loss of the same probe construction retrained on representations paired with the labels of other puzzles. A positive $\theta_1$ means the generated state predicts the puzzle's own candidates better than an unrelated state does. H1 has two registered readings from the same estimate: a nonzero effect when the \R{level.family}\% family interval excludes zero, and practical equivalence, readability below the threshold of \R{plan.h1margin} in Brier loss, when the \R{level.tost}\% interval lies inside $\pm$\R{plan.h1margin}. Both can hold at once. Intervals resample TEST puzzles and are conditional on the fixed training data and fitted probes; the variation across training seeds is reported separately.
+ 
+ \subsection{Level-6 readability (H1)}
+ \label{sec:e3-h1}
+ 
+-The level-6 probe reached a Brier loss of \R{brier.wl.gen.L06}, the permuted control \R{brier.wl.perm.L06}. The primary contrast was $\theta_1 = \R{h1.est}$ with a family interval of [\R{h1.fam.lo}, \R{h1.fam.hi}], a relative improvement of \R{h1.relimp}\% over the control; the \R{level.tost}\% interval, [\R{h1.tost.lo}, \R{h1.tost.hi}], lies inside $\pm$\R{plan.h1margin} (Table~\ref{tab:primary}; Figure~\ref{fig:e3-readability}, right). Both registered readings hold: the candidate mask is readable from the level-6 state above the permuted control, but by less than the practical threshold, with the examined probe family and training budget. This does not show that the representation computes candidates, nor that it carries no candidate information; another readout might do better.
++The level-6 probe reached a Brier loss of \R{brier.wl.gen.L06}, the permuted control \R{brier.wl.perm.L06}. The primary contrast was $\theta_1 = \R{h1.est}$ with a family interval of [\R{h1.fam.lo}, \R{h1.fam.hi}], a relative improvement of \R{h1.relimp}\% over the control; the \R{level.tost}\% interval, [\R{h1.tost.lo}, \R{h1.tost.hi}], lies inside $\pm$\R{plan.h1margin} (Tables~\ref{tab:summary} and~\ref{tab:readings}; Figure~\ref{fig:e3-readability}, right). The estimate was stable across training seeds (\R{h1.seed0}, \R{h1.seed1} and \R{h1.seed2}). Both registered readings hold: the candidate mask is readable from the level-6 state above the permuted control, but by less than the practical threshold, with the examined probe family and training budget. This does not show that the representation computes candidates, nor that it carries no candidate information; another readout might do better.
+ 
+-The controls bound this result from both sides (Table~\ref{tab:e3-matrix}). A probe on random features of the same width reached \R{brier.wl.random}, and a probe trained on permuted labels \R{brier.wl.labelperm}; a label-free predictor that outputs the marginal candidate rate reached \R{brier.marginal}. The same construction on the teacher's level-6 state, computed from the solution rather than the puzzle, gave \R{brier.teacher.L06}, practically equal to the generated state. In contrast, the candidate mask is almost exactly readable from the puzzle itself: a linear probe on the raw input reached \R{brier.raw.proj} (projected) and \R{brier.raw.unproj} (unprojected), a small MLP on the raw input and the exact rule both reached \R{brier.rule}, and linear probes on peer digit counts \R{brier.peercounts}. The label is therefore directly accessible from the input, and the level-6 state carries far less of it in linearly readable form than the input does; this does not mean that the latent space contains no logical information.
++The controls place this result (Table~\ref{tab:e3-matrix}). A probe on random features of the same width reached \R{brier.wl.random}, and a probe trained on permuted labels \R{brier.wl.labelperm}; a label-free predictor that outputs the marginal candidate rate reached \R{brier.marginal}. A linear probe on surface features of the puzzle alone (clue count, clue digit frequencies and cell position) reached \R{brier.surface}, better than the level-6 generated state. The same construction on the teacher's level-6 state, computed from the solution rather than the puzzle, gave a similar observed Brier loss (\R{brier.teacher.L06}). The candidate mask is almost exactly readable from the puzzle itself: a linear probe on the raw input reached \R{brier.raw.proj} (projected) and \R{brier.raw.unproj} (unprojected), a small MLP on the raw input \R{brier.raw.mlp}, linear probes on peer digit counts \R{brier.peercounts}, and the exact rule is exact by construction. The label is therefore directly accessible from the input, and the level-6 state carries much less of it in linearly readable form than the input, or even its surface statistics, do; this does not mean that the latent space contains no logical information.
+ 
+-The per-cell probe gave a similarly small effect ($\theta_1 = \R{theta1.pc.L06.est}$, \R{level.ci95}\% interval [\R{theta1.pc.L06.ci.lo}, \R{theta1.pc.L06.ci.hi}]), and a per-cell MLP did not improve on the linear probe (\R{brier.pc.mlp.L06} against \R{brier.pc.lin.L06}). The training-size curve of the primary probe was still falling at the largest size, from \R{ts.wl.n125} with \R{ts.size.min} training puzzles to \R{ts.wl.n2000} with \R{ts.size.max}
+-(Figure~\ref{fig:e3-supporting}, left), so a larger training set might read somewhat more. By inference depth (Figure~\ref{fig:e3-supporting}, right), the Brier loss rose from \R{depth.wl.d1} for cells filled in the first solver wave to \R{depth.wl.d4} for cells filled in wave 4 or later; the positive label rate rose with depth as well, from \R{depth.pos.d1}\% to \R{depth.pos.d4}\%, so the depth breakdown is descriptive and does not indicate a deeper algorithm.
++The registered secondary metrics agree (Table~\ref{tab:secondary}): at the fixed threshold of \R{probe.threshold}, the primary probe reached a macro F1 of \R{sec.wl.f1} and a naked-single F1 of \R{sec.wl.naked}, against \R{sec.raw.f1} macro F1 for the projected raw-input probe; its macro PR-AUC was \R{sec.wl.prauc} at a positive label rate of \R{sec.wl.posrate}\%. The per-cell probe gave a similarly small effect ($\theta_1 = \R{theta1.pc.L06.est}$, \R{level.ci95}\% interval [\R{theta1.pc.L06.ci.lo}, \R{theta1.pc.L06.ci.hi}]), and a per-cell MLP improved on the linear probe only marginally (\R{brier.pc.mlp.L06} against \R{brier.pc.lin.L06}). The training-size curve of the primary probe was still falling at the largest size, from \R{ts.wl.n125} with \R{ts.size.min} training puzzles to \R{ts.wl.n2000} with \R{ts.size.max} (Figure~\ref{fig:e3-supporting}, left), so a larger training set might read somewhat more.
++
++By inference depth (Figure~\ref{fig:e3-supporting}, right; Table~\ref{tab:depth}), the Brier loss of the primary probe rose from \R{depth.wl.d1} for cells filled in the first solver wave to \R{depth.wl.d4} for cells filled in wave 4 or later, and was \R{depth.wl.stuck} for the \R{depth.n.stuck} cells, in \R{depth.np.stuck} puzzles, that the rules never fill. The positive label rate rose with depth as well, from \R{depth.pos.d1}\% to \R{depth.pos.d4}\%, while the projected raw-input probe stayed near \R{depth.raw.d1} in every stratum. The depth breakdown is descriptive; the differing label rates and sample sizes do not allow inferring a deeper algorithm.
+ 
+ \subsection{Levels 2 and 12}
+ \label{sec:e3-levels}
+ 
+-At level~2 the whole-layer probe gave $\theta_1 = \R{theta1.wl.L02.est}$. At level~12 the candidate mask was clearly readable ($\theta_1 = \R{theta1.wl.L12.est}$, \R{level.ci95}\% interval [\R{theta1.wl.L12.ci.lo}, \R{theta1.wl.L12.ci.hi}]), but the teacher's level-12 state, which encodes the solution, was read equally well: the difference teacher minus generated was \R{thetaT.est}, with a \R{level.thetaTtost}\% interval of [\R{thetaT.tost.lo}, \R{thetaT.tost.hi}] inside $\pm$\R{plan.thetaTmargin}. The level-12 readability is therefore consistent with solution content; it does not show that the generated representation computes candidates or encodes inference steps. A unit-level target (whether a digit is already placed in a row, column or box) was not readable from the generated level-6 state (ROC-AUC \R{unit.gen.auc}) but perfectly from the raw input (\R{unit.raw.auc}).
++At level~2 the whole-layer probe gave $\theta_1 = \R{theta1.wl.L02.est}$ (\R{level.ci95}\% interval [\R{theta1.wl.L02.ci.lo}, \R{theta1.wl.L02.ci.hi}]; Table~\ref{tab:levels}). At level~12 the candidate mask was clearly readable ($\theta_1 = \R{theta1.wl.L12.est}$, \R{level.ci95}\% interval [\R{theta1.wl.L12.ci.lo}, \R{theta1.wl.L12.ci.hi}]), but the teacher's level-12 state, which encodes the solution, was read equally well: the difference teacher minus generated was \R{thetaT.est}, with a \R{level.thetaTtost}\% interval of [\R{thetaT.tost.lo}, \R{thetaT.tost.hi}] inside $\pm$\R{plan.thetaTmargin}. The level-12 readability is therefore consistent with solution content; it does not show that the generated representation computes candidates or encodes inference steps.
++
++A secondary unit-level target, whether a digit is already placed in a given row, column or box, was read from the mean of the unit's nine cell states. From the generated level-6 state its ROC-AUC was \R{unit.gen.auc}, at chance, with exact match for \R{unit.gen.exact}\% of units; from the raw input the ranking was perfect (ROC-AUC \R{unit.raw.auc}) while exact match at the fixed threshold reached \R{unit.raw.exact}\%. The pooled readout is our own construction and is not the single-position readout of prior work on this target \citep{kniazev2026linear}.
+ 
+ \subsection{Equivariance of the level-12 readout (exploratory)}
+ \label{sec:e3-equiv}
+ 
+-We applied Sudoku symmetries (digit permutations and grid transformations) to \R{equiv.n} TEST puzzles, ran the model on the transformed puzzles and compared the level-12 readout with the transformed readout of the original. Accuracy was unchanged (Brier \R{equiv.brier.trans} on transformed against \R{equiv.brier.orig} on original puzzles), but the per-cell predictions moved: the mean deviation was \R{equiv.dev.all}, against a tolerance of \R{plan.equivtol} fixed from seed noise before the lock, and none of the transformed puzzles stayed within it (Table~\ref{tab:equivariance}). This analysis is exploratory and has no registered criterion. It shows that per-cell predictions change under symmetry while accuracy does not; it does not show that the model lacks symmetry-consistent representations in general.
+-
+-\begin{table}[t]
+-\centering
+-\caption{Primary contrasts with the registered interpretation. Estimates are differences in Brier loss (H1) or in solve share, in percentage points (H2, H3); intervals are the \R{level.family}\% family interval and the individual \R{level.ci95}\% interval.}
+-\label{tab:primary}
+-\small
+-\input{generated/tables/primary.tex}
+-\end{table}
++We applied Sudoku symmetries to \R{equiv.n} TEST puzzles (for each puzzle, several elements of the full symmetry group plus elements that only permute digits or only transform the grid), ran the model on the transformed puzzles and compared the level-12 readout with the transformed readout of the original. The Brier losses on transformed and original puzzles were similar (\R{equiv.brier.trans} and \R{equiv.brier.orig}), but the per-cell predictions moved: the mean deviation under the full group was \R{equiv.dev.all}, against a tolerance of \R{plan.equivtol} fixed from seed noise before the lock (the corresponding seed noise on TEST was \R{equiv.seednoise}), and for none of the puzzles did the deviation, averaged over its transformations, stay within the tolerance (Table~\ref{tab:equivariance}). This analysis is exploratory and has no registered criterion. It shows that, for the sampled transformations and this tolerance, per-cell predictions change under symmetry while the observed Brier loss does not; it does not show that the model lacks symmetry-consistent representations in general.
+ 
+ \begin{figure}[t]
+ \centering
+@@ -52,6 +47,6 @@ We applied Sudoku symmetries (digit permutations and grid transformations) to \R
+ \begin{figure}[t]
+ \centering
+ \includegraphics[width=\linewidth]{generated/figures/e3_supporting.pdf}
+-\caption{E3 supporting analyses (descriptive). Left: Brier loss against the number of training puzzles for the whole-layer (primary) and the per-cell probe. Right: Brier loss at level 6 by inference depth; label rates differ between depth strata.}
++\caption{E3 supporting analyses (descriptive). Left: Brier loss against the number of training puzzles for the whole-layer (primary) and the per-cell probe. Right: Brier loss at level 6 by inference depth; label rates and sample sizes differ between depth strata (Table~\ref{tab:depth}).}
+ \label{fig:e3-supporting}
+ \end{figure}
+diff --git a/paper/sections/introduction.tex b/paper/sections/introduction.tex
+index 5eb53dd..3042500 100644
+--- a/paper/sections/introduction.tex
++++ b/paper/sections/introduction.tex
+@@ -3,7 +3,7 @@
+ 
+ Next-Concept Modeling (NCM) generates its output coarse to fine: a short sequence of discrete codes at the first level is refined by longer code sequences at each later level, and a decoder maps the accumulated state to the output \citep{kumbong2026ncm}. On Sudoku, a released NCM checkpoint solves most hard puzzles. This invites a question that is easy to ask and hard to answer cleanly: where in such a hierarchy does the logic of the puzzle show up? Do the coarse levels matter more than the fine ones, does the model make up for a damaged early level, and is the logical state of the puzzle readable from an intermediate level?
+ 
+-We answer three narrow versions of these questions with a preregistered, confirmatory study on one checkpoint. The study separates the levels of evidence: what the final output is sensitive to, what can be read from an intermediate state, and, as a planned but conditional step, what a targeted intervention changes. None of these on its own would show an explicit search, a human solving strategy or an algorithmic plan, and we state each result together with the claims that do not follow from it.
++We answer three narrow versions of these questions with a preregistered, confirmatory study on one checkpoint. The study separates the levels of evidence: what the final output is sensitive to, what can be read from an intermediate state, and, as a planned but conditional step, what a targeted intervention changes; that last step was not run (Section~\ref{sec:discussion-limitations}). None of these on its own would show an explicit search, a human solving strategy or an algorithmic plan, and we state each result together with the claims that do not follow from it.
+ 
+ \paragraph{Questions and hypotheses.}
+ \begin{itemize}
+@@ -13,7 +13,7 @@ We answer three narrow versions of these questions with a preregistered, confirm
+ \end{itemize}
+ A descriptive study (E1) first separates errors of the tokenizer from errors of generation. The candidate mask is a deterministic function of the puzzle, so H1 asks how accessible this information is to a given probe, not whether the model holds more information than its input.
+ 
+-\paragraph{Findings.} The tokenizer reconstructed every TEST solution, so all failures came from generation. One replaced level-1 code lowered the solve share by \R{h2.est.abs} percentage points more than one replaced level-11 code (family interval [\R{h2.fam.lo}, \R{h2.fam.hi}]), under a frequency-based replacement policy. Generating the later levels anew attenuated this damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), an effect whose practical relevance is not established and which is consistent with the checkpoint's training against corrupted levels. The candidate mask was readable from the level-6 state above a permuted control, but by \R{h1.est} in Brier loss ([\R{h1.fam.lo}, \R{h1.fam.hi}]), inside the registered practical threshold of \R{plan.h1margin}, while the same information is almost exactly readable from the raw puzzle. At the last level the readout was good but matched the teacher state that encodes the solution, and it was not equivariant under Sudoku symmetries.
++\paragraph{Findings.} The tokenizer reconstructed every TEST solution, so all failures came from generation. One replaced level-1 code lowered the solve share by \R{h2.est.abs} percentage points more than one replaced level-11 code (family interval [\R{h2.fam.abs.lo}, \R{h2.fam.abs.hi}] points), under a frequency-based replacement policy. Generating the later levels anew attenuated this damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), below the practical threshold of \R{plan.h3practical} points used for planning, so its practical relevance is not established; the effect is consistent with the checkpoint's training against corrupted levels. The candidate mask was readable from the level-6 state above a permuted control, but by \R{h1.est} in Brier loss ([\R{h1.fam.lo}, \R{h1.fam.hi}]), inside the registered equivalence range of $\pm$\R{plan.h1margin}, while the same information is almost exactly readable from the raw puzzle and better readable from its surface statistics. At the last level the readout was good but matched the teacher state that encodes the solution; in an exploratory analysis, its per-cell predictions were not equivariant under the sampled Sudoku symmetries.
+ 
+ \paragraph{Contributions.}
+ \begin{itemize}
+@@ -22,4 +22,4 @@ A descriptive study (E1) first separates errors of the tokenizer from errors of
+ \item A probe design with a full control matrix (permuted, random-feature, label-permutation, teacher and raw-input controls), and the analysis code, frozen at a git tag before the confirmatory runs; every number in this paper is generated from the committed result files.
+ \end{itemize}
+ 
+-Section~\ref{sec:background} introduces NCM and the logical labels, Section~\ref{sec:setup} the data, the preregistration and the statistical plan. Sections~\ref{sec:e1} to~\ref{sec:e3} report E1, E2 and E3, and Section~\ref{sec:discussion} discusses the results and their limitations.
++Section~\ref{sec:background} introduces NCM and the logical labels, Section~\ref{sec:setup} the data, the preregistration and the statistical plan, and Section~\ref{sec:summary} summarizes the confirmatory results. Sections~\ref{sec:e1} to~\ref{sec:e3} report E1, E2 and E3 (the hypotheses keep their registered labels), and Section~\ref{sec:discussion} discusses the results and their limitations.
+diff --git a/paper/sections/setup.tex b/paper/sections/setup.tex
+index 82948f1..fd8e73f 100644
+--- a/paper/sections/setup.tex
++++ b/paper/sections/setup.tex
+@@ -6,14 +6,14 @@
+ 
+ We study the released Sudoku-hard checkpoint of Next-Concept Modeling (NCM) \citep{kumbong2026ncm}, run with the upstream code at a pinned commit and never retrained or modified. NCM represents a completed grid as a hierarchy of \R{model.levels} levels of discrete codes, each drawn from a codebook of \R{model.codes} entries. The number of codes grows from a single code at level~1 to \R{model.tokens} at level~\R{model.levels}, the length of the output token sequence, and each code is embedded in \R{model.dim} dimensions. The generator produces the levels in order, coarse to fine, conditioned on the puzzle; the decoder maps the cumulative state of all levels to the solution grid. The released configuration decodes greedily, so generation is deterministic.
+ 
+-All runs use single-precision (FP32) floating point, eager execution and deterministic algorithms on a CPU. This differs from the published evaluation, which runs on GPUs. Before any analysis we reproduced the published result on the \R{g0.n} released hard puzzles (G0): the official exact-match metric gave \R{g0.official}\% against the published \R{g0.published}\%, inside the pre-specified tolerance of $\pm$\R{g0.tol} percentage points. The intervention path passed identity checks that are required to hold exactly: with interventions disabled the output is unchanged, writing back the model's own code at any level changes nothing, and saved cumulative states are not overwritten by later levels. Our own validator, which checks rules, clue preservation and format independently of the reference solution, gave a solve share of \R{g0.own}\% on the same puzzles.
++All runs use single-precision (FP32) floating point, eager execution and deterministic algorithms on a CPU. The published evaluation also runs in FP32 and eager mode; the only planned difference is the device, CPU instead of GPU kernels. Before any analysis we reproduced the published result on the \R{g0.n} released hard puzzles (G0): the official exact-match metric gave \R{g0.official}\% against the published \R{g0.published}\%, inside the pre-specified tolerance of $\pm$\R{g0.tol} percentage points. The intervention path passed identity checks that are required to hold exactly: with interventions disabled the output is unchanged, writing back the model's own code at any level changes nothing, and saved cumulative states are not overwritten by later levels. Our own validator, which checks rules, clue preservation and format independently of the reference solution, gave a solve share of \R{g0.own}\% on the same puzzles.
+ 
+ \subsection{Puzzles and data splits}
+ \label{sec:setup-data}
+ 
+ Except for the reproduction, every puzzle comes from our own generator, written from scratch: a complete grid is drawn by randomized backtracking, and clues are removed one at a time in random order as long as the solution stays unique, until exactly \R{data.clues} clues remain, the clue count of the released hard set. The generator was frozen before any analysis subset was drawn, and a single terminal distribution check compared one fresh batch of \R{gate.n} puzzles with the released set. Without the model, the distribution of solver depth differed by a total variation distance of \R{gate.tvd} (threshold \R{gate.tvd.thr}). With the model, the solve share on the fresh batch was \R{gate.fresh}\% against \R{gate.bench}\% on the released set; the \R{gate.ci.level}\% interval of the difference, [\R{gate.ci.lo}, \R{gate.ci.hi}] percentage points, lay inside the pre-specified equivalence range of $\pm$\R{gate.margin} points. The check does not show that the fresh puzzles follow the unreleased training distribution of the checkpoint; it shows that they are not harder or easier for the model than the released evaluation set by more than the stated range.
+ 
+-Separate seed ranges produce separate subsets: a calibration set for pilots and sample-size planning, \R{probe.train} puzzles for training probes (PROBE-TRAIN), \R{probe.val} for model selection (PROBE-VAL), and \R{n.test} confirmatory TEST puzzles. Every subset was screened for exact duplicates and for symmetry-equivalent puzzles across subsets. TEST was generated at the preregistration lock and used only for the runs reported here. Two further seed ranges, reserved for the conditional causal study (Section~\ref{sec:discussion}), were never used.
++Separate seed ranges produce separate subsets: a calibration set for pilots and sample-size planning, \R{probe.train} puzzles for training probes (PROBE-TRAIN), \R{probe.val} for model selection (PROBE-VAL), and \R{n.test} confirmatory TEST puzzles. Every subset was screened for exact duplicates and for symmetry-equivalent puzzles across subsets. TEST was generated during the preparation of the preregistration, without running the model on it, and its puzzle identities and hashes were fixed in the registration; it was used only for the runs reported here. Two further seed ranges, reserved for the conditional causal study (Section~\ref{sec:discussion}), were never used.
+ 
+ \subsection{Logical labels}
+ \label{sec:setup-labels}
+@@ -25,6 +25,8 @@ The inference depth of a cell comes from a deterministic solver that applies onl
+ \subsection{Preregistration and statistical plan}
+ \label{sec:setup-stats}
+ 
+-The protocol, hypotheses, thresholds, sample sizes and interpretation rules were registered before TEST existed (OSF, \url{https://osf.io/m28fx}, embargoed until publication; repository tag \texttt{prereg-v3.7}). The primary family has three contrasts, H1 to H3, each tested with a two-sided Bonferroni interval of \R{level.family}\% nominal coverage, so that the family-wise error rate is at most \R{stat.alpha}\%. Intervals are percentile cluster bootstraps over puzzles with \R{stat.nboot} resamples; when fewer than twenty puzzles have a nonzero difference in a contrast, a conservative rare-event bound replaces the bootstrap. The practical thresholds were fixed in advance: \R{plan.h2practical} percentage points for H2, \R{plan.h3practical} for H3, an equivalence range of $\pm$\R{plan.theta2pmargin} points for the secondary comparison of levels 2 and 11, and $\pm$\R{plan.h1margin} in Brier loss for H1, whose equivalence reading uses a two one-sided test at the family level (\R{level.tost}\% interval). Each confirmatory result is reported with the claim it supports and the claims that do not follow from it, as fixed in the registered interpretation table.
++The protocol, hypotheses, thresholds, sample sizes and interpretation rules were registered before any model run on TEST and before any TEST outcome existed (OSF, \url{https://osf.io/m28fx}, embargoed until publication; repository tag \texttt{prereg-v3.7}). The primary family has three contrasts, H1 to H3, each tested with a two-sided Bonferroni interval of \R{level.family}\% nominal coverage, targeting a family-wise error rate of \R{stat.alpha}\%; bootstrap coverage is approximate. Intervals are percentile cluster bootstraps over puzzles with \R{stat.nboot} resamples; when fewer than twenty puzzles have a nonzero difference in a contrast, a conservative rare-event bound replaces the bootstrap. The practical thresholds were fixed in advance: \R{plan.h2practical} percentage points for H2, \R{plan.h3practical} for H3, an equivalence range of $\pm$\R{plan.theta2pmargin} points for the secondary comparison of levels 2 and 11, and $\pm$\R{plan.h1margin} in Brier loss for H1, whose equivalence reading uses a two one-sided test at the family level (\R{level.tost}\% interval). Each confirmatory result is reported with the claim it supports and the claims that do not follow from it, as fixed in the registered interpretation table.
+ 
+-All analysis code was frozen under a git tag before any model ran on TEST. A dry run of the frozen code on non-TEST data had to reproduce earlier pilot outputs exactly before TEST could start, and a pre-written script evaluated TEST once. One defect found in the dry run was fixed, and the code re-tagged, before any TEST run, and one optional study was dropped; these and the remaining post-registration decisions are listed in Appendix~\ref{sec:appendix}.
++\paragraph{Changes before the lock.} Three design choices were changed during preparation, on calibration and probe-selection data only, before the registration and before TEST was used: the primary H2 contrast moved from level~2 to level~1, after a pilot in which levels 2 to 11 barely changed the solve share; H3 moved to level~1 as well, because at level~2 decoding a replaced code never changed the solve outcome, so the compensation contrast there could only measure regeneration; and the primary H1 probe changed from a per-cell probe to the cell-relative whole-layer probe of Section~\ref{sec:e3-design}, with H1 recast as a two-sided contrast with an equivalence range, after the per-cell estimate on PROBE-VAL came out close to zero. The registration stated the expected H1 outcome as readability above zero but inside the equivalence range. All three changes were logged with their reasons. The H1 changes make an absence claim harder rather than easier to reach; the H2 and H3 changes, in contrast, moved the tests to the level where the pilot had shown an effect, so their confirmatory value rests on the fresh TEST puzzles.
++
++\paragraph{Execution.} All analysis code was frozen under a git tag before any model ran on TEST. A dry run of the frozen code on non-TEST data had to reproduce earlier pilot outputs exactly before TEST could start, and a pre-written script evaluated TEST once. Decisions taken after the registration are listed in Appendix~\ref{sec:appendix-deviations}.
+diff --git a/paper/sections/summary.tex b/paper/sections/summary.tex
+new file mode 100644
+index 0000000..af9ef88
+--- /dev/null
++++ b/paper/sections/summary.tex
+@@ -0,0 +1,20 @@
++\section{Confirmatory results at a glance}
++\label{sec:summary}
++
++Table~\ref{tab:summary} lists the three primary contrasts and the two registered secondary contrasts that have an equivalence reading; Table~\ref{tab:readings} gives, for every registered interpretation row that the results triggered, the claim it supports and the claims that do not follow. Sections~\ref{sec:e1} to~\ref{sec:e3} explain each result. The primary contrasts use the \R{level.family}\% family interval; the secondary contrasts use the individual \R{level.ci95}\% interval. The equivalence interval is the \R{level.tost}\% two one-sided test interval for H1 and the \R{level.thetaTtost}\% interval for the secondary contrasts; for the level 2 versus 11 contrast, which had fewer than twenty puzzles with a nonzero difference, both intervals are the registered rare-event bound.
++
++\begin{table}[ht]
++\centering
++\caption{Confirmatory and registered secondary contrasts. Brier: difference in Brier loss (H1: permuted control minus generated state, positive when the generated state reads better; level 12: teacher minus generated). pp: difference in solve share, in percentage points. Threshold: practical threshold (H2, H3) or equivalence range.}
++\label{tab:summary}
++\footnotesize
++\adjustbox{max width=\linewidth}{\input{generated/tables/summary.tex}}
++\end{table}
++
++\begin{table}[ht]
++\centering
++\caption{Registered interpretation of every triggered row: the result that triggered it, the claim it supports and the claims that do not follow from it (verbatim from the registered interpretation table).}
++\label{tab:readings}
++\footnotesize
++\adjustbox{max width=\linewidth}{\input{generated/tables/readings.tex}}
++\end{table}
+diff --git a/src/ncm_sudoku/wp4figures.py b/src/ncm_sudoku/wp4figures.py
+index 30a77a9..539956e 100644
+--- a/src/ncm_sudoku/wp4figures.py
++++ b/src/ncm_sudoku/wp4figures.py
+@@ -114,7 +114,7 @@ def propagation(results: dict):
+         ax2.plot(levels, prop[name]["state_dist_D"], "-", color=colour, label=f"{name}, D")
+     ax2.set_xticks(range(1, 13), [str(i) for i in range(1, 13)])
+     ax2.set_xlabel("Level")
+-    ax2.set_ylabel("Cumulative-state distance to A")
++    ax2.set_ylabel("Relative cumulative-state distance to A")
+     ax2.legend(frameon=False, fontsize=5)
+     fig.tight_layout()
+     return fig
+@@ -134,7 +134,7 @@ def e3_readability(results: dict):
+     ax1.plot(xs, [levels[k]["whole_layer"]["permuted"] for k in keys], "s--", color=GREY, label="Permuted null")
+     ax1.plot((6, 12), (_main_row(results, "wl_teacher_L06.teacher"), _main_row(results, "wl_teacher_L12.teacher")),
+              "^:", color=ORANGE, label="Teacher")
+-    ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input (linear)")
++    ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input, unprojected (linear)")
+     ax1.set_xticks(xs)
+     ax1.set_xlabel("Level")
+     ax1.set_ylabel("Brier (score set)")
+@@ -144,7 +144,8 @@ def e3_readability(results: dict):
+             (12, req(results, "secondary.theta1_wl.L12.estimate"), req(results, "secondary.theta1_wl.L12.ci95.ci")))
+     ax2.axhspan(-H1_MARGIN, H1_MARGIN, color=GREY, alpha=0.2, label="±practical threshold")
+     for x, est, ci in rows:
+-        ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1)
++        label = ("H1 family interval" if x == 6 else "95% interval") if x in (6, 12) else None
++        ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1, label=label)
+         ax2.plot([x], [est], "o", color=BLUE, markersize=4)
+     ax2.axhline(0, color="black", linewidth=0.6)
+     ax2.set_xticks(xs)
+diff --git a/src/ncm_sudoku/wp4numbers.py b/src/ncm_sudoku/wp4numbers.py
+index 1b2c8dc..80f7e84 100644
+--- a/src/ncm_sudoku/wp4numbers.py
++++ b/src/ncm_sudoku/wp4numbers.py
+@@ -24,13 +24,15 @@ SOURCE_FILES = {
+     "testset": "experiments/lock/test_set.json",
+     "gate": "experiments/wp1/gate.json",
+     "extract": "experiments/e3prep/extract.json",
++    "released": "experiments/wp1/e1_released.json",
+ }
+ 
+ # Fixed design facts (not results): model hierarchy from plan §2.1 and the upstream configuration,
+ # data and bootstrap settings from plan §4.1 and §11.1 (N_BOOT pinned equal to wp2eval by a test).
+ E2_DOSES = {2: (1, 2), 6: (1, 2, 4, 8, 13), 11: (1, 4, 11, 21, 41, 67)}  # plan §7.3 dose grid
+ 
+-DESIGN = {"levels": 12, "codes": 16, "dim": 256, "tokens": 89, "clues": 30, "nboot": 10000, "alpha": 0.05, "peers": 20}
++DESIGN = {"levels": 12, "codes": 16, "dim": 256, "tokens": 89, "clues": 30, "nboot": 10000, "alpha": 0.05, "peers": 20,
++          "batch": 4096, "minsteps": 2000, "epochs": 50, "threshold": 0.5}
+ 
+ TEX_HEADER = r"""% Generated by scripts/wp4_figures.py; do not edit by hand.
+ \makeatletter
+@@ -51,6 +53,8 @@ def _signed(text: str) -> str:
+ 
+ def fmt(x, kind: str) -> str:
+     """Format a stored value; kinds: pp1, pp1abs, pct1 (x100, 1 decimal), pct0, dec1, dec2, dec4, sig2, g, int."""
++    if kind == "commit" and isinstance(x, str) and len(x) >= 7:
++        return x[:7]
+     if x is None or isinstance(x, bool) or (isinstance(x, float) and math.isnan(x)):
+         raise ValueError(f"cannot format {x!r}")
+     if kind == "pp1abs":  # magnitude for prose such as "lowered by X points"
+@@ -150,6 +154,34 @@ def _keys() -> dict[str, tuple[str, str, str]]:
+     k: dict[str, tuple[str, str, str]] = {}
+     k |= _contrast("h1", "primary.H1", "dec4", family=True, tost=True)
+     k["h2.est.abs"] = ("results", "primary.H2.estimate", "pp1abs")
++    k["h2.fam.abs.lo"] = ("results", "primary.H2.family.ci.1", "pp1abs")  # magnitude interval: [|hi|, |lo|]
++    k["h2.fam.abs.hi"] = ("results", "primary.H2.family.ci.0", "pp1abs")
++    for i in range(3):
++        k[f"h1.seed{i}"] = ("results", f"tables.seed_stability.H1.per_seed.{i}", "dec4")
++    k["code.commit"] = ("results", "code_state.commit", "commit")
++    for name in ("batch", "minsteps", "epochs"):
++        k[f"probe.{name}"] = ("design", name, "int")
++    k["probe.threshold"] = ("design", "threshold", "g")
++    sec = "tables.secondary_metrics.wl_L06.generated"
++    k["sec.wl.f1"] = ("results", f"{sec}.f1.macro", "sig2")
++    k["sec.wl.prauc"] = ("results", f"{sec}.ranking.pr_auc_macro", "sig2")
++    k["sec.wl.posrate"] = ("results", f"{sec}.ranking.positive_rate", "pct1")
++    k["sec.wl.naked"] = ("results", f"{sec}.naked_single_f1", "sig2")
++    k["sec.raw.f1"] = ("results", "tables.secondary_metrics.raw_projected.linear.f1.macro", "sig2")
++    for pol in ("frequency", "uniform"):
++        rp = f"tables.e2_diagnostics.replacement.level1-{pol}"
++        k[f"e2.l1.{pol}.pnew.med"] = ("results", f"{rp}.p_new.2", "sig2")
++        k[f"e2.l1.{pol}.porig.med"] = ("results", f"{rp}.p_orig.2", "sig2")
++        k[f"e2.l1.{pol}.tv.med"] = ("results", f"tables.e2.level1.{pol}.quantiles.tv.2", "sig2")
++    k["e2.cfg.L11.frequency.d1.tv.med"] = ("results", "tables.e2.configurations[level=11,policy=frequency,dose=1].quantiles.tv.2", "sig2")
++    k["rel.n"] = ("released", "n", "int")
++    k["rel.solve"] = ("released", "generated.solve", "pct1")
++    k["rel.teacher"] = ("released", "teacher.exact_share", "pct1")
++    dp = "tables.depth.wl_L06.generated.label_rates"
++    k["depth.n.stuck"] = ("results", f"{dp}.stuck.n_cells", "int")
++    k["depth.np.stuck"] = ("results", f"{dp}.stuck.n_puzzles", "int")
++    k["depth.raw.d1"] = ("results", "tables.depth.raw_projected.linear.brier.1.brier", "dec4")
++    k["depth.raw.d4"] = ("results", "tables.depth.raw_projected.linear.brier.>=4.brier", "dec4")
+     k["h1.relimp"] = ("results", "primary.H1.relative_improvement", "pct1")
+     k |= _contrast("h2", "primary.H2", "pp1", family=True)
+     k |= _contrast("h3", "primary.H3", "pp1", family=True)
+@@ -176,7 +208,7 @@ def _keys() -> dict[str, tuple[str, str, str]]:
+     k["e1.teacher"] = ("results", f"{e1}.teacher.exact_share", "pct1")
+     k["e1.cellacc"] = ("results", f"{e1}.generated.cell_acc_all", "pct1")
+     k["e1.wellformed"] = ("results", f"{e1}.generated.well_formed", "pct1")
+-    k["e1.clues"] = ("results", f"{e1}.generated.clue_preservation", "pct1")
++    k["e1.clues"] = ("results", f"{e1}.generated.all_clues_preserved", "pct1")
+     k["e1.cellacc.empty"] = ("results", f"{e1}.generated.cell_acc_empty", "pct1")
+     k["e1.violations"] = ("results", f"{e1}.generated.mean_constraint_violations_well_formed", "sig2")
+     for lv in range(1, 13):  # per_level is ordered by level; e1_levels checks the order
+diff --git a/src/ncm_sudoku/wp4tables.py b/src/ncm_sudoku/wp4tables.py
+index 3279949..4928d97 100644
+--- a/src/ncm_sudoku/wp4tables.py
++++ b/src/ncm_sudoku/wp4tables.py
+@@ -7,7 +7,9 @@ The section file supplies the table float, caption and label. Values are formatt
+ import re
+ from pathlib import Path
+ 
+-from ncm_sudoku.wp4numbers import fmt, lookup
++from ncm_sudoku.wp4numbers import (
++    H1_MARGIN, H2_PRACTICAL, H3_PRACTICAL, THETA2P_MARGIN, THETA_T_MARGIN, fmt, lookup,
++)
+ 
+ TEXT = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}",
+         "~": r"\textasciitilde{}", "^": r"\textasciicircum{}", "\\": r"\textbackslash{}"}
+@@ -15,11 +17,11 @@ MATH = {"±": r"\pm", "θ": r"\theta", "₁": "_1", "₂": "_2", "′": "'", "
+         "≤": r"\le", "≥": r"\ge", "×": r"\times", "Δ": r"\Delta"}
+ 
+ DEVIATIONS = {
+-    "D78": "Plan review reading of plan section 7.4: full state tensors are not saved; cumulative-state distances and intermediate decodings exist for the primary configurations only",
+-    "D79": "Implementation reading of the naked-single F1 (secondary metric), fixed before the code freeze",
+-    "D81": "Post-freeze fix before any TEST run: retry of a directory rename on Windows",
+-    "D82": "Correction of D81: the rename failed because of an unreleased memory map; fixed at the source and re-tagged before any TEST run",
+-    "D84": "E4 dropped: the plan section 9.1 entry condition is not met given the TEST readout and equivariance results; SELECT and E4-TEST were never generated",
++    ("D77",): "Implementation readings of details the protocol text left open, fixed before the code freeze (for example: the level-12 readability criterion is the 95% interval of its whole-layer contrast above zero; the equivariance result gets no mechanical reading)",
++    ("D78",): "Plan review: the plan section 8.2 controls (random features, label permutation, teacher state, training-size curve) also run on the primary whole-layer probe; full state tensors are not saved, so cumulative-state distances and intermediate decodings exist only for the level-1 enumeration and the level-11 single replacement (plan section 7.4 reading)",
++    ("D79",): "Definition of the naked-single F1 (secondary metric): items are cells; a true item has exactly one candidate, a predicted item exactly one digit with probability at least 0.5; a match needs the same cell and digit",
++    ("D81", "D82"): "An implementation defect that stopped the dry run (a directory holding an unreleased memory-mapped file could not be renamed) was diagnosed and fixed, the code re-tagged and the dry run repeated, before any model ran on TEST",
++    ("D84",): "E4 dropped after the TEST results: its entry condition was judged very unlikely to hold given the level-6 readout below the practical threshold and the non-equivariant level-12 readout; the formal gate on SELECT was not evaluated, and SELECT and E4-TEST were never generated",
+ }
+ 
+ 
+@@ -65,20 +67,146 @@ def _interval(ci: list, kind: str) -> str:
+     return f"[{fmt(ci[0], kind)}, {fmt(ci[1], kind)}]"
+ 
+ 
+-def primary_table(results: dict) -> str:
++PRIMARY_HYPS = ("H1", "H2", "H3")
++
++# (label, result path, format kind, scale, interval field, threshold code)
++SUMMARY = (
++    ("H1: level-6 readability", "primary.H1", "dec4", "Brier", "family", "h1"),
++    ("H2: level 1 vs.\\ 11", "primary.H2", "pp1", "pp", "family", "h2"),
++    ("H3: compensation", "primary.H3", "pp1", "pp", "family", "h3"),
++    ("Level 2 vs.\\ 11 (secondary)", "secondary.theta2_prime", "pp1", "pp", "ci95", "theta2p"),
++    ("Level 12, teacher vs.\\ generated (secondary)", "secondary.theta_T", "sig2", "Brier", "ci95", "thetaT"),
++)
++EQUIVALENCE = ("h1", "theta2p", "thetaT")
++
++
++def _threshold(code: str) -> str:
++    return {
++        "h1": f"$\\pm${fmt(H1_MARGIN, 'g')}",
++        "h2": f"{fmt(H2_PRACTICAL, 'pp1')} pp",
++        "h3": f"{fmt(H3_PRACTICAL, 'pp1')} pp",
++        "theta2p": f"$\\pm${fmt(THETA2P_MARGIN, 'pp1')} pp",
++        "thetaT": f"$\\pm${fmt(THETA_T_MARGIN, 'g')}",
++    }[code]
++
++
++def summary_table(results: dict) -> str:
++    """Confirmatory and registered secondary contrasts: estimate, interval, equivalence interval, threshold."""
++    rows = []
++    for label, path, kind, scale, interval, code in SUMMARY:
++        ci = _interval(req(results, f"{path}.{interval}.ci"), kind)
++        eq = _interval(req(results, f"{path}.tost.ci"), kind) if code in EQUIVALENCE else "--"
++        rows.append([label, scale, fmt(req(results, f"{path}.estimate"), kind), ci, eq, _threshold(code)])
++    header = ["Contrast", "Scale", "Estimate", "Interval", "Equiv.\\ interval", "Threshold"]
++    return _tabular("p{3.3cm}lrllr", header, rows)
++
++
++def _reading(results: dict, hyp: str) -> dict:
++    reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
++    if reading is None:
++        raise KeyError(f"no §13 reading for {hyp}")
++    return reading
++
++
++READING_LABELS = {"H1": "H1", "H2": "H2", "H3": "H3", "theta2_prime": "Level 2 vs.\\ 11", "level12": "Level 12"}
++
++
++def readings_table(results: dict) -> str:
++    """Every triggered §13 row: registered result, justified claim and "does not follow"."""
++    for hyp in PRIMARY_HYPS:
++        _reading(results, hyp)
++    rows = [[READING_LABELS.get(r["hypothesis"], escape(r["hypothesis"])), escape(r["result"]), escape(r["claim"]),
++             escape(r["does_not_follow"])]
++            for r in results["readings"] if r["row"]]
++    header = ["", "Registered result", "Justified claim", "Does not follow"]
++    return _tabular("p{1.3cm} p{2.9cm} p{3.2cm} p{3.9cm}", header, rows)
++
++
++SECONDARY_ROWS = (
++    ("wl_L06.generated", "Whole-layer, level 6"), ("wl_L06.permuted", "Whole-layer, level 6, permuted"),
++    ("pc_L06.linear", "Per-cell, level 6"), ("pc_L06.mlp", "Per-cell MLP, level 6"),
++    ("wl_L12.generated", "Whole-layer, level 12"), ("wl_teacher_L12.teacher", "Whole-layer, teacher level 12"),
++    ("raw_projected.linear", "Raw input, projected"), ("raw_unprojected.linear", "Raw input, unprojected"),
++    ("controls.raw_mlp", "Raw input, MLP"), ("controls.peer_counts_linear", "Peer digit counts"),
++    ("controls.surface_linear", "Surface features"), ("controls.rule", "Exact rule"),
++)
++
++
++def _sec(results: dict, row: str, field: str):
++    value = results["tables"]["secondary_metrics"].get(row)
++    for part in field.split("."):
++        if not isinstance(value, dict) or value.get(part) is None:
++            raise KeyError(f"tables.secondary_metrics[{row}].{field}")
++        value = value[part]
++    return value
++
++
++def secondary_table(results: dict) -> str:
++    """Registered secondary candidate-mask metrics (threshold 0.5) per probe and control."""
++    rows = [[label, fmt(_sec(results, row, "f1.macro"), "dec4"), fmt(_sec(results, row, "ranking.pr_auc_macro"), "dec4"),
++             fmt(_sec(results, row, "mask_exact_match"), "pct1"), fmt(_sec(results, row, "count_mae"), "sig2"),
++             fmt(_sec(results, row, "naked_single_f1"), "dec4"), fmt(_sec(results, row, "hidden_single_f1.all.f1"), "dec4")]
++            for row, label in SECONDARY_ROWS]
++    header = ["Readout", "Macro F1", "PR-AUC", "Mask exact (\\%)", "Count MAE", "Naked F1", "Hidden F1"]
++    return _tabular("lrrrrrr", header, rows)
++
++
++DEPTHS = ((("1", "1"), ("2", "2"), ("3", "3"), (">=4", "$\\ge$4"), ("stuck", "stuck")))
++DEPTH_ROWS = ("wl_L06.generated", "pc_L06.linear", "raw_unprojected.linear", "raw_projected.linear")
++
++
++def _depth(results: dict, row: str, part: str, stratum: str, field: str):
++    try:
++        value = results["tables"]["depth"][row][part][stratum][field]
++    except (KeyError, TypeError):
++        value = None
++    if value is None:
++        raise KeyError(f"tables.depth[{row}].{part}.{stratum}.{field}")
++    return value
++
++
++def depth_table(results: dict) -> str:
++    """Level-6 Brier by inference depth with sample sizes and label rates (descriptive)."""
++    rows = []
++    for stratum, label in DEPTHS:
++        base = DEPTH_ROWS[0]
++        rows.append([label, fmt(_depth(results, base, "label_rates", stratum, "n_cells"), "int"),
++                     fmt(_depth(results, base, "label_rates", stratum, "n_puzzles"), "int"),
++                     fmt(_depth(results, base, "label_rates", stratum, "positive_rate"), "pct1")]
++                    + [fmt(_depth(results, row, "brier", stratum, "brier"), "dec4") for row in DEPTH_ROWS])
++    header = ["Depth", "Cells", "Puzzles", "Positive (\\%)", "Whole-layer", "Per-cell", "Raw, unproj.", "Raw, proj."]
++    return _tabular("lrrrrrrr", header, rows)
++
++
++def levels_table(results: dict) -> str:
++    """Brier by level for whole-layer and per-cell probes and their permuted controls."""
++    rows = []
++    for lv in ("L02", "L06", "L12"):
++        base = f"tables.e3_levels.{lv}"
++        rows.append([str(int(lv[1:]))] + [fmt(req(results, f"{base}.{p}"), "dec4") for p in (
++            "whole_layer.generated", "whole_layer.permuted", "per_cell.linear", "per_cell.mlp", "per_cell.permuted")])
++    header = ["Level", "Whole-layer", "Whole-layer permuted", "Per-cell", "Per-cell MLP", "Per-cell permuted"]
++    return _tabular("rrrrrr", header, rows)
++
++
++def e2_diagnostics_table(results: dict) -> str:
++    """Initial damage (median and upper-quartile TV, empty-cell TV), latent distance and format errors."""
++    e2 = results["tables"]["e2"]
++    entries = [("1", p, "enum.", f"tables.e2.level1.{p}") for p in ("frequency", "uniform")]
++    entries += [(str(c["level"]), c["policy"], str(c["dose"]),
++                 f"tables.e2.configurations[level={c['level']},policy={c['policy']},dose={c['dose']}]")
++                for c in e2["configurations"]]
+     rows = []
+-    for hyp, kind, scale in (("H1", "dec4", "Brier"), ("H2", "pp1", "pp"), ("H3", "pp1", "pp")):
+-        base = f"primary.{hyp}"
+-        reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
+-        if reading is None:
+-            raise KeyError(f"no §13 reading for {hyp}")
+-        rows.append([hyp, scale, fmt(req(results, f"{base}.estimate"), kind),
+-                     _interval(req(results, f"{base}.family.ci"), kind),
+-                     _interval(req(results, f"{base}.ci95.ci"), kind), escape(reading["result"]),
+-                     escape(reading["claim"]), escape(reading["does_not_follow"])])
+-    header = ["", "Scale", "Estimate", "Family interval", "95\\% interval", "Result", "Justified claim",
+-              "Does not follow"]
+-    return _tabular("llrll p{2.6cm} p{3.2cm} p{3.6cm}", header, rows)
++    for level, policy, dose, path in entries:
++        rows.append([level, policy, dose, fmt(req(results, f"{path}.quantiles.tv.2"), "sig2"),
++                     fmt(req(results, f"{path}.quantiles.tv.3"), "sig2"),
++                     fmt(req(results, f"{path}.quantiles.tv_empty.2"), "sig2"),
++                     fmt(req(results, f"{path}.quantiles.latent.2"), "sig2"),
++                     fmt(req(results, f"{path}.format_error_share.C"), "pct1"),
++                     fmt(req(results, f"{path}.format_error_share.D"), "pct1")])
++    header = ["Level", "Policy", "Dose", "TV median", "TV $Q_3$", "TV empty, median", "Latent, median",
++              "Format C (\\%)", "Format D (\\%)"]
++    return _tabular("rllrrrrrr", header, rows)
+ 
+ 
+ def e3_matrix_table(results: dict) -> str:
+@@ -87,7 +215,7 @@ def e3_matrix_table(results: dict) -> str:
+              escape(r["reference"]) if r["reference"] else "--", _cell(r["relative_difference"], "pct1"),
+              _cell(r["n_params"], "int")]
+             for i, r in enumerate(results["tables"]["e3_main"])]
+-    header = ["Row", "Construction", "Brier", "Reference", "Relative difference (\\%)", "Parameters"]
++    header = ["Row", "Constr.", "Brier", "Reference", "Rel.\\ diff.\\ (\\%)", "Params"]
+     return _tabular("llrlrr", header, rows)
+ 
+ 
+@@ -104,8 +232,7 @@ def e2_dose_table(results: dict) -> str:
+         rows.append([str(c["level"]), c["policy"], fmt(c["dose"], "int"), fmt(c["n_records"], "int"),
+                      fmt(c["excluded_share"], "pct1"), fmt(s["A"], "pct1"), fmt(s["C"], "pct1"),
+                      fmt(s["D"], "pct1")])
+-    header = ["Level", "Policy", "Dose", "Records", "Excluded (\\%)", "Solve A (\\%)", "Solve C (\\%)",
+-              "Solve D (\\%)"]
++    header = ["Level", "Policy", "Dose", "Runs", "Excl.\\ (\\%)", "A (\\%)", "C (\\%)", "D (\\%)"]
+     return _tabular("rllrrrrr", header, rows)
+ 
+ 
+@@ -130,18 +257,20 @@ def e1_table(results: dict) -> str:
+ 
+ def equivariance_table(results: dict) -> str:
+     cats = results["tables"]["equivariance"]["categories"]
+-    rows = [[name, fmt(c["mean_deviation"], "dec4"), fmt(c["share_within"], "pct1"),
++    names = {"all": "full group", "digit": "digit permutations only", "geometric": "grid transformations only"}
++    rows = [[names.get(name, escape(name)), fmt(c["mean_deviation"], "dec4"), fmt(c["share_within"], "pct1"),
+              fmt(c["brier_transformed"], "dec4"), fmt(c["brier_original"], "dec4")]
+             for name, c in cats.items()]
+-    header = ["Category", "Mean deviation", "Within tolerance (\\%)", "Brier transformed", "Brier original"]
++    header = ["Category", "Mean deviation", "Within tol.\\ (\\%)", "Brier, transformed", "Brier, original"]
+     return _tabular("lrrrr", header, rows)
+ 
+ 
+ def deviations_table(decisions: Path) -> str:
+     text = decisions.read_text(encoding="utf-8")
+     rows = []
+-    for did, summary in DEVIATIONS.items():
+-        if not re.search(rf"^\| {did} \|", text, flags=re.M):
+-            raise KeyError(f"{did} not found in {decisions.name}")
+-        rows.append([did, escape(summary)])
+-    return _tabular("l p{12cm}", ["Entry", "Decision (DECISIONS.md)"], rows)
++    for ids, summary in DEVIATIONS.items():
++        for did in ids:
++            if not re.search(rf"^\| {did} \|", text, flags=re.M):
++                raise KeyError(f"{did} not found in {decisions.name}")
++        rows.append([", ".join(ids), escape(summary)])
++    return _tabular("l p{10.6cm}", ["Entry", "Decision (DECISIONS.md)"], rows)
