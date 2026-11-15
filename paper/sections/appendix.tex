@@ -22,11 +22,11 @@ The protocol is registered at OSF (\url{https://osf.io/m28fx}) and frozen in the
 \subsection{Full result tables}
 \label{sec:appendix-tables}
 
-The tables below are descriptive; the confirmatory contrasts are those of Table~\ref{tab:summary}. Table~\ref{tab:e3-matrix} gives every E3 probe and control at level 6 together with the level-12 teacher and the raw-input rows, Table~\ref{tab:levels} the whole-layer and per-cell probes by level, Table~\ref{tab:secondary} the registered secondary candidate-mask metrics, and Table~\ref{tab:depth} the depth breakdown with its sample sizes. Table~\ref{tab:e2-dose} gives the E2 solve shares and Table~\ref{tab:e2-diagnostics} the initial damage and format errors per level, policy and dose; Table~\ref{tab:equivariance} gives the exploratory equivariance result.
+The tables below are descriptive; the confirmatory contrasts are those of Table~\ref{tab:summary}. Table~\ref{tab:e3-matrix} gives every E3 probe and control at level 6 together with the level-12 teacher and the raw-input rows, Table~\ref{tab:levels} the whole-layer and per-cell probes by level, Table~\ref{tab:secondary} the registered secondary candidate-mask metrics, and Table~\ref{tab:depth} the depth breakdown with its sample sizes. Table~\ref{tab:per-digit} gives the per-digit F1. Table~\ref{tab:e2-dose} gives the E2 solve shares, Table~\ref{tab:e2-diagnostics} the initial damage and format errors and Table~\ref{tab:e2-replacement} the replacement diagnostics per level, policy and dose; Table~\ref{tab:equivariance} gives the exploratory equivariance result. Further registered E2 diagnostics are recorded in the result files but not shown: the per-cell change maps of C and D against A for every configuration, their split into originally empty and given cells, the per-level code changes of C and D for the configurations with saved states, and the cell Hamming distances of C against A.
 
 \begin{table}[ht]
 \centering
-\caption{E3 probes and controls on the TEST puzzles (Brier loss of the nine candidate bits; lower is better). The relative difference is (Brier $-$ reference) / reference against the named reference probe. Construction: whole-layer (cell and its peers), per-cell, or input (raw puzzle, peer counts, surface features); the rule and the marginal predictor are label-free.}
+\caption{E3 probes and controls on the TEST puzzles (Brier loss of the nine candidate bits; lower is better). The relative difference is (Brier $-$ reference) / reference against the named reference probe. Construction: whole-layer (cell and its peers), per-cell, or input (raw puzzle, peer counts, surface features). The rule needs no training; the marginal predictor is a position-wise marginal of the training labels that ignores the representation.}
 \label{tab:e3-matrix}
 \scriptsize
 \setlength{\tabcolsep}{2pt}
@@ -43,7 +43,7 @@ The tables below are descriptive; the confirmatory contrasts are those of Table~
 
 \begin{table}[ht]
 \centering
-\caption{Registered secondary candidate-mask metrics on TEST, thresholded at \R{probe.threshold} where a threshold is needed. The positive label rate of the candidate bits is \R{sec.wl.posrate}\%. Mask exact: share of cells whose nine predicted bits all match. The naked-single F1 follows the definition in Table~\ref{tab:deviations}; the hidden-single F1 counts (unit, digit) items.}
+\caption{Registered secondary candidate-mask metrics on TEST, thresholded at \R{probe.threshold} where a threshold is needed. The positive label rate of the candidate bits is \R{sec.wl.posrate}\%. Thresholded and ranking metrics use the seed-averaged predictions. Mask exact: share of cells whose nine predicted bits all match. The naked-single F1 follows the definition in Table~\ref{tab:deviations}. The hidden-single F1 scores (puzzle, unit, digit, cell) items, so a prediction must name the right cell; the hidden column counts all hidden singles, including cells that are also naked singles, and the hidden-only column excludes them.}
 \label{tab:secondary}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -69,7 +69,7 @@ The tables below are descriptive; the confirmatory contrasts are those of Table~
 
 \begin{table}[ht]
 \centering
-\caption{E2 diagnostics per configuration (descriptive): initial damage as the mean cell-wise total variation distance between the decoder outputs of C and A (median and upper quartile over runs; median over originally empty cells), the median relative latent distance of the final state, and the format-error shares of C and D.}
+\caption{E2 diagnostics per configuration (descriptive): initial damage as the mean cell-wise total variation distance between the decoder outputs of C and A (median and upper quartile; median over originally empty cells), the median relative latent distance of the final state of C from A, and the format-error shares of C and D. Level-1 rows: quantiles over puzzles of the per-puzzle policy-weighted expectation over the alternative values; other rows: quantiles over puzzle--seed runs.}
 \label{tab:e2-diagnostics}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -82,4 +82,21 @@ The tables below are descriptive; the confirmatory contrasts are those of Table~
 \label{tab:equivariance}
 \footnotesize
 \adjustbox{max width=\linewidth}{\input{generated/tables/equivariance.tex}}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Per-digit F1 of the primary probe and the projected raw-input probe at the fixed threshold of \R{probe.threshold}.}
+\label{tab:per-digit}
+\footnotesize
+\adjustbox{max width=\linewidth}{\input{generated/tables/per_digit_f1.tex}}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{E2 replacement diagnostics per configuration (medians, descriptive): probability of the original and of the new code under the generator, frequency of the new code on the calibration set, per-position RMS norm of the replaced codebook-vector difference in the level's embedding space (scales differ between levels), and the share of the replacement residual left after re-quantization with the later codebooks. Aggregation as in Table~\ref{tab:e2-diagnostics}.}
+\label{tab:e2-replacement}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\adjustbox{max width=\linewidth}{\input{generated/tables/e2_replacement.tex}}
 \end{table}

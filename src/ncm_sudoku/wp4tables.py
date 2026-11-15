@@ -18,7 +18,7 @@ MATH = {"±": r"\pm", "θ": r"\theta", "₁": "_1", "₂": "_2", "′": "'", "�
 
 DEVIATIONS = {
     ("D77",): "Implementation readings of details the protocol text left open, fixed before the code freeze (for example: the level-12 readability criterion is the 95% interval of its whole-layer contrast above zero; the equivariance result gets no mechanical reading)",
-    ("D78",): "Plan review: the plan section 8.2 controls (random features, label permutation, teacher state, training-size curve) also run on the primary whole-layer probe; full state tensors are not saved, so cumulative-state distances and intermediate decodings exist only for the level-1 enumeration and the level-11 single replacement (plan section 7.4 reading)",
+    ("D78",): "Plan review: the plan section 8.2 controls (random features, label permutation, teacher state, training-size curve) also run on the primary whole-layer probe; full state tensors are not saved, so cumulative-state distances and intermediate decodings exist only for the level-1 enumeration and the single level-11 replacement under the frequency policy (plan section 7.4 reading); the hidden-single F1 scores (puzzle, unit, digit, cell) items, so a prediction must name the right cell",
     ("D79",): "Definition of the naked-single F1 (secondary metric): items are cells; a true item has exactly one candidate, a predicted item exactly one digit with probability at least 0.5; a match needs the same cell and digit",
     ("D81", "D82"): "An implementation defect that stopped the dry run (a directory holding an unreleased memory-mapped file could not be renamed) was diagnosed and fixed, the code re-tagged and the dry run repeated, before any model ran on TEST",
     ("D84",): "E4 dropped after the TEST results: its entry condition was judged very unlikely to hold given the level-6 readout below the practical threshold and the non-equivariant level-12 readout; the formal gate on SELECT was not evaluated, and SELECT and E4-TEST were never generated",
@@ -145,10 +145,11 @@ def secondary_table(results: dict) -> str:
     """Registered secondary candidate-mask metrics (threshold 0.5) per probe and control."""
     rows = [[label, fmt(_sec(results, row, "f1.macro"), "dec4"), fmt(_sec(results, row, "ranking.pr_auc_macro"), "dec4"),
              fmt(_sec(results, row, "mask_exact_match"), "pct1"), fmt(_sec(results, row, "count_mae"), "sig2"),
-             fmt(_sec(results, row, "naked_single_f1"), "dec4"), fmt(_sec(results, row, "hidden_single_f1.all.f1"), "dec4")]
+             fmt(_sec(results, row, "naked_single_f1"), "dec4"), fmt(_sec(results, row, "hidden_single_f1.all.f1"), "dec4"),
+             fmt(_sec(results, row, "hidden_single_f1.hidden_only.f1"), "dec4")]
             for row, label in SECONDARY_ROWS]
-    header = ["Readout", "Macro F1", "PR-AUC", "Mask exact (\\%)", "Count MAE", "Naked F1", "Hidden F1"]
-    return _tabular("lrrrrrr", header, rows)
+    header = ["Readout", "Macro F1", "PR-AUC", "Mask exact (\\%)", "Count MAE", "Naked F1", "Hidden F1", "Hidden-only F1"]
+    return _tabular("lrrrrrrr", header, rows)
 
 
 DEPTHS = ((("1", "1"), ("2", "2"), ("3", "3"), (">=4", "$\\ge$4"), ("stuck", "stuck")))
@@ -191,11 +192,7 @@ def levels_table(results: dict) -> str:
 
 def e2_diagnostics_table(results: dict) -> str:
     """Initial damage (median and upper-quartile TV, empty-cell TV), latent distance and format errors."""
-    e2 = results["tables"]["e2"]
-    entries = [("1", p, "enum.", f"tables.e2.level1.{p}") for p in ("frequency", "uniform")]
-    entries += [(str(c["level"]), c["policy"], str(c["dose"]),
-                 f"tables.e2.configurations[level={c['level']},policy={c['policy']},dose={c['dose']}]")
-                for c in e2["configurations"]]
+    entries = [(lv, pol, dose, path) for lv, pol, dose, path, _ in _e2_entries(results)]
     rows = []
     for level, policy, dose, path in entries:
         rows.append([level, policy, dose, fmt(req(results, f"{path}.quantiles.tv.2"), "sig2"),
@@ -207,6 +204,43 @@ def e2_diagnostics_table(results: dict) -> str:
     header = ["Level", "Policy", "Dose", "TV median", "TV $Q_3$", "TV empty, median", "Latent, median",
               "Format C (\\%)", "Format D (\\%)"]
     return _tabular("rllrrrrrr", header, rows)
+
+
+def _e2_entries(results: dict) -> list[tuple[str, str, str, str, str]]:
+    """(level, policy, dose label, damage path, replacement key) for the level-1 rows and every configuration."""
+    e2 = results["tables"]["e2"]
+    entries = [("1", p, "enum.", f"tables.e2.level1.{p}", f"level1-{p}") for p in ("frequency", "uniform")]
+    for c in e2["configurations"]:
+        lv, pol, dose = c["level"], c["policy"], c["dose"]
+        entries.append((str(lv), pol, str(dose), f"tables.e2.configurations[level={lv},policy={pol},dose={dose}]",
+                        f"L{lv:02d}-{pol}-d{dose}"))
+    return entries
+
+
+def e2_replacement_table(results: dict) -> str:
+    """Replacement diagnostics: generator probability of the original and the new code, CAL frequency of the
+    new code, replacement vector norm and re-quantization ratio (medians)."""
+    rows = []
+    for level, policy, dose, path, key in _e2_entries(results):
+        rp = f"tables.e2_diagnostics.replacement.{key}"
+        rows.append([level, policy, dose, fmt(req(results, f"{rp}.p_orig.2"), "sig2"),
+                     fmt(req(results, f"{rp}.p_new.2"), "sig2"), fmt(req(results, f"{rp}.freq_new.2"), "sig2"),
+                     fmt(req(results, f"{rp}.replacement_norm.2"), "sig2"),
+                     fmt(req(results, f"{path}.quantiles.requant_ratio.2"), "sig2")])
+    header = ["Level", "Policy", "Dose", "$p$ original", "$p$ new", "CAL freq.\\ new", "Replacement norm",
+              "Re-quant.\\ ratio"]
+    return _tabular("rllrrrrr", header, rows)
+
+
+def per_digit_f1_table(results: dict) -> str:
+    """Per-digit F1 (threshold 0.5) of the primary probe and the projected raw-input probe."""
+    rows = []
+    for row, label in (("wl_L06.generated", "Whole-layer, level 6"), ("raw_projected.linear", "Raw input, projected")):
+        values = _sec(results, row, "f1.per_digit")
+        if len(values) != 9:
+            raise KeyError(f"tables.secondary_metrics[{row}].f1.per_digit must have 9 entries")
+        rows.append([label] + [fmt(v, "dec4") for v in values])
+    return _tabular("l" + "r" * 9, ["Readout"] + [str(d) for d in range(1, 10)], rows)
 
 
 def e3_matrix_table(results: dict) -> str:

@@ -23,6 +23,8 @@ TABLES = {
     "depth": wp4tables.depth_table,
     "levels": wp4tables.levels_table,
     "e2_diagnostics": wp4tables.e2_diagnostics_table,
+    "e2_replacement": wp4tables.e2_replacement_table,
+    "per_digit_f1": wp4tables.per_digit_f1_table,
     "e3_matrix": wp4tables.e3_matrix_table,
     "e2_dose": wp4tables.e2_dose_table,
     "e1": wp4tables.e1_table,

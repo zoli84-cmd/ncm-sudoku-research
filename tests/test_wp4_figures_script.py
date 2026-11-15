@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = {
     "numbers.tex", "numbers.json",
     "tables/summary.tex", "tables/readings.tex", "tables/e3_matrix.tex", "tables/secondary.tex",
-    "tables/depth.tex", "tables/levels.tex", "tables/e2_diagnostics.tex", "tables/e2_dose.tex", "tables/e1.tex",
+    "tables/depth.tex", "tables/levels.tex", "tables/e2_diagnostics.tex", "tables/e2_replacement.tex",
+    "tables/per_digit_f1.tex", "tables/e2_dose.tex", "tables/e1.tex",
     "tables/equivariance.tex", "tables/deviations.tex",
     "figures/dose_curves.pdf", "figures/contrasts_forest.pdf", "figures/propagation.pdf",
     "figures/e3_readability.pdf", "figures/e3_supporting.pdf", "figures/e1_levels.pdf",

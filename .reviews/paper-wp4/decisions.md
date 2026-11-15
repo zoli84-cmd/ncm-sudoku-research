@@ -1,6 +1,6 @@
 # Decision log: WP4 manuscript review
 
-Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.md`). All R1 decisions approved by the user on 2026-11-15 and applied.
+Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.md`). All R1 and R2 decisions approved by the user on 2026-11-15 and applied. Round 2 sources: sol and carbon in `round-2/`.
 
 | Round | ID(s) | Severity | Finding (one line) | Decision | Reason | Verified in code |
 |---|---|---|---|---|---|---|
@@ -32,3 +32,19 @@ Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.m
 | R1 | CARBON-16 | nit | "kept every clue" binds the cell-level share | accept | bind `all_clues_preserved` | spot |
 | R1 | CARBON-17 | nit | Setup: upstream evaluation is already FP32 eager (difference is CUDA vs. CPU); add the level-2 θ₁ interval | accept | wording, keys | spot |
 | R1 | CARBON-4 (part) | minor | Released-set E1 stratum (plan §4.1) not mentioned | accept | one sentence, non-confirmatory WP1 result, keys from `experiments/wp1/e1_released.json` | spot |
+| R2 | SOL-1 + SOL-2 + CARBON-1 | major | The R1 E2-diagnostics fix is incomplete: replacement probability, code frequency and replacement geometry are missing from the table; the level-1 quantiles are over per-puzzle policy-weighted expectations, not over runs; the level-1 replacement probability is quoted without the level-11 comparator (median p_new 9.8e-6 vs 0.0089 at level 1), inviting a misreading; the appendix does not actually disclose the omitted change maps | accept | `e2p2.py` (level-1 quantiles after within-puzzle weighting; other levels pooled over puzzle-seed records); results.json tables.e2_diagnostics.replacement has p_new, p_orig, freq_new, replacement_norm for all 28 configurations; quantiles hold codebook_rms and requant_ratio | yes |
+| R2 | CARBON-2 + SOL-6 | major | The hidden-single F1 is misdescribed ((unit, digit) items) and the reported `all` value includes naked singles (34 of 362 true positives are hidden-only; hidden-only F1 0.0074 vs 0.0382); the hidden-single operationalization (D78) is missing from the deviations table | accept | `e3metrics.hidden_single_f1` scores (puzzle, unit, digit, cell) items; results.json secondary_metrics hidden_single_f1.all / hidden_only | yes |
+| R2 | SOL-3 | minor | Seed aggregation of the secondary metrics (seed-averaged predictions) not stated | accept | `e3metrics.py` docstring | yes |
+| R2 | SOL-4 + CARBON-5 | minor | The marginal predictor is fitted to PROBE-TRAIN labels; "label-free" is wrong | accept | `e3controls.marginal_probs`; call it a position-wise training-label marginal (feature-free) | spot |
+| R2 | SOL-5 | minor | Per-digit F1 (registered) not reported | accept | add the per-digit F1 range of the primary probe and a pointer to results.json | spot |
+| R2 | SOL-7 | minor | Unit-level target lost its exploratory status | accept | plan §8.3 "secondary exploratory target" | spot |
+| R2 | SOL-8 | minor | Introduction still says intervals "control" the family-wise error | accept | align with setup ("targeting nominal control; approximate coverage") | spot |
+| R2 | SOL-9 | nit | "The E3 probes are linear" in the discussion | accept | "The primary E3 probes are linear" | spot |
+| R2 | CARBON-3 | minor | Summary caption lacks sign directions of the pp rows and the one-sided level of the rare-event bound | accept | caption | spot |
+| R2 | CARBON-4 | minor | "Surface features read better" holds for Brier and PR-AUC, not for thresholded F1; "secondary metrics agree" overstates | accept | qualify both statements | spot |
+| R2 | CARBON-6 | minor | Training budget reads as a minimum; cap hits and the D69 budget check not disclosed | accept | state the cap rule, note that some selected runs reached the cap and that a pre-lock check with three times the steps barely changed the level-6 contrast (D69) | spot |
+| R2 | CARBON-7 | minor | Branch-C constancy holds from the intervention level on; saved state distances exist for the level-11 frequency-policy single replacement only | accept | wording in e2.tex and D78 summary | yes |
+| R2 | CARBON-8 | minor | "Every triggered row" should be "every mechanically triggered row" (raw-ceiling and equivariance rows have no numeric trigger) | accept | wording | spot |
+| R2 | CARBON-9 | nit | "Three design choices" understates other pre-lock secondary changes; level-2 C = A held under the frequency policy | accept | "three primary-hypothesis choices", "under the frequency policy" | spot |
+| R2 | CARBON-10 | nit | "Seed noise" undefined | accept | define as the 95th percentile of the between-seed deviation | spot |
+| R2 | CARBON-11 | nit | Prose precision of secondary metrics differs from the table; six keys unused | accept in part | prose uses the table's precision; unused keys removed | spot |

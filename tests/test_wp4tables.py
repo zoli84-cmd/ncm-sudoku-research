@@ -126,3 +126,25 @@ def test_missing_brier_is_an_error_not_a_dash(results):
     broken["tables"]["e3_main"][0]["brier"] = None
     with pytest.raises((KeyError, ValueError), match="brier"):
         t.e3_matrix_table(broken)
+
+
+def test_e2_replacement_table(results):
+    tex = t.e2_replacement_table(results)
+    check_shape(tex, 28)
+    assert "0.0089" in tex and "0.0000098" in tex  # level-1 and level-11 median replacement probability
+
+
+def test_secondary_table_reports_hidden_only(results):
+    tex = t.secondary_table(results)
+    assert "0.0074" in tex and "0.0382" in tex
+
+
+def test_per_digit_f1_table(results):
+    tex = t.per_digit_f1_table(results)
+    check_shape(tex, 2)
+    assert "0.0700" in tex  # digit 1 of the primary probe
+
+
+def test_deviations_mention_hidden_single_items():
+    tex = t.deviations_table(ROOT / "DECISIONS.md")
+    assert "(puzzle, unit, digit, cell)" in tex

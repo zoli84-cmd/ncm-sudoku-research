@@ -173,6 +173,13 @@ def test_collect_review_round1_keys(sources):
     assert nums["e1.clues"] == "100.0" and nums["rel.n"] == "2000" and nums["rel.solve"] == "86.3"
     assert nums["rel.teacher"] == "100.0" and nums["code.commit"] == "1047668"
     assert nums["probe.batch"] == "4096" and nums["probe.minsteps"] == "2000" and nums["probe.epochs"] == "50" and nums["probe.threshold"] == "0.5"
-    assert nums["sec.wl.f1"] == "0.064" and nums["sec.wl.posrate"] == "36.7" and nums["sec.wl.naked"] == "0.017"
+    assert nums["sec.wl.f1"] == "0.0636" and nums["sec.wl.posrate"] == "36.7" and nums["sec.wl.naked"] == "0.0165"
     assert nums["e2.l1.frequency.pnew.med"] == "0.0089" and nums["e2.l1.frequency.porig.med"] == "0.91"
     assert nums["depth.n.stuck"] == "2842" and nums["depth.raw.d1"] == "0.0014"
+
+
+def test_collect_review_round2_keys(sources):
+    nums = collect(sources)
+    assert nums["e2.cfg.L11.frequency.d1.pnew.med"] == "0.0000098"
+    assert nums["sec.wl.hiddenonly"] == "0.0074" and nums["sec.wl.f1"] == "0.0636" and nums["sec.wl.naked"] == "0.0165"
+    assert nums["equiv.seedq"] == "95"
