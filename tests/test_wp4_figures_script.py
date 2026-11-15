@@ -43,7 +43,8 @@ def test_generate_writes_every_file_deterministically(tmp_path):
 
 def _copy_inputs(dst: Path):
     for rel_path in ("experiments/wp2/test/results.json", "experiments/g0/reproduction.json",
-                     "experiments/lock/test_set.json", "DECISIONS.md"):
+                     "experiments/lock/test_set.json", "experiments/wp1/gate.json",
+                     "experiments/e3prep/extract.json", "DECISIONS.md"):
         (dst / rel_path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel_path, dst / rel_path)
 

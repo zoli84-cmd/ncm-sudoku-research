@@ -68,6 +68,18 @@ def test_collect_real_results_primary_values(sources):
     assert set(nums) == set(KEYS)
 
 
+def test_collect_setup_keys(sources):
+    nums = collect(sources)
+    assert nums["g0.published"] == "86.1" and nums["g0.tol"] == "1.0"
+    assert nums["gate.n"] == "1000" and nums["gate.fresh"] == "86.6" and nums["gate.bench"] == "86.3"
+    assert nums["gate.ci.lo"] == r"\ensuremath{-}1.6" and nums["gate.ci.hi"] == "2.0" and nums["gate.margin"] == "5.0"
+    assert nums["gate.tvd"] == "0.017" and nums["gate.tvd.thr"] == "0.05"
+    assert nums["probe.train"] == "2000" and nums["probe.val"] == "500"
+    assert nums["model.levels"] == "12" and nums["model.codes"] == "16" and nums["model.dim"] == "256"
+    assert nums["model.tokens"] == "89" and nums["data.clues"] == "30" and nums["stat.nboot"] == "10000"
+    assert nums["gate.ci.level"] == "90" and nums["stat.alpha"] == "5"
+
+
 def test_collect_none_interval_raises_naming_the_key(sources):
     broken = copy.deepcopy(sources)
     broken["results"]["primary"]["H3"]["family"] = None
@@ -99,3 +111,4 @@ def test_plan_constants_equal_wp2eval():
 
     for name in ("H1_MARGIN", "THETA2P_MARGIN", "THETA_T_MARGIN", "EQUIV_TOLERANCE"):
         assert getattr(wp4numbers, name) == getattr(wp2eval, name), name
+    assert wp4numbers.DESIGN["nboot"] == wp2eval.N_BOOT
