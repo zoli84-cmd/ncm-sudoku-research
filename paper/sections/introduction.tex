@@ -1,3 +1,25 @@
 \section{Introduction}
 \label{sec:introduction}
-% TODO Phase 2
+
+Next-Concept Modeling (NCM) generates its output coarse to fine: a short sequence of discrete codes at the first level is refined by longer code sequences at each later level, and a decoder maps the accumulated state to the output \citep{kumbong2026ncm}. On Sudoku, a released NCM checkpoint solves most hard puzzles. This invites a question that is easy to ask and hard to answer cleanly: where in such a hierarchy does the logic of the puzzle show up? Do the coarse levels matter more than the fine ones, does the model make up for a damaged early level, and is the logical state of the puzzle readable from an intermediate level?
+
+We answer three narrow versions of these questions with a preregistered, confirmatory study on one checkpoint. The study separates the levels of evidence: what the final output is sensitive to, what can be read from an intermediate state, and, as a planned but conditional step, what a targeted intervention changes. None of these on its own would show an explicit search, a human solving strategy or an algorithmic plan, and we state each result together with the claims that do not follow from it.
+
+\paragraph{Questions and hypotheses.}
+\begin{itemize}
+\item \textbf{H2, level sensitivity.} Does one replaced code at the first level change the solve outcome more than one replaced code at level~11?
+\item \textbf{H3, compensation.} After a level-1 replacement, does generating the later levels anew leave the puzzle solved more often than replaying the original later levels?
+\item \textbf{H1, readability.} Is the candidate mask of the puzzle (which digits each empty cell still allows) readable from the generated level-6 state better than from an unrelated state, and by how much?
+\end{itemize}
+A descriptive study (E1) first separates errors of the tokenizer from errors of generation. The candidate mask is a deterministic function of the puzzle, so H1 asks how accessible this information is to a given probe, not whether the model holds more information than its input.
+
+\paragraph{Findings.} The tokenizer reconstructed every TEST solution, so all failures came from generation. One replaced level-1 code lowered the solve share by \R{h2.est} percentage points more than one replaced level-11 code (family interval [\R{h2.fam.lo}, \R{h2.fam.hi}]), under a frequency-based replacement policy. Generating the later levels anew attenuated this damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), an effect whose practical relevance is not established and which is consistent with the checkpoint's training against corrupted levels. The candidate mask was readable from the level-6 state above a permuted control, but by \R{h1.est} in Brier loss ([\R{h1.fam.lo}, \R{h1.fam.hi}]), inside the registered practical threshold of \R{plan.h1margin}, while the same information is almost exactly readable from the raw puzzle. At the last level the readout was good but matched the teacher state that encodes the solution, and it was not equivariant under Sudoku symmetries.
+
+\paragraph{Contributions.}
+\begin{itemize}
+\item A preregistered measurement design for coarse-to-fine generators that separates the tokenizer from generation, compares intervention levels at equal edit cost, and isolates compensation from replaying versus regenerating the later levels with a sham restart.
+\item Confirmatory estimates for one NCM Sudoku checkpoint on fresh puzzles, with intervals that control the family-wise error, registered practical thresholds and equivalence readings, including results that are null or below the threshold.
+\item A probe design with a full control matrix (permuted, random-feature, label-permutation, teacher and raw-input controls), and the analysis code, frozen at a git tag before the confirmatory runs; every number in this paper is generated from the committed result files.
+\end{itemize}
+
+Section~\ref{sec:background} introduces NCM and the logical labels, Section~\ref{sec:setup} the data, the preregistration and the statistical plan. Sections~\ref{sec:e1} to~\ref{sec:e3} report E1, E2 and E3, and Section~\ref{sec:discussion} discusses the results and their limitations.
