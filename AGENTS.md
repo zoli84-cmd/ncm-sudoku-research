@@ -20,7 +20,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - Claim boundaries follow plan §13: written artifacts keep the hedging and "does not follow" qualifiers; no compressed or caveman-style prose in project files
 - Upstream code: `HazyResearch/ncm` at commit `c70274273f489abc73832b2b98584a8483b6b203`, planned as an unmodified submodule under `third_party/ncm`; own code goes to `src/ncm_sudoku/`
 - Numerical policy: FP32, eager mode, deterministic algorithms, CPU on native Windows (plan §2.2, DECISIONS D30)
-- Not committed (see `.gitignore`): checkpoints, datasets, run outputs, paper PDFs, `.env`
+- Not committed (see `.gitignore`): checkpoints, datasets, root `runs/` raw outputs, paper PDFs, `.env`
 - Secrets: `CONSENSUS_API_KEY` is read from the environment only; never write keys to files, logs, or commits
 
 ## Work Guidance
@@ -70,7 +70,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - `checkpoints/` (git-ignored): downloaded by `scripts/fetch_checkpoints.py`; load only through `ncm_sudoku.model.load_model` (weights_only=True)
 - `runs/` (git-ignored): per-puzzle raw run outputs
 - `runs/e3prep/<probe_train|probe_val>/` (git-ignored): PROBE subset arrays from `scripts/e3_extract.py` (`ids.json`, `puzzles.npy`, `solutions.npy`, `solve.npy`, `mask.npy`, `empty.npy`, `depth.npy`, `L01.npy`..`L12.npy`, `T02.npy`, `T06.npy`, `T12.npy`); about 3 GB total across both subsets
-- `experiments/wp2/<role>/` and `runs/wp2/<role>/` (created by the WP2 runners, `role` = `test` or `dry`): committed WP2 outputs and git-ignored raw outputs; run records in `experiments/wp2/<role>/runs/<runner>.json`; the dry approval is `experiments/wp2/dry/check.json` (and `check.md`), written by `scripts/wp2_dry_check.py`; `scripts/wp2_evaluate.py` writes `experiments/wp2/<role>/results.json` and `report.md`; see `ncm_sudoku.wp2`
+- [experiments/wp2/](experiments/wp2/) and `runs/wp2/<role>/` (`role` = `test` or `dry`): committed WP2 outputs (the TEST report is `experiments/wp2/test/report.md`, D83) and git-ignored raw outputs; run records in `experiments/wp2/<role>/runs/<runner>.json`; the dry approval is `experiments/wp2/dry/check.json` (and `check.md`), written by `scripts/wp2_dry_check.py`; `scripts/wp2_evaluate.py` writes `experiments/wp2/<role>/results.json` and `report.md`; see `ncm_sudoku.wp2`
 - `runs/lock/test/` (git-ignored): TEST subset from `scripts/lock_test_set.py` (`ids.json`, `puzzles.npy`, `solutions.npy`, uint8); its hashes are in `experiments/lock/test_set.json`
 - `runs/lock/equiv_l12/` (git-ignored): level-12 whole-layer seed probes from `scripts/lock_equiv_l12.py` (`L12_wholelayer_seed{0,1,2}.pt` state dicts, `pca.pt` tensors, `L12_wholelayer.json` config); reload with `load_saved` (`torch.load(weights_only=True)`)
 - `runs/e3prep/models/` (git-ignored): selected level-6 linear seed probes from `scripts/e3_probes.py` (`L06_linear_seed{0,1,2}.pt` state dicts, `L06_linear.json` config); loaded with `torch.load(weights_only=True)`

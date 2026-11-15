@@ -1,0 +1,412 @@
+{
+  "runner": "e3",
+  "role": "test",
+  "note": null,
+  "started": "2026-11-14T08:50:30.639093+00:00",
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "inputs": {
+    "files": {
+      "probe_train/ids.json": "2c42deb702f04007297e7178c620de411733c75931f63f119507d1196325ef45",
+      "probe_train/puzzles.npy": "e3047d1eafe932cc19e07d8fffc9e5311bdf93396744a3fbd4747ba16f164c9f",
+      "probe_train/mask.npy": "375524a59792a8317a96a77ea53fabbfc8ff559090f4baa13aa914d128dc6831",
+      "probe_train/empty.npy": "d501086abe420aba47d6806fca5b1b72e8e0e89ee585dcdcf12c806957425893",
+      "probe_train/depth.npy": "0d1f87ce0dbedb88c41c9dac278c8392e376d8e6a4052ddfad3dad78ec680d5f",
+      "probe_train/L02.npy": "403949c4a2344a0fe8d3edf749f64a493e5a321404e329c3e2da1c2e5e5538d2",
+      "probe_train/L06.npy": "dcec777c654e0c3b1fe1b46541958f0051c7ced84f20e4b5f3f755138e4850bf",
+      "probe_train/L12.npy": "e2b750444bf55048e63ddd87a11ca0fbbe862fcc4419c9db8d301b2f3150d9fc",
+      "probe_train/T02.npy": "84971d97d846c132ee57396095cd7c91d452b8b43ce18b95d44a0f4358301f20",
+      "probe_train/T06.npy": "444473e47a00e53a623bd19766736b630b2af71b276967a79a68d5162ddef2d0",
+      "probe_train/T12.npy": "2f0f544516a91ad1f7221667e8fcf81fa9943347d63b73375f62ddc54048af4a",
+      "probe_val/ids.json": "a1bac53457c9119c581e92aa108cd469b4984e848f2493ad5f7d565ed88a0fd4",
+      "probe_val/puzzles.npy": "ac4f09fe228293ec16dc9b6bc3679dccf76fe03d81664fa931313ba20afe59e4",
+      "probe_val/mask.npy": "c0d64f11db3f9c6c535312e1a5318c593b2a598179a9fbef53f5c3727705cf07",
+      "probe_val/empty.npy": "356558f60c0bd9ff8c729d178e567b6dd060d308bd111cff591357feabbaf923",
+      "probe_val/depth.npy": "96d2d4c8010f95267ae53f257792636dbdb0bbba765f501c4f61d33b002c3aab",
+      "probe_val/L02.npy": "1bf08efbd12d63f409bbd8b9ceabadbdc067f92a8ef9946ab49fdef989f0e0ae",
+      "probe_val/L06.npy": "37c017ec92524bab323c070e2da5641f62097e8cd33b185d3e2c64ebccf935ea",
+      "probe_val/L12.npy": "34f0c026cc1e36aefc9b5790a56241b3c38764aa111d8093527bffd684fb514a",
+      "probe_val/T02.npy": "db3db9014066a021f27499bc858dd321c420b83df3efb6b4adb85246fc76f985",
+      "probe_val/T06.npy": "e91f1094c8bd46e18e0f94fbb6c1a84677956fae045f78763132313274486061",
+      "probe_val/T12.npy": "3e3d7e22ce4df88545553321da6115aad276af7e3c70dc891e40191c2f9974aa",
+      "score/ids.json": "9b8a68005cdb6b04574de21534c87aafc67c7fef20880a867984e9120c006f57",
+      "score/puzzles.npy": "9f34608cf1c1b0317fbf0675738d61434622591dbd11fc8c8df2618cc45c102a",
+      "score/mask.npy": "7e77e53457745ea1f8e05e32449b194426966d234758156270aac18a076edd24",
+      "score/empty.npy": "d7fc37d217eb9ace24b033bb8daf1922fc5b922df976c522aefa0e2b71917cfc",
+      "score/depth.npy": "db568ad605756050420d1e1e0336e558f8711c85975d3bc90c0d82de87e23346",
+      "score/L02.npy": "82b8c836d096937a95260517b73c568843ca06afa605de8dbb8700e1767a67ff",
+      "score/L06.npy": "a0c5d5435523b5646242cca3f80e142d0075c73ea85320edb55bc3788412a786",
+      "score/L12.npy": "cf1dc74471beedfde22ae0de2a4d81cc0237fcb3a8c6db6cc0fbbbc17bb22d53",
+      "score/T02.npy": "a61f2ec592e402ac01bc6855a56ff52e9df63366d259f9c875b7164ca1e9cdc1",
+      "score/T06.npy": "c18664f8a37c6a37f121aa456d25c41dc01b1f58afe70140805dd2172fbc31ea",
+      "score/T12.npy": "75c9279ae57f997f32d2f63b4ede9611a81323880c00f9a3ca2883fb1e4e23ad"
+    },
+    "arrays": {
+      "probe_train/puzzles.npy": {
+        "shape": [
+          2000,
+          81
+        ],
+        "dtype": "int8"
+      },
+      "probe_train/mask.npy": {
+        "shape": [
+          2000,
+          81,
+          9
+        ],
+        "dtype": "uint8"
+      },
+      "probe_train/empty.npy": {
+        "shape": [
+          2000,
+          81
+        ],
+        "dtype": "bool"
+      },
+      "probe_train/depth.npy": {
+        "shape": [
+          2000,
+          81
+        ],
+        "dtype": "int16"
+      },
+      "probe_train/L02.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_train/L06.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_train/L12.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_train/T02.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_train/T06.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_train/T12.npy": {
+        "shape": [
+          2000,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/puzzles.npy": {
+        "shape": [
+          500,
+          81
+        ],
+        "dtype": "int8"
+      },
+      "probe_val/mask.npy": {
+        "shape": [
+          500,
+          81,
+          9
+        ],
+        "dtype": "uint8"
+      },
+      "probe_val/empty.npy": {
+        "shape": [
+          500,
+          81
+        ],
+        "dtype": "bool"
+      },
+      "probe_val/depth.npy": {
+        "shape": [
+          500,
+          81
+        ],
+        "dtype": "int16"
+      },
+      "probe_val/L02.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/L06.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/L12.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/T02.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/T06.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "probe_val/T12.npy": {
+        "shape": [
+          500,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/puzzles.npy": {
+        "shape": [
+          600,
+          81
+        ],
+        "dtype": "uint8"
+      },
+      "score/mask.npy": {
+        "shape": [
+          600,
+          81,
+          9
+        ],
+        "dtype": "uint8"
+      },
+      "score/empty.npy": {
+        "shape": [
+          600,
+          81
+        ],
+        "dtype": "bool"
+      },
+      "score/depth.npy": {
+        "shape": [
+          600,
+          81
+        ],
+        "dtype": "int16"
+      },
+      "score/L02.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/L06.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/L12.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/T02.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/T06.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      },
+      "score/T12.npy": {
+        "shape": [
+          600,
+          81,
+          256
+        ],
+        "dtype": "float32"
+      }
+    },
+    "budget_overrides": {},
+    "k": 256,
+    "sizes": [
+      125,
+      250,
+      500,
+      1000,
+      2000
+    ]
+  },
+  "complete": true,
+  "valid": true,
+  "outputs_started": true,
+  "finished": "2026-11-14T13:46:08.573823+00:00",
+  "seconds": 17749.559397400008,
+  "environment_end": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code_end": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze_end": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "code_changed_during_run": false,
+  "n": 600,
+  "n_stages": 15,
+  "fits_sha256": "c7ea7efeb826831b37c08eca95e4710da1bcb81919dcd3609110b0b2866aeaf5",
+  "budget_sha256": "8f9685fc5892d7b05f5babf63d47adb200ae2f70a4164d035d807f615675555c",
+  "stage_digests": {
+    "wl_L06": "9e75577240a88b57cb6003975df037088bebe398a49f2d08c51af23ad7cb4a44",
+    "wl_L12": "f7bae3e3d95e8b6b6aced59773805201f6ea0da8e97cb11f7b12302a4489960e",
+    "wl_teacher_L12": "62cdea51f8779a1dfe0d28746a335058644a11f55a0ad9160fb5ced38a85db85",
+    "wl_L02": "a6681de85c6b9ae48f062c153713c482db4b84a1a68f30fb7e70992a02fcf07d",
+    "raw_projected": "bba9ca696cabdf56e9c01a240225498f3608fae13784ece4280e9ac31b639134",
+    "raw_unprojected": "609a5d4cd1411e04a9be99f0d42cb3c11432e5f372ff11bbc0ca1bad687e9cd6",
+    "pc_L02": "95b354d0c267e41b353dc12762a2ab3997bd4a4051d1504c38797d8641d5f57f",
+    "pc_L06": "bc3fa3736abf35de7c9f2261b353e8d70b3974f61ea9a16378f334224f20c07c",
+    "pc_L12": "cc6d075720d0ef212fb86df67cc11a8dfad5d3baf7fcbdc98068ef234a4c00e4",
+    "controls": "551167bf7386867197a77b46e32262af265e136082defea07658dfca6d9b17a1",
+    "unit_digit": "746214e343e3f3cf2e3e10c0c7cd7bd05a2d139632a4d66a62a836045a8063d2",
+    "training_size": "7ce8a20e5e4a04523295ce0e0b8af0dbf40de7d4389a69622dabecd0c6a9e22c",
+    "wl_L06_controls": "668f925c6882761f51848c53193a75d4dd59b8e364bc7d4ffdf17715bfd26db9",
+    "wl_teacher_L06": "574a4875a03f172d98265ee00639b3d92fd01de9269a734eab19af952a739f4a",
+    "wl_training_size": "ade6fbbf08f620339c263b1a1de710478d27de8b23e56b163add24ab98d70d79"
+  },
+  "outputs": {
+    "e3_fits.json": "c7ea7efeb826831b37c08eca95e4710da1bcb81919dcd3609110b0b2866aeaf5",
+    "e3_budget.json": "8f9685fc5892d7b05f5babf63d47adb200ae2f70a4164d035d807f615675555c"
+  },
+  "invalid_reasons": [],
+  "status": "valid"
+}

@@ -7,7 +7,7 @@ __pycache__/
 # Large or regenerable artifacts: checkpoints, datasets, run outputs
 checkpoints/
 data/
-runs/
+/runs/
 *.pt
 *.pickle
 
@@ -23,5 +23,3 @@ resources/*.pdf
 # Copilot review transcripts (large, regenerable from the CLI session)
 .reviews/**/transcript.*.md
 
-# Per-puzzle raw run outputs
-runs/

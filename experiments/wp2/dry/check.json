@@ -1,0 +1,1194 @@
+{
+  "note": "DRY RUN (CAL / PROBE-VAL in the TEST role); not TEST",
+  "date": "2026-11-14",
+  "code": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze_state": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "code_end": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze_state_end": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "check_state": {
+    "frozen": true,
+    "clean": true,
+    "unchanged": true,
+    "ok": true
+  },
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "records": {
+    "e3_extract": {
+      "status": "valid",
+      "valid": true,
+      "reasons": [],
+      "commit": "1047668b8954535145a247ed4eb5704d1387bfda"
+    },
+    "e3": {
+      "status": "valid",
+      "valid": true,
+      "reasons": [],
+      "commit": "1047668b8954535145a247ed4eb5704d1387bfda"
+    },
+    "equiv": {
+      "status": "valid",
+      "valid": true,
+      "reasons": [],
+      "commit": "1047668b8954535145a247ed4eb5704d1387bfda"
+    },
+    "e2": {
+      "status": "valid",
+      "valid": true,
+      "reasons": [],
+      "commit": "1047668b8954535145a247ed4eb5704d1387bfda"
+    },
+    "e1": {
+      "status": "valid",
+      "valid": true,
+      "reasons": [],
+      "commit": "1047668b8954535145a247ed4eb5704d1387bfda"
+    }
+  },
+  "comparisons": {
+    "dry_ids": {
+      "n": 50,
+      "ok": true
+    },
+    "e2_records": {
+      "eligible": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_A": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_B": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_C": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "well_formed_C": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "well_formed_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "tv": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "tv_empty": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "hamming_CA": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "hamming_CA_empty": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "latent": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "codebook_rms": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "requant_ratio": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "downstream_changes_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "n_matched": 3900,
+      "n_missing_new": 0,
+      "n_missing_old": 0,
+      "n_duplicate_keys": 0,
+      "complete_coverage": true,
+      "differing": [],
+      "differing_listed_max": 50,
+      "ok": true
+    },
+    "e2_level1": {
+      "noop": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "w_frequency": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "w_uniform": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_C": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "solve_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "well_formed_C": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "well_formed_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "tv": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "tv_empty": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "hamming_CA": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "hamming_CA_empty": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "latent": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "codebook_rms": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "requant_ratio": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "downstream_changes_D": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "n_matched": 800,
+      "n_missing_new": 0,
+      "n_missing_old": 0,
+      "n_duplicate_keys": 0,
+      "complete_coverage": true,
+      "differing": [],
+      "differing_listed_max": 50,
+      "ok": true
+    },
+    "e2_base": {
+      "pilot2": {
+        "solve_A": {
+          "n_diff": 0,
+          "max_abs_diff": 0.0
+        },
+        "solve_B1": {
+          "n_diff": 0,
+          "max_abs_diff": 0.0
+        },
+        "n_matched": 50,
+        "n_missing_new": 0,
+        "n_missing_old": 0,
+        "n_duplicate_keys": 0,
+        "complete_coverage": true,
+        "differing": [],
+        "differing_listed_max": 50
+      },
+      "level1_full_batch": {
+        "solve_A": {
+          "n_diff": 0,
+          "max_abs_diff": 0.0
+        },
+        "solve_B1": {
+          "n_diff": 0,
+          "max_abs_diff": 0.0
+        },
+        "n_matched": 50,
+        "n_missing_new": 0,
+        "n_missing_old": 0,
+        "n_duplicate_keys": 0,
+        "complete_coverage": true,
+        "differing": [],
+        "differing_listed_max": 50
+      },
+      "ok": true
+    },
+    "e2_identity": {
+      "output": {
+        "level1_noop_mismatch": 0,
+        "level1_noop_mismatch_stored": 0,
+        "sham_mismatch": {
+          "level1_B1": 0,
+          "levels_B": {
+            "2": 0,
+            "6": 0,
+            "11": 0
+          }
+        },
+        "code_mismatch": {
+          "level1_B1": 0,
+          "levels_B": {
+            "2": 0,
+            "6": 0,
+            "11": 0
+          },
+          "level1_noop_D": 0
+        }
+      },
+      "record": {
+        "level1_noop_mismatch": 0,
+        "sham_mismatch": {
+          "level1_B1": 0,
+          "levels_B": {
+            "2": 0,
+            "6": 0,
+            "11": 0
+          }
+        },
+        "code_mismatch": {
+          "level1_B1": 0,
+          "levels_B": {
+            "2": 0,
+            "6": 0,
+            "11": 0
+          },
+          "level1_noop_D": 0
+        }
+      },
+      "ok": true
+    },
+    "e3": {
+      "fits": {
+        "wl_L06.generated": {
+          "reference": "experiments/e3prep/wholelayer.json stages.L06.generated_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "wl_L06.permuted": {
+          "reference": "experiments/e3prep/wholelayer.json stages.L06.permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "wl_L12.generated": {
+          "reference": "experiments/e3prep/wholelayer.json stages.L12.generated_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "wl_L12.permuted": {
+          "reference": "experiments/e3prep/wholelayer.json stages.L12.permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "wl_teacher_L12.teacher": {
+          "reference": "experiments/e3prep/wholelayer.json stages.teacher_L12.teacher_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "raw_projected.linear": {
+          "reference": "experiments/e3prep/wholelayer.json stages.raw_projected.linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "raw_unprojected.linear": {
+          "reference": "experiments/e3prep/wholelayer.json stages.raw_unprojected.linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L02.linear": {
+          "reference": "experiments/e3prep/probes.json stages.L02_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L02.mlp": {
+          "reference": "experiments/e3prep/probes.json stages.L02_mlp",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L02.permuted": {
+          "reference": "experiments/e3prep/probes.json stages.L02_permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L06.linear": {
+          "reference": "experiments/e3prep/probes.json stages.L06_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L06.mlp": {
+          "reference": "experiments/e3prep/probes.json stages.L06_mlp",
+          "config": [
+            0.1,
+            0.003
+          ],
+          "config_reference": [
+            0.1,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L12.linear": {
+          "reference": "experiments/e3prep/probes.json stages.L12_linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L12.mlp": {
+          "reference": "experiments/e3prep/probes.json stages.L12_mlp",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "pc_L12.permuted": {
+          "reference": "experiments/e3prep/probes.json stages.L12_permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.raw_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.raw_linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.raw_mlp": {
+          "reference": "experiments/e3prep/probes.json stages.controls.raw_mlp",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.peer_counts_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.peer_counts_linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.rule": {
+          "reference": "experiments/e3prep/probes.json stages.controls.rule",
+          "config": null,
+          "config_reference": null,
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.surface_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.surface_linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.permuted_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.random_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.random_linear",
+          "config": [
+            0.01,
+            0.001
+          ],
+          "config_reference": [
+            0.01,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.label_permuted_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.label_permuted_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.teacher_L02_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.teacher_L02_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.teacher_L06_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.teacher_L06_linear",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.teacher_L12_linear": {
+          "reference": "experiments/e3prep/probes.json stages.controls.teacher_L12_linear",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "controls.marginal": {
+          "reference": "experiments/e3prep/probes.json stages.controls.marginal",
+          "config": null,
+          "config_reference": null,
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "unit_digit.generated": {
+          "reference": "experiments/e3prep/probes.json stages.unit_digit.generated",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "unit_digit.raw": {
+          "reference": "experiments/e3prep/probes.json stages.unit_digit.raw",
+          "config": [
+            0,
+            0.003
+          ],
+          "config_reference": [
+            0,
+            0.003
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "training_size.n125": {
+          "reference": "experiments/e3prep/probes.json stages.training_size.125",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "training_size.n250": {
+          "reference": "experiments/e3prep/probes.json stages.training_size.250",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "training_size.n500": {
+          "reference": "experiments/e3prep/probes.json stages.training_size.500",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "training_size.n1000": {
+          "reference": "experiments/e3prep/probes.json stages.training_size.1000",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        },
+        "training_size.n2000": {
+          "reference": "experiments/e3prep/probes.json stages.training_size.2000",
+          "config": [
+            0.1,
+            0.001
+          ],
+          "config_reference": [
+            0.1,
+            0.001
+          ],
+          "config_equal": true,
+          "per_puzzle_allclose": true,
+          "max_abs_diff": 0.0,
+          "ok": true
+        }
+      },
+      "depth": {
+        "generated_linear": {
+          "fit": "pc_L06.linear",
+          "1": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "2": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "3": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          ">=4": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "stuck": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "censored": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": null,
+            "ok": true
+          },
+          "ok": true
+        },
+        "raw_linear": {
+          "fit": "controls.raw_linear",
+          "1": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "2": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "3": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          ">=4": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "stuck": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": 0.0,
+            "ok": true
+          },
+          "censored": {
+            "sizes_equal": true,
+            "brier_allclose": true,
+            "brier_per_seed_allclose": true,
+            "max_abs_diff": null,
+            "ok": true
+          },
+          "ok": true
+        },
+        "ok": true
+      },
+      "new_fits": [
+        "wl_L02.generated",
+        "wl_L02.permuted",
+        "wl_L06_controls.label_permuted",
+        "wl_L06_controls.random",
+        "wl_teacher_L06.teacher",
+        "wl_training_size.n1000",
+        "wl_training_size.n125",
+        "wl_training_size.n2000",
+        "wl_training_size.n250",
+        "wl_training_size.n500"
+      ],
+      "score_ids_equal_val_ids": true,
+      "differing": [],
+      "ok": true
+    },
+    "equivariance": {
+      "config_equal": {
+        "level": true,
+        "n": true,
+        "k": true,
+        "seed": true,
+        "n_predictors": true,
+        "ids": true,
+        "probe_config": true
+      },
+      "acceptable_fixed": true,
+      "arrays": {
+        "deviation": {
+          "allclose": true,
+          "max_abs_diff": 0.0,
+          "per_kind": {
+            "all": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            },
+            "digit": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            },
+            "geometric": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            }
+          }
+        },
+        "seed_noise": {
+          "allclose": true,
+          "max_abs_diff": 0.0
+        },
+        "brier": {
+          "allclose": true,
+          "max_abs_diff": 0.0,
+          "per_kind": {
+            "all": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            },
+            "digit": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            },
+            "geometric": {
+              "allclose": true,
+              "max_abs_diff": 0.0
+            }
+          }
+        },
+        "brier_original": {
+          "allclose": true,
+          "max_abs_diff": 0.0
+        }
+      },
+      "share_within": {
+        "at_0.0116": {
+          "all": 0.0,
+          "digit": 0.0,
+          "geometric": 0.0
+        },
+        "at_lock_value": {
+          "all": 0.0,
+          "digit": 0.0,
+          "geometric": 0.0
+        },
+        "lock_value": 0.011644554557515473,
+        "lock_share_within": {
+          "all": 0.0,
+          "digit": 0.0,
+          "geometric": 0.0
+        }
+      },
+      "ok": true
+    },
+    "e1": {
+      "solve": {
+        "n_diff": 0,
+        "max_abs_diff": 0.0
+      },
+      "n_matched": 50,
+      "n_missing_new": 0,
+      "n_missing_old": 0,
+      "n_duplicate_keys": 0,
+      "complete_coverage": true,
+      "differing": [],
+      "differing_listed_max": 50,
+      "ids_match_e2": true,
+      "ok": true
+    },
+    "extraction": {
+      "matches_e3prep": {
+        "puzzles": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "solutions": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "solve": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "mask": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "empty": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "depth": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L01": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L02": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L03": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L04": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L05": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L06": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L07": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L08": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L09": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L10": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L11": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "L12": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "T02": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "T06": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        },
+        "T12": {
+          "equal": true,
+          "max_abs_diff": 0.0
+        }
+      },
+      "ok": true
+    },
+    "probe_inputs": {
+      "n": 22,
+      "missing": [],
+      "changed": [],
+      "ok": true
+    },
+    "dry_evaluate": {
+      "missing": [],
+      "code_state": {
+        "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+        "dirty": false,
+        "diff_sha256": null
+      },
+      "role_dry": true,
+      "tag_commit": true,
+      "clean": true,
+      "n_inputs_checked": 146,
+      "changed": [],
+      "not_recorded": [],
+      "ok": true
+    }
+  },
+  "technical_success": true,
+  "snapshot": {
+    "dry_records": {
+      "experiments/wp2/dry/runs/e3_extract.json": "377547a6546301d509d580585e5020b7b1e511bccd01e4556832790a573b5bc5",
+      "experiments/wp2/dry/runs/e3.json": "8732363ec78231f8e67b034ca02d41be756d1067eae8d3b1ea830a4c4c798ccc",
+      "experiments/wp2/dry/runs/equiv.json": "c051b20a2b72383763058d10b1110ae2f949843a1502bf58a201bb9fe0bc91a4",
+      "experiments/wp2/dry/runs/e2.json": "1ff8f1d01444fa0abf7b424b3e57846f3c4f656f7bf61c22ccee9bdf6e9a9b91",
+      "experiments/wp2/dry/runs/e1.json": "ea27ae8291010c2a6a197803c43157779339d87cd2045d09a01f79c96cafdc1d"
+    },
+    "compared": {
+      "runs/wp2/dry/e2.json": "4a216dd2115269dac18d875b4ca4cfeb4b23d8503019e832d1f8fb968e4086e9",
+      "runs/wp2/dry/e1.json": "27bca1823ba11f24981d6b79889047603e68f1ac8d990684f6dff76461762082",
+      "runs/wp2/dry/e2/parts.json": "7fe518dd489a996ceb4dd4dcf54547fc6cf408fc46db0620ae3793107784c3c3",
+      "experiments/wp2/dry/e3_fits.json": "f5d473fe0b7b9ff4d58cd7eb02b62bee9914f13f1c0049d7efc338db3b20de1c",
+      "experiments/wp2/dry/e3_budget.json": "6b2d8eea71a27dad545d56149322471b1bd94c93838b402d99f2a7f2818591a2",
+      "experiments/wp2/dry/equivariance.json": "b8e834db5014ca5f625392e5fd8d5a4c01d84476daec5914e6d2526814f220bc",
+      "runs/e2p2/pilot2.json": "a29578707045e0849733f4ef8a3ef3ce0e350ac86519feab17c1f60417904ac2",
+      "runs/lock/level1_full_batch.json": "aa1b64596a808cdcd334422298eb529b9676694a5d304d429dedb11740ed96fd",
+      "experiments/e3prep/probes.json": "31d3e7d1ec38268aabc91e7b6c32ef56cd6dac7a3900dcee91ca72b828080556",
+      "experiments/e3prep/wholelayer.json": "d8a0c29965979db10bb51f18d16605f11eb6940c2047ddad046972d865d49693",
+      "experiments/lock/equivariance_l12.json": "2d755fb3b95258e64fea23af6c1846677af4afbe505e273742d5af3fa4c976ed",
+      "experiments/wp2/dry/results.json": "7ef143c06c49a67eb84af6cf3472b6a620a679b2afb202e09d2f0884b833fd67",
+      "experiments/wp2/dry/report.md": "28fc1677ba914a230a208feb68fcbad8dcb04c8e62b855b0ecdc7ddb9338f023"
+    },
+    "probe_inputs": {
+      "runs/e3prep/probe_train/ids.json": "2c42deb702f04007297e7178c620de411733c75931f63f119507d1196325ef45",
+      "runs/e3prep/probe_train/puzzles.npy": "e3047d1eafe932cc19e07d8fffc9e5311bdf93396744a3fbd4747ba16f164c9f",
+      "runs/e3prep/probe_train/mask.npy": "375524a59792a8317a96a77ea53fabbfc8ff559090f4baa13aa914d128dc6831",
+      "runs/e3prep/probe_train/empty.npy": "d501086abe420aba47d6806fca5b1b72e8e0e89ee585dcdcf12c806957425893",
+      "runs/e3prep/probe_train/depth.npy": "0d1f87ce0dbedb88c41c9dac278c8392e376d8e6a4052ddfad3dad78ec680d5f",
+      "runs/e3prep/probe_train/L02.npy": "403949c4a2344a0fe8d3edf749f64a493e5a321404e329c3e2da1c2e5e5538d2",
+      "runs/e3prep/probe_train/L06.npy": "dcec777c654e0c3b1fe1b46541958f0051c7ced84f20e4b5f3f755138e4850bf",
+      "runs/e3prep/probe_train/L12.npy": "e2b750444bf55048e63ddd87a11ca0fbbe862fcc4419c9db8d301b2f3150d9fc",
+      "runs/e3prep/probe_train/T02.npy": "84971d97d846c132ee57396095cd7c91d452b8b43ce18b95d44a0f4358301f20",
+      "runs/e3prep/probe_train/T06.npy": "444473e47a00e53a623bd19766736b630b2af71b276967a79a68d5162ddef2d0",
+      "runs/e3prep/probe_train/T12.npy": "2f0f544516a91ad1f7221667e8fcf81fa9943347d63b73375f62ddc54048af4a",
+      "runs/e3prep/probe_val/ids.json": "a1bac53457c9119c581e92aa108cd469b4984e848f2493ad5f7d565ed88a0fd4",
+      "runs/e3prep/probe_val/puzzles.npy": "ac4f09fe228293ec16dc9b6bc3679dccf76fe03d81664fa931313ba20afe59e4",
+      "runs/e3prep/probe_val/mask.npy": "c0d64f11db3f9c6c535312e1a5318c593b2a598179a9fbef53f5c3727705cf07",
+      "runs/e3prep/probe_val/empty.npy": "356558f60c0bd9ff8c729d178e567b6dd060d308bd111cff591357feabbaf923",
+      "runs/e3prep/probe_val/depth.npy": "96d2d4c8010f95267ae53f257792636dbdb0bbba765f501c4f61d33b002c3aab",
+      "runs/e3prep/probe_val/L02.npy": "1bf08efbd12d63f409bbd8b9ceabadbdc067f92a8ef9946ab49fdef989f0e0ae",
+      "runs/e3prep/probe_val/L06.npy": "37c017ec92524bab323c070e2da5641f62097e8cd33b185d3e2c64ebccf935ea",
+      "runs/e3prep/probe_val/L12.npy": "34f0c026cc1e36aefc9b5790a56241b3c38764aa111d8093527bffd684fb514a",
+      "runs/e3prep/probe_val/T02.npy": "db3db9014066a021f27499bc858dd321c420b83df3efb6b4adb85246fc76f985",
+      "runs/e3prep/probe_val/T06.npy": "e91f1094c8bd46e18e0f94fbb6c1a84677956fae045f78763132313274486061",
+      "runs/e3prep/probe_val/T12.npy": "3e3d7e22ce4df88545553321da6115aad276af7e3c70dc891e40191c2f9974aa"
+    }
+  }
+}

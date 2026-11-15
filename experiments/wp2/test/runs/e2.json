@@ -1,0 +1,153 @@
+{
+  "runner": "e2",
+  "role": "test",
+  "note": null,
+  "started": "2026-11-14T14:14:01.350055+00:00",
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "inputs": {
+    "n": 600,
+    "ids_sha256": "6e019563448e73408cd24a7ae207f5fd2549f0c881e70a37348d06f21ad6f09e",
+    "puzzles_sha256": "e9e714c83f333922e55ba36998343e1e0ffa73a75c52e8531f0bf5bed943c886",
+    "solutions_sha256": "08b333165f081f8c74d6d558372dc02cbb8d4dc35aac40b5da0ac699031fe471",
+    "freqs_sha256": "0cc7292718750754baf27b813a4095e2a7479cf4e480fbed50e43c665c7983fb",
+    "chunk": 50,
+    "decode_chunk": 50
+  },
+  "complete": true,
+  "valid": true,
+  "outputs_started": true,
+  "A_sha256": "6379720e1b4f3b3641aa6c43559306b446bc6d5285cf0c41ef1fa499f7f52aa5",
+  "A_seconds": 539.7581628001062,
+  "A_regenerated_matches": null,
+  "finished": "2026-11-14T23:07:43.980523+00:00",
+  "seconds": 32026.95139629999,
+  "environment_end": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code_end": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze_end": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "code_changed_during_run": false,
+  "n_records": 46800,
+  "n_level1_records": 9600,
+  "level1_noop_mismatch": 0,
+  "sham_mismatch": {
+    "level1_B1": 0,
+    "levels_B": {
+      "2": 0,
+      "6": 0,
+      "11": 0
+    }
+  },
+  "code_mismatch": {
+    "level1_B1": 0,
+    "levels_B": {
+      "2": 0,
+      "6": 0,
+      "11": 0
+    },
+    "level1_noop_D": 0
+  },
+  "timing": {
+    "pilot_seconds": 31480.59324149997,
+    "stage_seconds_new": 31278.703639000538,
+    "write_seconds": 7.938438500277698,
+    "context_seconds": 193.95116399915423,
+    "n_stages_reused": 0,
+    "n_stages_new": 98
+  },
+  "outputs": {
+    "e2.json": "31d5639d3cd28e268743e01d2cbd48d75276facca18354f9524cbd15429da517",
+    "A.npy": "6379720e1b4f3b3641aa6c43559306b446bc6d5285cf0c41ef1fa499f7f52aa5",
+    "parts.json": "aa45250743b03b696563640d839b6fdfb597bc32f866542bbf974727cb97d972"
+  },
+  "invalid_reasons": [],
+  "status": "valid"
+}

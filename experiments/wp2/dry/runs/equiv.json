@@ -1,0 +1,141 @@
+{
+  "runner": "equiv",
+  "role": "dry",
+  "note": "DRY RUN (CAL / PROBE-VAL in the TEST role); not TEST",
+  "started": "2026-11-14T02:41:18.979953+00:00",
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "inputs": {
+    "n_equiv": 200,
+    "k_elements": 4,
+    "seed": 0,
+    "acceptable": 0.0116,
+    "fits_sha256": "f5d473fe0b7b9ff4d58cd7eb02b62bee9914f13f1c0049d7efc338db3b20de1c",
+    "probe_files_sha256": {
+      "preds/wl_L12__generated.npz": "4cd1784179ede812f25af4dc4f31721c1a0931e6869c6cb9be4626feeb86c90b",
+      "models/wl_L12__generated.json": "d5bdd08f4743f16235617d496ab78b80ee13f94b9b17f4e0eb6305f5f628cea6",
+      "models/wl_L12__generated_seed0.pt": "2ceed74d078346fb816ae8e4e9a65e111fe4b267e40d341231cc11c4393786d2",
+      "models/wl_L12__generated_seed1.pt": "e16d6c9b2410f6ac7b07dad49eed0a9b15f5a20d79c1f4629b2a1b69c9152714",
+      "models/wl_L12__generated_seed2.pt": "c31b045b504dabb33d795855d1a5db4f971e97833b7a850c82dd33916e0f27f4",
+      "models/wl_L12__generated_pca.pt": "fc33a29acbe2881afbea3ef2009bbab3e3cb654e35bd364d4a597aacbd842b8a"
+    },
+    "score_sha256": {
+      "L12.npy": "34f0c026cc1e36aefc9b5790a56241b3c38764aa111d8093527bffd684fb514a",
+      "puzzles.npy": "ac4f09fe228293ec16dc9b6bc3679dccf76fe03d81664fa931313ba20afe59e4",
+      "mask.npy": "c0d64f11db3f9c6c535312e1a5318c593b2a598179a9fbef53f5c3727705cf07",
+      "empty.npy": "356558f60c0bd9ff8c729d178e567b6dd060d308bd111cff591357feabbaf923"
+    }
+  },
+  "complete": true,
+  "valid": true,
+  "outputs_started": true,
+  "finished": "2026-11-14T03:08:54.341829+00:00",
+  "seconds": 1660.1884349000175,
+  "environment_end": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code_end": {
+    "commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "dirty": false,
+    "diff_sha256": null
+  },
+  "freeze_end": {
+    "tag": "wp2-code",
+    "tag_commit": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "head": "1047668b8954535145a247ed4eb5704d1387bfda",
+    "code_clean": true,
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "upstream_ok": true,
+    "upstream_clean": true,
+    "frozen": true
+  },
+  "code_changed_during_run": false,
+  "n": 200,
+  "probe_files_sha256": {
+    "preds/wl_L12__generated.npz": "4cd1784179ede812f25af4dc4f31721c1a0931e6869c6cb9be4626feeb86c90b",
+    "models/wl_L12__generated.json": "d5bdd08f4743f16235617d496ab78b80ee13f94b9b17f4e0eb6305f5f628cea6",
+    "models/wl_L12__generated_seed0.pt": "2ceed74d078346fb816ae8e4e9a65e111fe4b267e40d341231cc11c4393786d2",
+    "models/wl_L12__generated_seed1.pt": "e16d6c9b2410f6ac7b07dad49eed0a9b15f5a20d79c1f4629b2a1b69c9152714",
+    "models/wl_L12__generated_seed2.pt": "c31b045b504dabb33d795855d1a5db4f971e97833b7a850c82dd33916e0f27f4",
+    "models/wl_L12__generated_pca.pt": "fc33a29acbe2881afbea3ef2009bbab3e3cb654e35bd364d4a597aacbd842b8a"
+  },
+  "outputs": {
+    "equivariance.json": "b8e834db5014ca5f625392e5fd8d5a4c01d84476daec5914e6d2526814f220bc"
+  },
+  "invalid_reasons": [],
+  "status": "valid"
+}
