@@ -1,0 +1,4 @@
+\makeatletter
+\newcommand{\wpdef}[2]{\expandafter\def\csname wp@#1\endcsname{#2}}
+\newcommand{\R}[1]{\ifcsname wp@#1\endcsname\csname wp@#1\endcsname\else\PackageError{wp4}{Unknown result key #1}{}\fi}
+\makeatother
