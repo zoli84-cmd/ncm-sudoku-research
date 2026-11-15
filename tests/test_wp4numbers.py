@@ -164,3 +164,15 @@ def test_absolute_value_key_for_prose(sources):
     nums = collect(sources)
     assert fmt(-0.1112751815580535, "pp1abs") == "11.1"
     assert nums["h2.est.abs"] == "11.1"
+
+
+def test_collect_review_round1_keys(sources):
+    nums = collect(sources)
+    assert nums["h2.fam.abs.lo"] == "8.8" and nums["h2.fam.abs.hi"] == "13.6"
+    assert nums["h1.seed0"] == "0.0029" and nums["h1.seed2"] == "0.0029"
+    assert nums["e1.clues"] == "100.0" and nums["rel.n"] == "2000" and nums["rel.solve"] == "86.3"
+    assert nums["rel.teacher"] == "100.0" and nums["code.commit"] == "1047668"
+    assert nums["probe.batch"] == "4096" and nums["probe.minsteps"] == "2000" and nums["probe.epochs"] == "50" and nums["probe.threshold"] == "0.5"
+    assert nums["sec.wl.f1"] == "0.064" and nums["sec.wl.posrate"] == "36.7" and nums["sec.wl.naked"] == "0.017"
+    assert nums["e2.l1.frequency.pnew.med"] == "0.0089" and nums["e2.l1.frequency.porig.med"] == "0.91"
+    assert nums["depth.n.stuck"] == "2842" and nums["depth.raw.d1"] == "0.0014"

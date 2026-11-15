@@ -27,20 +27,40 @@ def check_shape(tex, rows):
     assert body_rows(tex) == rows
 
 
-def test_primary_table(results):
-    tex = t.primary_table(results)
-    check_shape(tex, 3)
-    assert "\\ensuremath{-}11.1" in tex
-    h2 = next(r for r in results["readings"] if r["hypothesis"] == "H2")
-    assert t.escape(h2["result"]) in tex and t.escape(h2["does_not_follow"]) not in tex
+def test_summary_table(results):
+    tex = t.summary_table(results)
+    check_shape(tex, 5)
+    assert r"\ensuremath{-}11.1" in tex and "[0.0025, 0.0033]" in tex
+    assert "5.0 pp" in tex and "3.0 pp" in tex
 
 
-def test_readings_table(results):
+def test_readings_table_has_every_triggered_row(results):
     tex = t.readings_table(results)
-    check_shape(tex, 3)
-    for hyp in ("H1", "H2", "H3"):
-        r = next(x for x in results["readings"] if x["hypothesis"] == hyp)
+    triggered = [r for r in results["readings"] if r["row"]]
+    check_shape(tex, len(triggered))
+    assert len(triggered) == 7
+    for r in triggered:
         assert t.escape(r["claim"]) in tex and t.escape(r["does_not_follow"]) in tex
+
+
+def test_secondary_table(results):
+    tex = t.secondary_table(results)
+    check_shape(tex, len(t.SECONDARY_ROWS))
+    assert "0.0636" in tex  # macro F1 of the primary probe
+
+
+def test_depth_table(results):
+    tex = t.depth_table(results)
+    check_shape(tex, 5)
+    assert "2842" in tex and "0.0014" in tex  # stuck cells; projected raw input
+
+
+def test_levels_table(results):
+    check_shape(t.levels_table(results), 3)
+
+
+def test_e2_diagnostics_table(results):
+    check_shape(t.e2_diagnostics_table(results), 28)
 
 
 def test_e3_matrix_table(results):
@@ -59,19 +79,22 @@ def test_e1_table(results):
 
 
 def test_equivariance_table(results):
-    check_shape(t.equivariance_table(results), 3)
+    tex = t.equivariance_table(results)
+    check_shape(tex, 3)
+    assert "full group" in tex
 
 
 def test_deviations_table_reads_ids_from_decisions():
     tex = t.deviations_table(ROOT / "DECISIONS.md")
     check_shape(tex, len(t.DEVIATIONS))
-    for did in ("D78", "D79", "D81", "D82", "D84"):
+    for did in ("D77", "D78", "D79", "D81, D82", "D84"):
         assert did in tex
+    assert "not evaluated" in tex
 
 
 def test_deviations_table_missing_id_raises(tmp_path):
     f = tmp_path / "DECISIONS.md"
-    f.write_text("| D78 | x |\n")
+    f.write_text("| D77 | x |\n| D78 | x |\n")
     with pytest.raises(KeyError, match="D79"):
         t.deviations_table(f)
 
@@ -88,14 +111,14 @@ def test_missing_reading_raises(results):
     broken = copy.deepcopy(results)
     broken["readings"] = [r for r in broken["readings"] if r["hypothesis"] != "H3"]
     with pytest.raises(KeyError, match="H3"):
-        t.primary_table(broken)
+        t.readings_table(broken)
 
 
 def test_missing_interval_names_the_path(results):
     broken = copy.deepcopy(results)
     broken["primary"]["H3"]["family"] = None
     with pytest.raises(KeyError, match="primary.H3.family"):
-        t.primary_table(broken)
+        t.summary_table(broken)
 
 
 def test_missing_brier_is_an_error_not_a_dash(results):

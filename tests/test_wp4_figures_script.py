@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "numbers.tex", "numbers.json",
-    "tables/primary.tex", "tables/readings.tex", "tables/e3_matrix.tex", "tables/e2_dose.tex", "tables/e1.tex",
+    "tables/summary.tex", "tables/readings.tex", "tables/e3_matrix.tex", "tables/secondary.tex",
+    "tables/depth.tex", "tables/levels.tex", "tables/e2_diagnostics.tex", "tables/e2_dose.tex", "tables/e1.tex",
     "tables/equivariance.tex", "tables/deviations.tex",
     "figures/dose_curves.pdf", "figures/contrasts_forest.pdf", "figures/propagation.pdf",
     "figures/e3_readability.pdf", "figures/e3_supporting.pdf", "figures/e1_levels.pdf",
@@ -44,7 +45,7 @@ def test_generate_writes_every_file_deterministically(tmp_path):
 def _copy_inputs(dst: Path):
     for rel_path in ("experiments/wp2/test/results.json", "experiments/g0/reproduction.json",
                      "experiments/lock/test_set.json", "experiments/wp1/gate.json",
-                     "experiments/e3prep/extract.json", "DECISIONS.md"):
+                     "experiments/e3prep/extract.json", "experiments/wp1/e1_released.json", "DECISIONS.md"):
         (dst / rel_path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel_path, dst / rel_path)
 
@@ -54,12 +55,12 @@ def test_check_mode_detects_stale_and_missing_files(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(mod, "ROOT", tmp_path)
     mod.generate(tmp_path, tmp_path / "paper" / "generated")
     assert mod.main(["--check"]) == 0
-    target = tmp_path / "paper" / "generated" / "tables" / "primary.tex"
+    target = tmp_path / "paper" / "generated" / "tables" / "summary.tex"
     target.write_text(target.read_text(encoding="utf-8") + "%", encoding="utf-8")
     (tmp_path / "paper" / "generated" / "numbers.json").unlink()
     assert mod.main(["--check"]) == 1
     out = capsys.readouterr().out
-    assert "tables/primary.tex" in out and "numbers.json" in out
+    assert "tables/summary.tex" in out and "numbers.json" in out
 
 
 def test_committed_generated_files_are_current():

@@ -17,8 +17,12 @@ from ncm_sudoku.wp4numbers import collect, load_sources, numbers_json, numbers_t
 ROOT = Path(__file__).resolve().parents[1]
 
 TABLES = {
-    "primary": wp4tables.primary_table,
+    "summary": wp4tables.summary_table,
     "readings": wp4tables.readings_table,
+    "secondary": wp4tables.secondary_table,
+    "depth": wp4tables.depth_table,
+    "levels": wp4tables.levels_table,
+    "e2_diagnostics": wp4tables.e2_diagnostics_table,
     "e3_matrix": wp4tables.e3_matrix_table,
     "e2_dose": wp4tables.e2_dose_table,
     "e1": wp4tables.e1_table,

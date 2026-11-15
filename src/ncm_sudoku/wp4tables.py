@@ -7,7 +7,9 @@ The section file supplies the table float, caption and label. Values are formatt
 import re
 from pathlib import Path
 
-from ncm_sudoku.wp4numbers import fmt, lookup
+from ncm_sudoku.wp4numbers import (
+    H1_MARGIN, H2_PRACTICAL, H3_PRACTICAL, THETA2P_MARGIN, THETA_T_MARGIN, fmt, lookup,
+)
 
 TEXT = {"&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_", "{": r"\{", "}": r"\}",
         "~": r"\textasciitilde{}", "^": r"\textasciicircum{}", "\\": r"\textbackslash{}"}
@@ -15,11 +17,11 @@ MATH = {"±": r"\pm", "θ": r"\theta", "₁": "_1", "₂": "_2", "′": "'", "�
         "≤": r"\le", "≥": r"\ge", "×": r"\times", "Δ": r"\Delta"}
 
 DEVIATIONS = {
-    "D78": "Plan review reading of plan section 7.4: full state tensors are not saved; cumulative-state distances and intermediate decodings exist for the primary configurations only",
-    "D79": "Implementation reading of the naked-single F1 (secondary metric), fixed before the code freeze",
-    "D81": "Post-freeze fix before any TEST run: retry of a directory rename on Windows",
-    "D82": "Correction of D81: the rename failed because of an unreleased memory map; fixed at the source and re-tagged before any TEST run",
-    "D84": "E4 dropped: the plan section 9.1 entry condition is not met given the TEST readout and equivariance results; SELECT and E4-TEST were never generated",
+    ("D77",): "Implementation readings of details the protocol text left open, fixed before the code freeze (for example: the level-12 readability criterion is the 95% interval of its whole-layer contrast above zero; the equivariance result gets no mechanical reading)",
+    ("D78",): "Plan review: the plan section 8.2 controls (random features, label permutation, teacher state, training-size curve) also run on the primary whole-layer probe; full state tensors are not saved, so cumulative-state distances and intermediate decodings exist only for the level-1 enumeration and the level-11 single replacement (plan section 7.4 reading)",
+    ("D79",): "Definition of the naked-single F1 (secondary metric): items are cells; a true item has exactly one candidate, a predicted item exactly one digit with probability at least 0.5; a match needs the same cell and digit",
+    ("D81", "D82"): "An implementation defect that stopped the dry run (a directory holding an unreleased memory-mapped file could not be renamed) was diagnosed and fixed, the code re-tagged and the dry run repeated, before any model ran on TEST",
+    ("D84",): "E4 dropped after the TEST results: its entry condition was judged very unlikely to hold given the level-6 readout below the practical threshold and the non-equivariant level-12 readout; the formal gate on SELECT was not evaluated, and SELECT and E4-TEST were never generated",
 }
 
 
@@ -65,6 +67,40 @@ def _interval(ci: list, kind: str) -> str:
     return f"[{fmt(ci[0], kind)}, {fmt(ci[1], kind)}]"
 
 
+PRIMARY_HYPS = ("H1", "H2", "H3")
+
+# (label, result path, format kind, scale, interval field, threshold code)
+SUMMARY = (
+    ("H1: level-6 readability", "primary.H1", "dec4", "Brier", "family", "h1"),
+    ("H2: level 1 vs.\\ 11", "primary.H2", "pp1", "pp", "family", "h2"),
+    ("H3: compensation", "primary.H3", "pp1", "pp", "family", "h3"),
+    ("Level 2 vs.\\ 11 (secondary)", "secondary.theta2_prime", "pp1", "pp", "ci95", "theta2p"),
+    ("Level 12, teacher vs.\\ generated (secondary)", "secondary.theta_T", "sig2", "Brier", "ci95", "thetaT"),
+)
+EQUIVALENCE = ("h1", "theta2p", "thetaT")
+
+
+def _threshold(code: str) -> str:
+    return {
+        "h1": f"$\\pm${fmt(H1_MARGIN, 'g')}",
+        "h2": f"{fmt(H2_PRACTICAL, 'pp1')} pp",
+        "h3": f"{fmt(H3_PRACTICAL, 'pp1')} pp",
+        "theta2p": f"$\\pm${fmt(THETA2P_MARGIN, 'pp1')} pp",
+        "thetaT": f"$\\pm${fmt(THETA_T_MARGIN, 'g')}",
+    }[code]
+
+
+def summary_table(results: dict) -> str:
+    """Confirmatory and registered secondary contrasts: estimate, interval, equivalence interval, threshold."""
+    rows = []
+    for label, path, kind, scale, interval, code in SUMMARY:
+        ci = _interval(req(results, f"{path}.{interval}.ci"), kind)
+        eq = _interval(req(results, f"{path}.tost.ci"), kind) if code in EQUIVALENCE else "--"
+        rows.append([label, scale, fmt(req(results, f"{path}.estimate"), kind), ci, eq, _threshold(code)])
+    header = ["Contrast", "Scale", "Estimate", "Interval", "Equiv.\\ interval", "Threshold"]
+    return _tabular("p{3.3cm}lrllr", header, rows)
+
+
 def _reading(results: dict, hyp: str) -> dict:
     reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
     if reading is None:
@@ -72,26 +108,105 @@ def _reading(results: dict, hyp: str) -> dict:
     return reading
 
 
-PRIMARY = (("H1", "dec4", "Brier"), ("H2", "pp1", "pp"), ("H3", "pp1", "pp"))
-
-
-def primary_table(results: dict) -> str:
-    """Estimates, family and 95% intervals and the registered result row of H1-H3."""
-    rows = []
-    for hyp, kind, scale in PRIMARY:
-        base = f"primary.{hyp}"
-        rows.append([hyp, scale, fmt(req(results, f"{base}.estimate"), kind),
-                     _interval(req(results, f"{base}.family.ci"), kind),
-                     _interval(req(results, f"{base}.ci95.ci"), kind), escape(_reading(results, hyp)["result"])])
-    header = ["", "Scale", "Estimate", "Family interval", "95\\% interval", "Registered result"]
-    return _tabular("llrll p{3.3cm}", header, rows)
+READING_LABELS = {"H1": "H1", "H2": "H2", "H3": "H3", "theta2_prime": "Level 2 vs.\\ 11", "level12": "Level 12"}
 
 
 def readings_table(results: dict) -> str:
-    """The §13 justified claim and its "does not follow" boundary for H1-H3."""
-    rows = [[hyp, escape(_reading(results, hyp)["claim"]), escape(_reading(results, hyp)["does_not_follow"])]
-            for hyp, _, _ in PRIMARY]
-    return _tabular("l p{5.0cm} p{5.8cm}", ["", "Justified claim", "Does not follow"], rows)
+    """Every triggered §13 row: registered result, justified claim and "does not follow"."""
+    for hyp in PRIMARY_HYPS:
+        _reading(results, hyp)
+    rows = [[READING_LABELS.get(r["hypothesis"], escape(r["hypothesis"])), escape(r["result"]), escape(r["claim"]),
+             escape(r["does_not_follow"])]
+            for r in results["readings"] if r["row"]]
+    header = ["", "Registered result", "Justified claim", "Does not follow"]
+    return _tabular("p{1.3cm} p{2.9cm} p{3.2cm} p{3.9cm}", header, rows)
+
+
+SECONDARY_ROWS = (
+    ("wl_L06.generated", "Whole-layer, level 6"), ("wl_L06.permuted", "Whole-layer, level 6, permuted"),
+    ("pc_L06.linear", "Per-cell, level 6"), ("pc_L06.mlp", "Per-cell MLP, level 6"),
+    ("wl_L12.generated", "Whole-layer, level 12"), ("wl_teacher_L12.teacher", "Whole-layer, teacher level 12"),
+    ("raw_projected.linear", "Raw input, projected"), ("raw_unprojected.linear", "Raw input, unprojected"),
+    ("controls.raw_mlp", "Raw input, MLP"), ("controls.peer_counts_linear", "Peer digit counts"),
+    ("controls.surface_linear", "Surface features"), ("controls.rule", "Exact rule"),
+)
+
+
+def _sec(results: dict, row: str, field: str):
+    value = results["tables"]["secondary_metrics"].get(row)
+    for part in field.split("."):
+        if not isinstance(value, dict) or value.get(part) is None:
+            raise KeyError(f"tables.secondary_metrics[{row}].{field}")
+        value = value[part]
+    return value
+
+
+def secondary_table(results: dict) -> str:
+    """Registered secondary candidate-mask metrics (threshold 0.5) per probe and control."""
+    rows = [[label, fmt(_sec(results, row, "f1.macro"), "dec4"), fmt(_sec(results, row, "ranking.pr_auc_macro"), "dec4"),
+             fmt(_sec(results, row, "mask_exact_match"), "pct1"), fmt(_sec(results, row, "count_mae"), "sig2"),
+             fmt(_sec(results, row, "naked_single_f1"), "dec4"), fmt(_sec(results, row, "hidden_single_f1.all.f1"), "dec4")]
+            for row, label in SECONDARY_ROWS]
+    header = ["Readout", "Macro F1", "PR-AUC", "Mask exact (\\%)", "Count MAE", "Naked F1", "Hidden F1"]
+    return _tabular("lrrrrrr", header, rows)
+
+
+DEPTHS = ((("1", "1"), ("2", "2"), ("3", "3"), (">=4", "$\\ge$4"), ("stuck", "stuck")))
+DEPTH_ROWS = ("wl_L06.generated", "pc_L06.linear", "raw_unprojected.linear", "raw_projected.linear")
+
+
+def _depth(results: dict, row: str, part: str, stratum: str, field: str):
+    try:
+        value = results["tables"]["depth"][row][part][stratum][field]
+    except (KeyError, TypeError):
+        value = None
+    if value is None:
+        raise KeyError(f"tables.depth[{row}].{part}.{stratum}.{field}")
+    return value
+
+
+def depth_table(results: dict) -> str:
+    """Level-6 Brier by inference depth with sample sizes and label rates (descriptive)."""
+    rows = []
+    for stratum, label in DEPTHS:
+        base = DEPTH_ROWS[0]
+        rows.append([label, fmt(_depth(results, base, "label_rates", stratum, "n_cells"), "int"),
+                     fmt(_depth(results, base, "label_rates", stratum, "n_puzzles"), "int"),
+                     fmt(_depth(results, base, "label_rates", stratum, "positive_rate"), "pct1")]
+                    + [fmt(_depth(results, row, "brier", stratum, "brier"), "dec4") for row in DEPTH_ROWS])
+    header = ["Depth", "Cells", "Puzzles", "Positive (\\%)", "Whole-layer", "Per-cell", "Raw, unproj.", "Raw, proj."]
+    return _tabular("lrrrrrrr", header, rows)
+
+
+def levels_table(results: dict) -> str:
+    """Brier by level for whole-layer and per-cell probes and their permuted controls."""
+    rows = []
+    for lv in ("L02", "L06", "L12"):
+        base = f"tables.e3_levels.{lv}"
+        rows.append([str(int(lv[1:]))] + [fmt(req(results, f"{base}.{p}"), "dec4") for p in (
+            "whole_layer.generated", "whole_layer.permuted", "per_cell.linear", "per_cell.mlp", "per_cell.permuted")])
+    header = ["Level", "Whole-layer", "Whole-layer permuted", "Per-cell", "Per-cell MLP", "Per-cell permuted"]
+    return _tabular("rrrrrr", header, rows)
+
+
+def e2_diagnostics_table(results: dict) -> str:
+    """Initial damage (median and upper-quartile TV, empty-cell TV), latent distance and format errors."""
+    e2 = results["tables"]["e2"]
+    entries = [("1", p, "enum.", f"tables.e2.level1.{p}") for p in ("frequency", "uniform")]
+    entries += [(str(c["level"]), c["policy"], str(c["dose"]),
+                 f"tables.e2.configurations[level={c['level']},policy={c['policy']},dose={c['dose']}]")
+                for c in e2["configurations"]]
+    rows = []
+    for level, policy, dose, path in entries:
+        rows.append([level, policy, dose, fmt(req(results, f"{path}.quantiles.tv.2"), "sig2"),
+                     fmt(req(results, f"{path}.quantiles.tv.3"), "sig2"),
+                     fmt(req(results, f"{path}.quantiles.tv_empty.2"), "sig2"),
+                     fmt(req(results, f"{path}.quantiles.latent.2"), "sig2"),
+                     fmt(req(results, f"{path}.format_error_share.C"), "pct1"),
+                     fmt(req(results, f"{path}.format_error_share.D"), "pct1")])
+    header = ["Level", "Policy", "Dose", "TV median", "TV $Q_3$", "TV empty, median", "Latent, median",
+              "Format C (\\%)", "Format D (\\%)"]
+    return _tabular("rllrrrrrr", header, rows)
 
 
 def e3_matrix_table(results: dict) -> str:
@@ -142,7 +257,8 @@ def e1_table(results: dict) -> str:
 
 def equivariance_table(results: dict) -> str:
     cats = results["tables"]["equivariance"]["categories"]
-    rows = [[name, fmt(c["mean_deviation"], "dec4"), fmt(c["share_within"], "pct1"),
+    names = {"all": "full group", "digit": "digit permutations only", "geometric": "grid transformations only"}
+    rows = [[names.get(name, escape(name)), fmt(c["mean_deviation"], "dec4"), fmt(c["share_within"], "pct1"),
              fmt(c["brier_transformed"], "dec4"), fmt(c["brier_original"], "dec4")]
             for name, c in cats.items()]
     header = ["Category", "Mean deviation", "Within tol.\\ (\\%)", "Brier, transformed", "Brier, original"]
@@ -152,8 +268,9 @@ def equivariance_table(results: dict) -> str:
 def deviations_table(decisions: Path) -> str:
     text = decisions.read_text(encoding="utf-8")
     rows = []
-    for did, summary in DEVIATIONS.items():
-        if not re.search(rf"^\| {did} \|", text, flags=re.M):
-            raise KeyError(f"{did} not found in {decisions.name}")
-        rows.append([did, escape(summary)])
-    return _tabular("l p{10.8cm}", ["Entry", "Decision (DECISIONS.md)"], rows)
+    for ids, summary in DEVIATIONS.items():
+        for did in ids:
+            if not re.search(rf"^\| {did} \|", text, flags=re.M):
+                raise KeyError(f"{did} not found in {decisions.name}")
+        rows.append([", ".join(ids), escape(summary)])
+    return _tabular("l p{10.6cm}", ["Entry", "Decision (DECISIONS.md)"], rows)

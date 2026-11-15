@@ -87,3 +87,16 @@ def test_e1_levels_two_series_over_twelve_levels(results):
     lines = fig.axes[0].get_lines()
     assert len(lines) == 2 and all(len(line.get_xdata()) == 12 for line in lines)
     f.plt.close(fig)
+
+
+def test_propagation_labels_relative_distance(results):
+    fig = f.propagation(results)
+    assert "Relative" in fig.axes[1].get_ylabel()
+    f.plt.close(fig)
+
+
+def test_readability_names_unprojected_raw_input(results):
+    fig = f.e3_readability(results)
+    labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+    assert any("unprojected" in label for label in labels)
+    f.plt.close(fig)

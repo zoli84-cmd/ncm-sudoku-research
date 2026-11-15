@@ -114,7 +114,7 @@ def propagation(results: dict):
         ax2.plot(levels, prop[name]["state_dist_D"], "-", color=colour, label=f"{name}, D")
     ax2.set_xticks(range(1, 13), [str(i) for i in range(1, 13)])
     ax2.set_xlabel("Level")
-    ax2.set_ylabel("Cumulative-state distance to A")
+    ax2.set_ylabel("Relative cumulative-state distance to A")
     ax2.legend(frameon=False, fontsize=5)
     fig.tight_layout()
     return fig
@@ -134,7 +134,7 @@ def e3_readability(results: dict):
     ax1.plot(xs, [levels[k]["whole_layer"]["permuted"] for k in keys], "s--", color=GREY, label="Permuted null")
     ax1.plot((6, 12), (_main_row(results, "wl_teacher_L06.teacher"), _main_row(results, "wl_teacher_L12.teacher")),
              "^:", color=ORANGE, label="Teacher")
-    ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input (linear)")
+    ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input, unprojected (linear)")
     ax1.set_xticks(xs)
     ax1.set_xlabel("Level")
     ax1.set_ylabel("Brier (score set)")
@@ -144,7 +144,8 @@ def e3_readability(results: dict):
             (12, req(results, "secondary.theta1_wl.L12.estimate"), req(results, "secondary.theta1_wl.L12.ci95.ci")))
     ax2.axhspan(-H1_MARGIN, H1_MARGIN, color=GREY, alpha=0.2, label="±practical threshold")
     for x, est, ci in rows:
-        ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1)
+        label = ("H1 family interval" if x == 6 else "95% interval") if x in (6, 12) else None
+        ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1, label=label)
         ax2.plot([x], [est], "o", color=BLUE, markersize=4)
     ax2.axhline(0, color="black", linewidth=0.6)
     ax2.set_xticks(xs)
