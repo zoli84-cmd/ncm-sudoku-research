@@ -158,3 +158,9 @@ def test_lookup_dict_keys_with_dots():
     assert lookup(doc, "depth.wl_L06.generated.brier.>=4.brier") == 0.5
     with pytest.raises(KeyError):
         lookup(doc, "depth.wl_L06.missing.brier")
+
+
+def test_absolute_value_key_for_prose(sources):
+    nums = collect(sources)
+    assert fmt(-0.1112751815580535, "pp1abs") == "11.1"
+    assert nums["h2.est.abs"] == "11.1"

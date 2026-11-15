@@ -50,9 +50,11 @@ def _signed(text: str) -> str:
 
 
 def fmt(x, kind: str) -> str:
-    """Format a stored value; kinds: pp1, pct1 (x100, 1 decimal), pct0, dec1, dec2, dec4, sig2, g, int."""
+    """Format a stored value; kinds: pp1, pp1abs, pct1 (x100, 1 decimal), pct0, dec1, dec2, dec4, sig2, g, int."""
     if x is None or isinstance(x, bool) or (isinstance(x, float) and math.isnan(x)):
         raise ValueError(f"cannot format {x!r}")
+    if kind == "pp1abs":  # magnitude for prose such as "lowered by X points"
+        return f"{100 * abs(x):.1f}"
     if kind in ("pp1", "pct1"):
         return _signed(f"{100 * x:.1f}")
     if kind == "dec1":
@@ -147,6 +149,7 @@ def _contrast(key: str, path: str, kind: str, family: bool = False, tost: bool =
 def _keys() -> dict[str, tuple[str, str, str]]:
     k: dict[str, tuple[str, str, str]] = {}
     k |= _contrast("h1", "primary.H1", "dec4", family=True, tost=True)
+    k["h2.est.abs"] = ("results", "primary.H2.estimate", "pp1abs")
     k["h1.relimp"] = ("results", "primary.H1.relative_improvement", "pct1")
     k |= _contrast("h2", "primary.H2", "pp1", family=True)
     k |= _contrast("h3", "primary.H3", "pp1", family=True)
