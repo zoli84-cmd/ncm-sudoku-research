@@ -9,8 +9,12 @@ import math
 import re
 from pathlib import Path
 
-from ncm_sudoku.wp2eval import EQUIV_TOLERANCE, H1_MARGIN, THETA2P_MARGIN, THETA_T_MARGIN
-
+# Plan constants, copied from ncm_sudoku.wp2eval (pinned equal by tests/test_wp4numbers.py) so that
+# the WP4 generator does not import wp2eval, which pulls in torch through e2p2.
+H1_MARGIN = 0.01  # §8.3, D60
+THETA2P_MARGIN = 0.03  # §11.4
+THETA_T_MARGIN = 0.01  # §8.3
+EQUIV_TOLERANCE = 0.0116  # §8.4, D71
 H2_PRACTICAL = 0.05  # plan §11.4, D44
 H3_PRACTICAL = 0.03  # plan §11.4, D44
 

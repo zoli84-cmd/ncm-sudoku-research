@@ -92,3 +92,10 @@ def test_numbers_json_sorted_and_round_trips(sources):
 
 def test_plan_constants_match_the_plan():
     assert wp4numbers.H2_PRACTICAL == 0.05 and wp4numbers.H3_PRACTICAL == 0.03
+
+
+def test_plan_constants_equal_wp2eval():
+    from ncm_sudoku import wp2eval
+
+    for name in ("H1_MARGIN", "THETA2P_MARGIN", "THETA_T_MARGIN", "EQUIV_TOLERANCE"):
+        assert getattr(wp4numbers, name) == getattr(wp2eval, name), name

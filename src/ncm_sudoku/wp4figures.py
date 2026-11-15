@@ -11,8 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from ncm_sudoku.wp2eval import H1_MARGIN, THETA2P_MARGIN  # noqa: E402
-from ncm_sudoku.wp4numbers import H2_PRACTICAL, H3_PRACTICAL  # noqa: E402
+from ncm_sudoku.wp4numbers import H1_MARGIN, H2_PRACTICAL, H3_PRACTICAL, THETA2P_MARGIN  # noqa: E402
 
 plt.rcParams.update({"pdf.fonttype": 42, "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8,
                      "legend.fontsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7})
