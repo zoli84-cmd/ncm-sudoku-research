@@ -1,0 +1,66 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from ncm_sudoku.texlint import lint, numeric_literals, strip_comments, used_keys
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def lits(tex):
+    return [lit for _, lit in numeric_literals(tex)]
+
+
+def test_decimal_found_everywhere():
+    tex = "a \\textbf{0.23} b $98.33\\%$ c & 5\\% & d 1,726"
+    assert lits(tex) == ["0.23", "98.33\\%", "5\\%", "1,726"]
+
+
+def test_percentage_points_and_negative_numbers():
+    assert lits("a drop of 11 pp and $-0.5$") == ["11 pp", "0.5"]
+
+
+def test_comments_and_R_arguments_ignored():
+    assert numeric_literals("\\R{h1.fam.lo} % 0.5 here\n\\ref{fig:2} \\cite{x2026}") == []
+
+
+def test_escaped_percent_is_not_a_comment():
+    assert lits("we saw 0.7 \\% here % 0.9 hidden") == ["0.7 \\%"]
+
+
+def test_other_skipped_arguments():
+    tex = "\\label{sec:e2} \\input{generated/tables/e3_matrix.tex} \\includegraphics[width=0.9\\linewidth]{generated/figures/f1.pdf} \\url{https://osf.io/m28fx} \\href{https://arxiv.org/abs/2610.14162}{arXiv}"
+    assert lits(tex) == []
+
+
+def test_small_integers_allowed_large_flagged():
+    assert lits("level 6 and 12, n = 600") == ["600"]
+
+
+def test_line_numbers():
+    assert numeric_literals("a\nb 0.5\n") == [(2, "0.5")]
+
+
+def test_strip_comments_keeps_escaped_percent():
+    assert strip_comments("5\\% a % b\nc") == "5\\% a \nc"
+
+
+def test_used_keys():
+    assert used_keys("\\R{h1.est} and \\R{h2.fam.lo} % \\R{commented}") == {"h1.est", "h2.fam.lo"}
+
+
+def test_unknown_key_and_literal_reported(tmp_path):
+    f = tmp_path / "s.tex"
+    f.write_text("\\R{nope} and 0.25\n")
+    problems = lint([f], {"h1.est": "0.0029"})
+    assert any("nope" in p for p in problems)
+    assert any("0.25" in p and "s.tex:1" in p for p in problems)
+
+
+def test_repo_sections_are_clean():
+    path = ROOT / "paper" / "generated" / "numbers.json"
+    if not path.exists():
+        pytest.skip("numbers.json not generated yet")
+    nums = json.loads(path.read_text(encoding="utf-8"))
+    assert lint(sorted((ROOT / "paper" / "sections").glob("*.tex")), nums) == []
