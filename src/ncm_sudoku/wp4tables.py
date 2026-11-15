@@ -218,16 +218,17 @@ def _e2_entries(results: dict) -> list[tuple[str, str, str, str, str]]:
 
 
 def e2_replacement_table(results: dict) -> str:
-    """Replacement diagnostics: generator probability of the original and the new code, CAL frequency of the
-    new code, replacement vector norm and re-quantization ratio (medians)."""
+    """Replacement diagnostics: generator probability of the original and the new code and CAL frequency of the
+    new code (quantiles over per-puzzle means), per-position RMS of the codebook-vector difference and
+    re-quantization ratio (quantiles over runs, as the damage); medians."""
     rows = []
     for level, policy, dose, path, key in _e2_entries(results):
         rp = f"tables.e2_diagnostics.replacement.{key}"
         rows.append([level, policy, dose, fmt(req(results, f"{rp}.p_orig.2"), "sig2"),
                      fmt(req(results, f"{rp}.p_new.2"), "sig2"), fmt(req(results, f"{rp}.freq_new.2"), "sig2"),
-                     fmt(req(results, f"{rp}.replacement_norm.2"), "sig2"),
+                     fmt(req(results, f"{path}.quantiles.codebook_rms.2"), "sig2"),
                      fmt(req(results, f"{path}.quantiles.requant_ratio.2"), "sig2")])
-    header = ["Level", "Policy", "Dose", "$p$ original", "$p$ new", "CAL freq.\\ new", "Replacement norm",
+    header = ["Level", "Policy", "Dose", "$p$ original", "$p$ new", "CAL freq.\\ new", "RMS norm",
               "Re-quant.\\ ratio"]
     return _tabular("rllrrrrr", header, rows)
 

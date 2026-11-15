@@ -330,7 +330,9 @@
  "uniform.thetacomp.n": "600",
  "uniform.thetacomp.nnz": "113",
  "unit.gen.auc": "0.50",
+ "unit.gen.brier": "0.2333",
  "unit.gen.exact": "0.9",
  "unit.raw.auc": "1.0",
+ "unit.raw.brier": "0.1361",
  "unit.raw.exact": "47.0"
 }

@@ -132,6 +132,8 @@ def test_e2_replacement_table(results):
     tex = t.e2_replacement_table(results)
     check_shape(tex, 28)
     assert "0.0089" in tex and "0.0000098" in tex  # level-1 and level-11 median replacement probability
+    row = next(line for line in tex.splitlines() if line.startswith("2 & frequency & 2 &"))
+    assert "0.52" in row and "0.74" not in row  # registered per-position RMS, not the summed norm
 
 
 def test_secondary_table_reports_hidden_only(results):

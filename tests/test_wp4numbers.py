@@ -183,3 +183,8 @@ def test_collect_review_round2_keys(sources):
     assert nums["e2.cfg.L11.frequency.d1.pnew.med"] == "0.0000098"
     assert nums["sec.wl.hiddenonly"] == "0.0074" and nums["sec.wl.f1"] == "0.0636" and nums["sec.wl.naked"] == "0.0165"
     assert nums["equiv.seedq"] == "95"
+
+
+def test_collect_final_round_keys(sources):
+    nums = collect(sources)
+    assert nums["unit.gen.brier"] == "0.2333" and nums["unit.raw.brier"] == "0.1361"

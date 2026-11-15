@@ -259,6 +259,7 @@ def _keys() -> dict[str, tuple[str, str, str]]:
         short = "gen" if side == "generated" else "raw"
         k[f"unit.{short}.auc"] = ("results", f"tables.unit_digit.{side}.roc_auc", "sig2")
         k[f"unit.{short}.exact"] = ("results", f"tables.unit_digit.{side}.exact_match", "pct1")
+        k[f"unit.{short}.brier"] = ("results", f"tables.unit_digit.{side}.brier", "dec4")
     eq = "tables.equivariance"
     k["equiv.brier.trans"] = ("results", f"{eq}.categories.all.brier_transformed", "dec4")
     k["equiv.brier.orig"] = ("results", f"{eq}.categories.all.brier_original", "dec4")

@@ -1,6 +1,6 @@
 # Decision log: WP4 manuscript review
 
-Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.md`). All R1 and R2 decisions approved by the user on 2026-11-15 and applied. Round 2 sources: sol and carbon in `round-2/`.
+Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.md`). All decisions approved by the user and applied (R1 and R2 on 2026-11-15, Final on 2026-11-16). Round 2: sol and carbon in `round-2/`; Final: astra in `round-final/`.
 
 | Round | ID(s) | Severity | Finding (one line) | Decision | Reason | Verified in code |
 |---|---|---|---|---|---|---|
@@ -48,3 +48,9 @@ Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.m
 | R2 | CARBON-9 | nit | "Three design choices" understates other pre-lock secondary changes; level-2 C = A held under the frequency policy | accept | "three primary-hypothesis choices", "under the frequency policy" | spot |
 | R2 | CARBON-10 | nit | "Seed noise" undefined | accept | define as the 95th percentile of the between-seed deviation | spot |
 | R2 | CARBON-11 | nit | Prose precision of secondary metrics differs from the table; six keys unused | accept in part | prose uses the table's precision; unused keys removed | spot |
+| Final | ASTRA-1 | major | The replacement table calls its norm a per-position RMS, but `replacement_norm` is the root-sum-square over replaced positions; the registered per-position RMS is the separate `codebook_rms` | accept | `e2p2.py` (`sqrt(sum ||E[new]-E[old]||^2 over changed positions)`); show `codebook_rms` (registered) or rename the column | yes |
+| Final | ASTRA-2 | major | The replacement table inherits the damage table's aggregation statement: probability, frequency and norm are quantiles over per-puzzle seed-mean (level 1: policy-weighted) values, the re-quantization ratio over pooled runs; the level-11 probability sentence reads as a median over individual replacements | accept | `wp2_evaluate._per_puzzle` averages within puzzle before the quantiles; `e2p2` pools records for damage quantiles | yes |
+| Final | ASTRA-3 | minor | `hit_cap` means the best validation epoch was the last epoch run, not that a run reached a cap | accept | `probes.train_probe` (`hit_cap = best_epoch == epochs_run - 1`) | yes |
+| Final | ASTRA-4 | minor | Permuted control: permutation independent in PROBE-TRAIN and PROBE-VAL, own selection, both probes scored on intact TEST pairs | accept | plan §8.2 | spot |
+| Final | ASTRA-5 | minor | Equivariance deviation and group draws undefined | accept | plan §8.4: mean absolute probability difference over originally empty cell-digit pairs; 4 full-group, 2 digit-only, 2 geometric draws per puzzle | spot |
+| Final | ASTRA-6 | minor | Unit-digit Brier (registered endpoint) missing | accept | results.json tables.unit_digit brier | spot |
