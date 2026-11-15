@@ -65,20 +65,33 @@ def _interval(ci: list, kind: str) -> str:
     return f"[{fmt(ci[0], kind)}, {fmt(ci[1], kind)}]"
 
 
+def _reading(results: dict, hyp: str) -> dict:
+    reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
+    if reading is None:
+        raise KeyError(f"no §13 reading for {hyp}")
+    return reading
+
+
+PRIMARY = (("H1", "dec4", "Brier"), ("H2", "pp1", "pp"), ("H3", "pp1", "pp"))
+
+
 def primary_table(results: dict) -> str:
+    """Estimates, family and 95% intervals and the registered result row of H1-H3."""
     rows = []
-    for hyp, kind, scale in (("H1", "dec4", "Brier"), ("H2", "pp1", "pp"), ("H3", "pp1", "pp")):
+    for hyp, kind, scale in PRIMARY:
         base = f"primary.{hyp}"
-        reading = next((r for r in results["readings"] if r["hypothesis"] == hyp), None)
-        if reading is None:
-            raise KeyError(f"no §13 reading for {hyp}")
         rows.append([hyp, scale, fmt(req(results, f"{base}.estimate"), kind),
                      _interval(req(results, f"{base}.family.ci"), kind),
-                     _interval(req(results, f"{base}.ci95.ci"), kind), escape(reading["result"]),
-                     escape(reading["claim"]), escape(reading["does_not_follow"])])
-    header = ["", "Scale", "Estimate", "Family interval", "95\\% interval", "Result", "Justified claim",
-              "Does not follow"]
-    return _tabular("llrll p{2.6cm} p{3.2cm} p{3.6cm}", header, rows)
+                     _interval(req(results, f"{base}.ci95.ci"), kind), escape(_reading(results, hyp)["result"])])
+    header = ["", "Scale", "Estimate", "Family interval", "95\\% interval", "Registered result"]
+    return _tabular("llrll p{3.3cm}", header, rows)
+
+
+def readings_table(results: dict) -> str:
+    """The §13 justified claim and its "does not follow" boundary for H1-H3."""
+    rows = [[hyp, escape(_reading(results, hyp)["claim"]), escape(_reading(results, hyp)["does_not_follow"])]
+            for hyp, _, _ in PRIMARY]
+    return _tabular("l p{5.0cm} p{5.8cm}", ["", "Justified claim", "Does not follow"], rows)
 
 
 def e3_matrix_table(results: dict) -> str:
@@ -87,7 +100,7 @@ def e3_matrix_table(results: dict) -> str:
              escape(r["reference"]) if r["reference"] else "--", _cell(r["relative_difference"], "pct1"),
              _cell(r["n_params"], "int")]
             for i, r in enumerate(results["tables"]["e3_main"])]
-    header = ["Row", "Construction", "Brier", "Reference", "Relative difference (\\%)", "Parameters"]
+    header = ["Row", "Constr.", "Brier", "Reference", "Rel.\\ diff.\\ (\\%)", "Params"]
     return _tabular("llrlrr", header, rows)
 
 
@@ -104,8 +117,7 @@ def e2_dose_table(results: dict) -> str:
         rows.append([str(c["level"]), c["policy"], fmt(c["dose"], "int"), fmt(c["n_records"], "int"),
                      fmt(c["excluded_share"], "pct1"), fmt(s["A"], "pct1"), fmt(s["C"], "pct1"),
                      fmt(s["D"], "pct1")])
-    header = ["Level", "Policy", "Dose", "Records", "Excluded (\\%)", "Solve A (\\%)", "Solve C (\\%)",
-              "Solve D (\\%)"]
+    header = ["Level", "Policy", "Dose", "Runs", "Excl.\\ (\\%)", "A (\\%)", "C (\\%)", "D (\\%)"]
     return _tabular("rllrrrrr", header, rows)
 
 
@@ -133,7 +145,7 @@ def equivariance_table(results: dict) -> str:
     rows = [[name, fmt(c["mean_deviation"], "dec4"), fmt(c["share_within"], "pct1"),
              fmt(c["brier_transformed"], "dec4"), fmt(c["brier_original"], "dec4")]
             for name, c in cats.items()]
-    header = ["Category", "Mean deviation", "Within tolerance (\\%)", "Brier transformed", "Brier original"]
+    header = ["Category", "Mean deviation", "Within tol.\\ (\\%)", "Brier, transformed", "Brier, original"]
     return _tabular("lrrrr", header, rows)
 
 
@@ -144,4 +156,4 @@ def deviations_table(decisions: Path) -> str:
         if not re.search(rf"^\| {did} \|", text, flags=re.M):
             raise KeyError(f"{did} not found in {decisions.name}")
         rows.append([did, escape(summary)])
-    return _tabular("l p{12cm}", ["Entry", "Decision (DECISIONS.md)"], rows)
+    return _tabular("l p{10.8cm}", ["Entry", "Decision (DECISIONS.md)"], rows)

@@ -17,7 +17,7 @@ where $B_{\mathrm{permuted}}$ is the Brier loss of the same probe construction r
 \subsection{Level-6 readability (H1)}
 \label{sec:e3-h1}
 
-The level-6 probe reached a Brier loss of \R{brier.wl.gen.L06}, the permuted control \R{brier.wl.perm.L06}. The primary contrast was $\theta_1 = \R{h1.est}$ with a family interval of [\R{h1.fam.lo}, \R{h1.fam.hi}], a relative improvement of \R{h1.relimp}\% over the control; the \R{level.tost}\% interval, [\R{h1.tost.lo}, \R{h1.tost.hi}], lies inside $\pm$\R{plan.h1margin} (Table~\ref{tab:primary}; Figure~\ref{fig:e3-readability}, right). Both registered readings hold: the candidate mask is readable from the level-6 state above the permuted control, but by less than the practical threshold, with the examined probe family and training budget. This does not show that the representation computes candidates, nor that it carries no candidate information; another readout might do better.
+The level-6 probe reached a Brier loss of \R{brier.wl.gen.L06}, the permuted control \R{brier.wl.perm.L06}. The primary contrast was $\theta_1 = \R{h1.est}$ with a family interval of [\R{h1.fam.lo}, \R{h1.fam.hi}], a relative improvement of \R{h1.relimp}\% over the control; the \R{level.tost}\% interval, [\R{h1.tost.lo}, \R{h1.tost.hi}], lies inside $\pm$\R{plan.h1margin} (Tables~\ref{tab:primary} and~\ref{tab:readings}; Figure~\ref{fig:e3-readability}, right). Both registered readings hold: the candidate mask is readable from the level-6 state above the permuted control, but by less than the practical threshold, with the examined probe family and training budget. This does not show that the representation computes candidates, nor that it carries no candidate information; another readout might do better.
 
 The controls bound this result from both sides (Table~\ref{tab:e3-matrix}). A probe on random features of the same width reached \R{brier.wl.random}, and a probe trained on permuted labels \R{brier.wl.labelperm}; a label-free predictor that outputs the marginal candidate rate reached \R{brier.marginal}. The same construction on the teacher's level-6 state, computed from the solution rather than the puzzle, gave \R{brier.teacher.L06}, practically equal to the generated state. In contrast, the candidate mask is almost exactly readable from the puzzle itself: a linear probe on the raw input reached \R{brier.raw.proj} (projected) and \R{brier.raw.unproj} (unprojected), a small MLP on the raw input and the exact rule both reached \R{brier.rule}, and linear probes on peer digit counts \R{brier.peercounts}. The label is therefore directly accessible from the input, and the level-6 state carries far less of it in linearly readable form than the input does; this does not mean that the latent space contains no logical information.
 
@@ -38,8 +38,16 @@ We applied Sudoku symmetries (digit permutations and grid transformations) to \R
 \centering
 \caption{Primary contrasts with the registered interpretation. Estimates are differences in Brier loss (H1) or in solve share, in percentage points (H2, H3); intervals are the \R{level.family}\% family interval and the individual \R{level.ci95}\% interval.}
 \label{tab:primary}
-\small
+\footnotesize
 \input{generated/tables/primary.tex}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Registered interpretation of the primary contrasts: the claim each result supports and the claims that do not follow from it.}
+\label{tab:readings}
+\small
+\input{generated/tables/readings.tex}
 \end{table}
 
 \begin{figure}[t]

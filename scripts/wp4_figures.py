@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 TABLES = {
     "primary": wp4tables.primary_table,
+    "readings": wp4tables.readings_table,
     "e3_matrix": wp4tables.e3_matrix_table,
     "e2_dose": wp4tables.e2_dose_table,
     "e1": wp4tables.e1_table,

@@ -30,9 +30,17 @@ def check_shape(tex, rows):
 def test_primary_table(results):
     tex = t.primary_table(results)
     check_shape(tex, 3)
-    h2 = next(r for r in results["readings"] if r["hypothesis"] == "H2")
-    assert t.escape(h2["does_not_follow"]) in tex
     assert "\\ensuremath{-}11.1" in tex
+    h2 = next(r for r in results["readings"] if r["hypothesis"] == "H2")
+    assert t.escape(h2["result"]) in tex and t.escape(h2["does_not_follow"]) not in tex
+
+
+def test_readings_table(results):
+    tex = t.readings_table(results)
+    check_shape(tex, 3)
+    for hyp in ("H1", "H2", "H3"):
+        r = next(x for x in results["readings"] if x["hypothesis"] == hyp)
+        assert t.escape(r["claim"]) in tex and t.escape(r["does_not_follow"]) in tex
 
 
 def test_e3_matrix_table(results):

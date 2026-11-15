@@ -9,8 +9,10 @@ E2 asks how strongly the solve outcome depends on a single code at different lev
 The primary edit is a single code replacement. A replacement value is drawn from the level's generated code frequencies estimated on the calibration set, excluding the original value (frequency policy); a uniform choice among the other values is the secondary policy. Level~1 has a single code, so instead of sampling we run all alternative values and weight them by their calibration frequencies, which gives the exact expectation over the policy. At the other levels one position and one value are drawn, with three intervention seeds per puzzle and dose. The two primary contrasts are
 \[
 \theta_2 = \mathbb{E}\bigl[(Y_{D,1}-Y_A)-(Y_{D,11}-Y_A)\bigr],
-\qquad
-\theta_{\mathrm{comp}} = \mathbb{E}\bigl[(Y_D-Y_C)-(Y_B-Y_A)\bigr]\ \text{at level 1},
+\]
+and, at level~1,
+\[
+\theta_{\mathrm{comp}} = \mathbb{E}\bigl[(Y_D-Y_C)-(Y_B-Y_A)\bigr],
 \]
 where $Y$ is the binary solve outcome of a branch. A negative $\theta_2$ (H2) means that one replaced code costs more at level~1 than at level~11; a positive $\theta_{\mathrm{comp}}$ (H3) means that regenerating the later levels leaves the puzzle solved more often than replaying them, corrected for the sham restart. One code at each level is an equal number of discrete edits, not an equal semantic change. Level~1 is also architecturally distinct: its single code passes through a learned upsampler, so replacing it changes the whole level-1 state.
 
