@@ -13,8 +13,8 @@ Single place for work-package status, backlog, and open items. Decisions live in
 | E3 preparation | Solver waves, labels and depth on PROBE subsets; probe and baseline training-size curves; H1 sample size (plan §12.1) | done (2026-11-11): D64; whole-layer diagnostic D65–D67, budget sensitivity D69; H1 form decided (D68) | probes minutes–hours | 2–3 sessions |
 | Lock | Sample-size simulation (E2 and H1 → one TEST size), §12.2 checklist, OSF embargoed registration with git tag hash | done (2026-11-12): `research_plan_v3.7.md` reviewed (high tier), tag `prereg-v3.7`, embargoed OSF registration https://osf.io/m28fx (D75) | minutes (simulation) | 1–2 sessions |
 | WP2 | Confirmatory TEST runs (D76): E1, E2 (H2, H3) and E3 (H1) on the 600 TEST puzzles with every pre-specified secondary and exploratory analysis; code freeze (tag `wp2-code`), dry run on CAL/PROBE-VAL, TEST runs, pre-written evaluation, report under `experiments/wp2/` | done (2026-11-15): code D80, post-freeze fixes D81–D82, dry run passed and TEST complete without deviation (D83); report `experiments/wp2/test/report.md`; merge and push of `wp2` and the tag pending user approval | measured: dry run ≈ 6.7 h; TEST ≈ 14.7 h (E3 extraction 13 min, E3 4.9 h, equivariance 28 min, E2 8.9 h, E1 9 min, evaluation 1.3 min) | 4–5 sessions |
-| WP3 | E4a / E4b targeted patching (conditional on the E4 gate); needs its own protocol and registration before its test set is generated | conditional | depends on E4-TEST size | 3–6 sessions or dropped, plus the separate registration |
-| WP4 | Integrated analysis, figures, manuscript (plan §12.3 fixes the analysis output; manuscript scope and external review rounds are not yet planned) | next; does not wait for WP3 if E4 is dropped | minutes | 4–8 sessions |
+| WP3 | E4a / E4b targeted patching (conditional on the E4 gate); needs its own protocol and registration before its test set is generated | dropped (2026-11-15, D84): §9.1 entry condition not met per the WP2 TEST readout and equivariance results | — | — |
+| WP4 | Integrated analysis, figures, manuscript (plan §12.3 fixes the analysis output; manuscript scope and external review rounds are not yet planned) | in progress (2026-11-15): design | minutes | 4–8 sessions |
 | E5 | Optional extension (other checkpoint, retraining, other task) | not planned | — | needs a new protocol |
 
 Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`): baseline generation 1.30 s; branch D regeneration from level 2 / 6 / 11: 1.13 / 0.69 / 0.19 s; cumulative states 0.02 s; decode only (branch C) 0.02 s; RSS ≈ 0.5–0.65 GB; storage 322 B of codes vs ≈ 1.1 MB of FP32 states per puzzle.
@@ -32,4 +32,4 @@ Measured costs per puzzle (20 released hard puzzles, `experiments/g0/cost.json`)
 ## Open items
 
 - Repeat the related-work search before submission (`literature/`).
-- Remaining effort (planning estimate, 2026-11-15, after WP2): WP4 4–8 sessions without WP3; WP3 adds 3–6 sessions plus its own registration and its TEST runs (about 1–2 weeks).
+- Remaining effort (planning estimate, 2026-11-15, after WP2): WP4 4–8 sessions; WP3 dropped (D84).
