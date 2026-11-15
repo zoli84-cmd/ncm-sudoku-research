@@ -14,11 +14,12 @@ import numpy as np  # noqa: E402
 from ncm_sudoku.wp4numbers import H1_MARGIN, H2_PRACTICAL, H3_PRACTICAL, THETA2P_MARGIN  # noqa: E402
 from ncm_sudoku.wp4tables import req  # noqa: E402
 
-plt.rcParams.update({"pdf.fonttype": 42, "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8,
+plt.rcParams.update({"pdf.fonttype": 42, "font.family": "serif", "font.serif": ["cmr10"],
+                     "mathtext.fontset": "cm", "axes.formatter.use_mathtext": True, "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8,
                      "legend.fontsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7})
 # Okabe-Ito colour-blind-safe palette
 BLUE, ORANGE, GREEN, VERMILLION, PURPLE, GREY = "#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#999999"
-WIDTH = 6.3  # inches, single-column article text width
+WIDTH = 6.3  # inches, the text width set by geometry (letterpaper, margin=1.1in) in paper/preamble.tex
 
 
 def save_pdf(fig, path: Path) -> None:
@@ -56,12 +57,12 @@ def dose_curves(results: dict):
 FOREST_ROWS = (
     ("H2 (level 1 vs. 11)", "primary.H2", True),
     ("H3 (compensation)", "primary.H3", True),
-    ("θ₂′ (level 2 vs. 11)", "secondary.theta2_prime", False),
-    ("Uniform: θ₂", "secondary.uniform.theta2", False),
-    ("Uniform: θ_comp", "secondary.uniform.theta_comp", False),
-    ("Uniform: θ₂′", "secondary.uniform.theta2_prime", False),
-    ("Correct baseline: θ₂", "secondary.correct_baseline.theta2", False),
-    ("Correct baseline: θ_comp", "secondary.correct_baseline.theta_comp", False),
+    (r"$\theta_2'$ (level 2 vs. 11)", "secondary.theta2_prime", False),
+    (r"Uniform: $\theta_2$", "secondary.uniform.theta2", False),
+    (r"Uniform: $\theta_{\mathrm{comp}}$", "secondary.uniform.theta_comp", False),
+    (r"Uniform: $\theta_2'$", "secondary.uniform.theta2_prime", False),
+    (r"Correct baseline: $\theta_2$", "secondary.correct_baseline.theta2", False),
+    (r"Correct baseline: $\theta_{\mathrm{comp}}$", "secondary.correct_baseline.theta_comp", False),
 )
 
 
@@ -81,7 +82,7 @@ def contrasts_forest(results: dict):
     ax.axvline(-100 * H2_PRACTICAL, color=VERMILLION, linestyle=":", linewidth=0.8, label="H2 practical threshold")
     ax.axvline(100 * H3_PRACTICAL, color=GREEN, linestyle=":", linewidth=0.8, label="H3 practical threshold")
     for i, x in enumerate((-100 * THETA2P_MARGIN, 100 * THETA2P_MARGIN)):
-        ax.axvline(x, color=PURPLE, linestyle="--", linewidth=0.6, label="θ₂′ equivalence range" if i == 0 else None)
+        ax.axvline(x, color=PURPLE, linestyle="--", linewidth=0.6, label=r"$\theta_2'$ equivalence range" if i == 0 else None)
     ax.set_yticks(range(n), [r[0] for r in reversed(FOREST_ROWS)])
     ax.set_xlabel("Difference in solve share (percentage points)")
     ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
@@ -104,7 +105,7 @@ def propagation(results: dict):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(WIDTH, 4.2), gridspec_kw={"width_ratios": [1.3, 1]})
     im = ax1.imshow(grid, aspect="auto", cmap="viridis", interpolation="nearest")
     ax1.set_xticks(range(12), [str(i) for i in range(1, 13)])
-    ax1.set_yticks(range(len(names)), names, fontsize=5)
+    ax1.set_yticks(range(len(names)), names, fontsize=6)
     ax1.set_xlabel("Later level")
     fig.colorbar(im, ax=ax1, label="Mean changed D codes")
     prop = diag["propagation"]
@@ -115,7 +116,7 @@ def propagation(results: dict):
     ax2.set_xticks(range(1, 13), [str(i) for i in range(1, 13)])
     ax2.set_xlabel("Level")
     ax2.set_ylabel("Relative cumulative-state distance to A")
-    ax2.legend(frameon=False, fontsize=5)
+    ax2.legend(frameon=False, fontsize=6)
     fig.tight_layout()
     return fig
 
@@ -142,7 +143,7 @@ def e3_readability(results: dict):
     rows = ((2, req(results, "secondary.theta1_wl.L02.estimate"), req(results, "secondary.theta1_wl.L02.ci95.ci")),
             (6, req(results, "primary.H1.estimate"), req(results, "primary.H1.family.ci")),
             (12, req(results, "secondary.theta1_wl.L12.estimate"), req(results, "secondary.theta1_wl.L12.ci95.ci")))
-    ax2.axhspan(-H1_MARGIN, H1_MARGIN, color=GREY, alpha=0.2, label="±practical threshold")
+    ax2.axhspan(-H1_MARGIN, H1_MARGIN, color=GREY, alpha=0.2, label=r"$\pm$practical threshold")
     for x, est, ci in rows:
         label = ("H1 family interval" if x == 6 else "95% interval") if x in (6, 12) else None
         ax2.plot([x, x], ci, color=BLUE, linewidth=2 if x == 6 else 1, label=label)
@@ -150,7 +151,7 @@ def e3_readability(results: dict):
     ax2.axhline(0, color="black", linewidth=0.6)
     ax2.set_xticks(xs)
     ax2.set_xlabel("Level")
-    ax2.set_ylabel("θ₁ (permuted − generated Brier)")
+    ax2.set_ylabel(r"$\theta_1$ (permuted $-$ generated Brier)")
     ax2.legend(frameon=False)
     fig.tight_layout()
     return fig
@@ -184,7 +185,7 @@ def e3_supporting(results: dict):
                 raise KeyError(f"tables.depth[{row}].brier.{d}.brier")
             vals.append(value)
         ax2.bar(x + (j - 0.5) * 0.35, vals, width=0.35, color=colour, label=label)
-    ax2.set_xticks(x, DEPTHS)
+    ax2.set_xticks(x, [r"$\geq$4" if d == ">=4" else d for d in DEPTHS])
     ax2.set_xlabel("Inference depth (descriptive)")
     ax2.set_ylabel("Brier")
     ax2.set_ylim(0, 0.3)
