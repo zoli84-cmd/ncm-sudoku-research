@@ -7,7 +7,7 @@ Decoding the teacher codes reproduced the reference solution exactly for \R{e1.t
 
 Figure~\ref{fig:e1-levels} follows the two code sequences through the hierarchy. The share of generated codes matching the teacher codes was \R{e1.lv1.agree}\% at level~1 and \R{e1.lv12.agree}\% at level~\R{model.levels}, with no monotonic trend in between. Decoding the full-length cumulative state after each level with the final decoder gave a cell accuracy of \R{e1.lv1.cellacc}\% at level~1, \R{e1.lv11.cellacc}\% at level~11 and \R{e1.cellacc}\% after the last level; no partial state before the last level decoded to a solved grid. These curves describe what the final decoder reads from a partial state. They do not show what information the earlier levels carry in another form, which is the question of E3 (Section~\ref{sec:e3}).
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 \caption{E1 on the TEST puzzles: generated output, official metric and teacher reconstruction. Hamming distances are the mean share of tokens or cells in which the generated output differs from the teacher reconstruction.}
 \label{tab:e1}

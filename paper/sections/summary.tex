@@ -3,7 +3,7 @@
 
 Table~\ref{tab:summary} lists the three primary contrasts and the two registered secondary contrasts that have an equivalence reading; Table~\ref{tab:readings} gives, for every registered interpretation row that the results triggered mechanically, the claim it supports and the claims that do not follow. Sections~\ref{sec:e1} to~\ref{sec:e3} explain each result. The primary contrasts use the \R{level.family}\% family interval; the secondary contrasts use the individual \R{level.ci95}\% interval. The equivalence interval is the \R{level.tost}\% two one-sided test interval for H1 and the \R{level.thetaTtost}\% interval for the secondary contrasts; for the level 2 versus 11 contrast, which had fewer than twenty puzzles with a nonzero difference, both intervals are the registered rare-event bound at the one-sided \R{level.ci95}\% level.
 
-\begin{table}[ht]
+\begin{table}[htbp]
 \centering
 \caption{Confirmatory and registered secondary contrasts. Brier: difference in Brier loss (H1: permuted control minus generated state, positive when the generated state reads better; level 12: teacher minus generated). pp: difference in solve share, in percentage points (H2 and level 2 vs.\ 11: change at the earlier level minus change at level 11, negative when the earlier level costs more; H3: positive when regenerating the later levels helps). Threshold: practical threshold (H2, H3) or equivalence range.}
 \label{tab:summary}
@@ -11,7 +11,7 @@ Table~\ref{tab:summary} lists the three primary contrasts and the two registered
 \adjustbox{max width=\linewidth}{\input{generated/tables/summary.tex}}
 \end{table}
 
-\begin{table}[ht]
+\begin{table}[htbp]
 \centering
 \caption{Registered interpretation of every mechanically triggered row: the result that triggered it, the claim it supports and the claims that do not follow from it (verbatim from the registered interpretation table). The H3 row presumes a checkpoint trained with level corruption; the NCM paper describes such training for the method, and we assume, without training metadata to verify it, that the released checkpoint followed it.}
 \label{tab:readings}
