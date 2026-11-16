@@ -136,3 +136,24 @@ def test_figure_width_equals_text_width():
     preamble = (ROOT / "paper/preamble.tex").read_text(encoding="utf-8")
     assert r"\usepackage[letterpaper,margin=1.1in]{geometry}" in preamble
     assert f.WIDTH == pytest.approx(8.5 - 2 * 1.1)
+
+
+def test_forest_thresholds_drawn_only_on_their_rows(results):
+    fig = f.contrasts_forest(results)
+    n = len(f.FOREST_ROWS)
+    row_y = {path: n - 1 - i for i, (_, path, _) in enumerate(f.FOREST_ROWS)}
+    expected = {
+        "H2 practical threshold": {row_y["primary.H2"]},
+        "H3 practical threshold": {row_y["primary.H3"]},
+        "equivalence": {row_y["secondary.theta2_prime"], row_y["secondary.uniform.theta2_prime"]},
+    }
+    seen = {k: set() for k in expected}
+    for line in fig.axes[0].get_lines():
+        gid = line.get_gid() or ""
+        for key in expected:
+            if key in gid:
+                ys = line.get_ydata()
+                assert max(ys) - min(ys) < 1, f"{gid} spans more than one row"
+                seen[key].add(round(sum(ys) / len(ys)))
+    assert seen == expected
+    f.plt.close(fig)

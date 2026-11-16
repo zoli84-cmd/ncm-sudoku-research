@@ -79,10 +79,24 @@ def contrasts_forest(results: dict):
             ax.plot([flo, fhi], [y, y], color=BLUE, linewidth=3, alpha=0.5)
         ax.plot([100 * req(results, f"{path}.estimate")], [y], "o", color=BLUE if primary else "black", markersize=4)
     ax.axvline(0, color="black", linewidth=0.6)
-    ax.axvline(-100 * H2_PRACTICAL, color=VERMILLION, linestyle=":", linewidth=0.8, label="H2 practical threshold")
-    ax.axvline(100 * H3_PRACTICAL, color=GREEN, linestyle=":", linewidth=0.8, label="H3 practical threshold")
-    for i, x in enumerate((-100 * THETA2P_MARGIN, 100 * THETA2P_MARGIN)):
-        ax.axvline(x, color=PURPLE, linestyle="--", linewidth=0.6, label=r"$\theta_2'$ equivalence range" if i == 0 else None)
+    # Each registered threshold is drawn only on the rows it applies to; drawn across all rows,
+    # the H3 threshold (+3 pp) and the theta_2' equivalence bound (+3 pp) would coincide.
+    row_y = {path: n - 1 - i for i, (_, path, _) in enumerate(FOREST_ROWS)}
+    marks = (
+        ("H2 practical threshold", "H2 practical threshold", (-100 * H2_PRACTICAL,), ("primary.H2",), VERMILLION, ":", 1.2),
+        ("H3 practical threshold", "H3 practical threshold", (100 * H3_PRACTICAL,), ("primary.H3",), GREEN, ":", 1.2),
+        ("equivalence", r"$\theta_2'$ equivalence range", (-100 * THETA2P_MARGIN, 100 * THETA2P_MARGIN),
+         ("secondary.theta2_prime", "secondary.uniform.theta2_prime"), PURPLE, "--", 0.9),
+    )
+    for gid, label, xs, paths, colour, style, width in marks:
+        first = True
+        for path in paths:
+            y = row_y[path]
+            for x in xs:
+                line, = ax.plot([x, x], [y - 0.4, y + 0.4], color=colour, linestyle=style, linewidth=width,
+                                label=label if first else None)
+                line.set_gid(f"{gid}:{path}:{x}")
+                first = False
     ax.set_yticks(range(n), [r[0] for r in reversed(FOREST_ROWS)])
     ax.set_xlabel("Difference in solve share (percentage points)")
     ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
