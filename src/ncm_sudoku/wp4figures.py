@@ -148,11 +148,11 @@ def e3_readability(results: dict):
     ax1.plot(xs, [levels[k]["whole_layer"]["generated"] for k in keys], "o-", color=BLUE, label="Generated")
     ax1.plot(xs, [levels[k]["whole_layer"]["permuted"] for k in keys], "s--", color=GREY, label="Permuted null")
     ax1.plot((6, 12), (_main_row(results, "wl_teacher_L06.teacher"), _main_row(results, "wl_teacher_L12.teacher")),
-             "^:", color=ORANGE, label="Teacher")
+             "^:", color=ORANGE, label="Teacher (levels 6 and 12)")
     ax1.axhline(_main_row(results, "raw_unprojected.linear"), color=GREEN, linewidth=0.8, label="Raw input, unprojected (linear)")
     ax1.set_xticks(xs)
     ax1.set_xlabel("Level")
-    ax1.set_ylabel("Brier (score set)")
+    ax1.set_ylabel("Brier loss (TEST)")
     ax1.legend(frameon=False)
     rows = ((2, req(results, "secondary.theta1_wl.L02.estimate"), req(results, "secondary.theta1_wl.L02.ci95.ci")),
             (6, req(results, "primary.H1.estimate"), req(results, "primary.H1.family.ci")),
@@ -186,7 +186,7 @@ def e3_supporting(results: dict):
     ns = sorted(v["n_puzzles"] for v in ts["whole_layer"].values() if isinstance(v, dict))
     ax1.set_xticks(ns, [str(n) for n in ns])
     ax1.set_xlabel("Training puzzles")
-    ax1.set_ylabel("Brier (score set)")
+    ax1.set_ylabel("Brier loss (TEST)")
     ax1.legend(frameon=False)
     depth = results["tables"]["depth"]
     x = np.arange(len(DEPTHS))
@@ -201,7 +201,7 @@ def e3_supporting(results: dict):
         ax2.bar(x + (j - 0.5) * 0.35, vals, width=0.35, color=colour, label=label)
     ax2.set_xticks(x, [r"$\geq$4" if d == ">=4" else d for d in DEPTHS])
     ax2.set_xlabel("Inference depth (descriptive)")
-    ax2.set_ylabel("Brier")
+    ax2.set_ylabel("Brier loss (TEST)")
     ax2.set_ylim(0, 0.3)
     ax2.legend(frameon=False, loc="upper left", ncol=2)
     fig.tight_layout()
@@ -224,5 +224,26 @@ def e1_levels(results: dict):
     ax.set_ylabel("% (descriptive)")
     ax.set_ylim(0, 100)
     ax.legend(frameon=False, loc="lower right")
+    fig.tight_layout()
+    return fig
+
+
+def damage_curves(results: dict):
+    """Registered sensitivity curves on the damage axis (plan §7.3): per level, the stored frequency-policy nodes
+    (mean initial damage, mean solve change of D against A), with the frozen 6-vs-11 range shaded; descriptive."""
+    fig, ax = plt.subplots(figsize=(WIDTH, 2.6))
+    auc = results["auc"]
+    series = (("Level 2", auc["2-11"]["nodes"]["a"], GREEN, "^"), ("Level 6", auc["6-11"]["nodes"]["a"], BLUE, "o"),
+              ("Level 11", auc["6-11"]["nodes"]["b"], ORANGE, "s"))
+    lo, hi = auc["6-11"]["range"]
+    span = ax.axvspan(lo, hi, color=GREY, alpha=0.25, label="Range frozen on CAL (levels 6 vs. 11)")
+    span.set_gid("frozen-range")
+    for label, pts, colour, marker in series:
+        ax.plot([p[0] for p in pts], [100 * p[1] for p in pts], marker=marker, color=colour, label=label)
+    ax.axhline(0, color="black", linewidth=0.6)
+    ax.set_xscale("log")
+    ax.set_xlabel("Mean initial damage (total variation distance, C vs. A)")
+    ax.set_ylabel("Mean solve change of D (pp)")
+    ax.legend(frameon=False, loc="lower left")
     fig.tight_layout()
     return fig

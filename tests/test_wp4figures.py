@@ -102,7 +102,8 @@ def test_readability_names_unprojected_raw_input(results):
     f.plt.close(fig)
 
 
-FIGURES = ["dose_curves", "contrasts_forest", "propagation", "e3_readability", "e3_supporting", "e1_levels"]
+FIGURES = ["dose_curves", "contrasts_forest", "propagation", "e3_readability", "e3_supporting", "e1_levels",
+           "damage_curves"]
 
 
 def _texts(fig):
@@ -156,4 +157,36 @@ def test_forest_thresholds_drawn_only_on_their_rows(results):
                 assert max(ys) - min(ys) < 1, f"{gid} spans more than one row"
                 seen[key].add(round(sum(ys) / len(ys)))
     assert seen == expected
+    f.plt.close(fig)
+
+
+def test_damage_curves_plot_the_stored_nodes_per_level(results):
+    fig = f.damage_curves(results)
+    ax = fig.axes[0]
+    lines = {line.get_label(): line for line in ax.get_lines()}
+    nodes = {"Level 2": results["auc"]["2-11"]["nodes"]["a"], "Level 6": results["auc"]["6-11"]["nodes"]["a"],
+             "Level 11": results["auc"]["6-11"]["nodes"]["b"]}
+    assert set(nodes) <= set(lines)
+    for label, pts in nodes.items():
+        assert list(lines[label].get_xdata()) == [p[0] for p in pts]
+        assert list(lines[label].get_ydata()) == pytest.approx([100 * p[1] for p in pts])
+    assert ax.get_xscale() == "log"
+    f.plt.close(fig)
+
+
+def test_damage_curves_shade_the_frozen_range(results):
+    fig = f.damage_curves(results)
+    lo, hi = results["auc"]["6-11"]["range"]
+    spans = [p for p in fig.axes[0].patches if p.get_gid() == "frozen-range"]
+    assert len(spans) == 1
+    x0, width = spans[0].get_x(), spans[0].get_width()
+    assert x0 == pytest.approx(lo) and x0 + width == pytest.approx(hi)
+    f.plt.close(fig)
+
+
+@pytest.mark.parametrize("name", FIGURES)
+def test_figure_labels_use_reader_terms(results, name):
+    fig = getattr(f, name)(results)
+    for t in _texts(fig):
+        assert "score set" not in t.get_text(), t.get_text()
     f.plt.close(fig)

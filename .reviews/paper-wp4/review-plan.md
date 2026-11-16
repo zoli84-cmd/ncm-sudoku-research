@@ -7,4 +7,4 @@ Tier: high — hard to roll back: a public preprint with confirmatory claims; pu
 | R1 | sol,carbon | full | done 2026-11-15 (all accepted items applied, user approval) | 12 (3 blocker, 9 major) |
 | R2 | sol,carbon | changed sections plus decision log | done 2026-11-15 (all accepted items applied, user approval) | 2 major |
 | Final | astra | full | done 2026-11-16 (all items applied, user approval); review done | 2 major |
-| Pre-publication | sol,carbon,astra | full (user request after Final, before arXiv and repository publication) | running 2026-11-16 | |
+| Pre-publication | sol,carbon,astra | full (user request after Final, before arXiv and repository publication) | done 2026-11-16 (21 items accepted and applied, 1 rejected; user approval); review done | 4 major |

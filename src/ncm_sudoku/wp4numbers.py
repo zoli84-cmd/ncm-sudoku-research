@@ -25,6 +25,8 @@ SOURCE_FILES = {
     "gate": "experiments/wp1/gate.json",
     "extract": "experiments/e3prep/extract.json",
     "released": "experiments/wp1/e1_released.json",
+    "cal": "experiments/lock/cal_freqs.json",
+    "provdata": "experiments/provenance/released_data.json",
 }
 
 # Fixed design facts (not results): model hierarchy from plan §2.1 and the upstream configuration,
@@ -52,9 +54,13 @@ def _signed(text: str) -> str:
 
 
 def fmt(x, kind: str) -> str:
-    """Format a stored value; kinds: pp1, pp1abs, pct1 (x100, 1 decimal), pct0, dec1, dec2, dec4, sig2, g, int."""
+    """Format a stored value; kinds: pp1, pp1abs, pct1 (x100, 1 decimal), pct0, dec1, dec2, dec4, sig2, g, int, commit, str."""
     if kind == "commit" and isinstance(x, str) and len(x) >= 7:
         return x[:7]
+    if kind == "str":  # version strings, passed through verbatim
+        if not isinstance(x, str) or not x:
+            raise ValueError(f"not a string: {x!r}")
+        return x
     if x is None or isinstance(x, bool) or (isinstance(x, float) and math.isnan(x)):
         raise ValueError(f"cannot format {x!r}")
     if kind == "pp1abs":  # magnitude for prose such as "lowered by X points"
@@ -156,6 +162,21 @@ def _keys() -> dict[str, tuple[str, str, str]]:
     k["h2.est.abs"] = ("results", "primary.H2.estimate", "pp1abs")
     k["h2.fam.abs.lo"] = ("results", "primary.H2.family.ci.1", "pp1abs")  # magnitude interval: [|hi|, |lo|]
     k["h2.fam.abs.hi"] = ("results", "primary.H2.family.ci.0", "pp1abs")
+    # pre-publication round: provenance, environment, compute, CAL size, raw-input contrasts
+    k["cal.n"] = ("cal", "n_cal", "int")
+    k["prov.upstream"] = ("results", "environment.upstream_commit", "commit")
+    k["prov.ckpt"] = ("results", "environment.checkpoints.revision", "commit")
+    k["prov.data"] = ("provdata", "hard.revision", "commit")
+    k["env.python"] = ("results", "environment.python", "str")
+    k["env.torch"] = ("results", "environment.torch", "str")
+    k["env.numpy"] = ("results", "environment.numpy", "str")
+    k["env.threads"] = ("results", "environment.torch_threads", "int")
+    k["test.hours"] = ("derived", "test_hours", "dec1")
+    for name in ("proj", "unproj"):
+        path = f"secondary.raw_minus_generated.{'projected' if name == 'proj' else 'unprojected'}"
+        k[f"rawgen.{name}.est"] = ("results", f"{path}.estimate", "dec4")
+        k[f"rawgen.{name}.ci.lo"] = ("results", f"{path}.ci95.ci.0", "dec4")
+        k[f"rawgen.{name}.ci.hi"] = ("results", f"{path}.ci95.ci.1", "dec4")
     for i in range(3):
         k[f"h1.seed{i}"] = ("results", f"tables.seed_stability.H1.per_seed.{i}", "dec4")
     k["code.commit"] = ("results", "code_state.commit", "commit")
@@ -306,6 +327,8 @@ KEYS = _keys()
 def load_sources(root: Path) -> dict[str, dict]:
     sources = {name: json.loads((root / rel).read_text(encoding="utf-8")) for name, rel in SOURCE_FILES.items()}
     sources["design"] = dict(DESIGN)
+    # Total wall time of the five confirmatory TEST runners (their run records), in hours.
+    sources["derived"] = {"test_hours": sum(r["seconds"] for r in sources["results"]["records"].values()) / 3600}
     sources["plan"] = {
         "h1margin": H1_MARGIN, "theta2pmargin": THETA2P_MARGIN, "thetaTmargin": THETA_T_MARGIN,
         "equivtol": EQUIV_TOLERANCE, "h2practical": H2_PRACTICAL, "h3practical": H3_PRACTICAL,
