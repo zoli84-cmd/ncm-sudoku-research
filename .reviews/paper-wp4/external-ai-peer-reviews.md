@@ -32,3 +32,17 @@ Both reviewers found the confirmatory numbers consistent with the committed resu
 ## Disposition
 
 The adopted and rejected items, with reasons, are recorded in `DECISIONS.md` D86 (commit `f7cf57e`). In short: adopted the abstract statement of the level 2 vs. 11 equivalence, the E-to-H map, the one-code wording, the H3 discordance counts, the cumulative-state paragraph, the readout-capacity limits, the solution-digit reference (labelled as an exploratory analytic value computed after TEST), the split E3 paragraph and the float placement fix. Not adopted, because they need new model runs or analyses after TEST: higher-rank or unprojected probes, teacher and raw-input equivariance, generator activations, the reviewer's paired bootstrap differences and figure insets. The title change is the author's decision and was open when this summary was written; the recommendation was to keep the title, for consistency with the OSF registration title and because the abstract already specifies the candidate mask. The ±0.01 margin is registered and was not changed.
+
+## Fable 5.2 (third review, after the D86 revision)
+
+An informal review, also in Hungarian, of the revised manuscript. It recomputed derivable values (solve shares, the rare-event bound, the Wilson interval, the cell count, the contrasts) and found them consistent; it could not open the repository (rate limit) or read the OSF page.
+
+1. H1: at level 6 the teacher state reaches the same Brier loss as the generated state, so the small gain over the control may be solution content; suggested an exploratory probe on the eight non-solution digits.
+2. H2: one replacement is not the same intervention at the two levels; replacing all level-11 codes gives an initial damage close to the single level-1 replacement but a much smaller solve loss, which should be stated in Section 6.2.
+3. The registration lists the GLMM and the same-solution/different-clue-mask teacher control as exploratory; the manuscript should say that they were not run.
+4. E4: the registration excludes E4, while the manuscript said the registered plan included it.
+5. Rounding: differences of rounded numbers in the text differ in the last digit from the contrasts.
+6. References: check every entry by hand; suggested citing a published version of Kniazev & Fijalkow and rechecking the per-cell probe sentence against its abstract.
+7. For a later TMLR submission: anonymization (name, ORCID, repository and OSF links), length (main text about 18 pages), AI statement against the venue policy, public access to the repository and tags.
+
+Disposition: `DECISIONS.md` D87. Items 1 (disclosure only, no new probe), 2 to 5 and the per-cell clause of 6 were adopted after checking the sources; no published venue of Kniazev & Fijalkow was found, so the arXiv citation stays. Item 7 concerns a future journal submission, not the arXiv preprint.
