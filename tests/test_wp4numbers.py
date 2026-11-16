@@ -213,3 +213,15 @@ def test_collect_prepublication_keys(sources):
 def test_test_hours_is_the_sum_of_run_record_durations(sources):
     seconds = sum(r["seconds"] for r in sources["results"]["records"].values())
     assert sources["derived"]["test_hours"] == pytest.approx(seconds / 3600)
+
+
+def test_collect_peer_review_keys(sources):
+    nums = collect(sources)
+    assert nums["h3.disc.pos"] == "65" and nums["h3.disc.neg"] == "37"
+    assert nums["soldigit.brier"] == "0.1823"
+
+
+def test_solution_digit_reference_follows_from_the_label_rate(sources):
+    p = sources["results"]["tables"]["secondary_metrics"]["wl_L06.generated"]["ranking"]["positive_rate"]
+    q = (9 * p - 1) / 8
+    assert sources["derived"]["soldigit_brier"] == pytest.approx(8 / 9 * q * (1 - q))

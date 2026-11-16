@@ -206,6 +206,9 @@ def _keys() -> dict[str, tuple[str, str, str]]:
     k["h1.relimp"] = ("results", "primary.H1.relative_improvement", "pct1")
     k |= _contrast("h2", "primary.H2", "pp1", family=True)
     k |= _contrast("h3", "primary.H3", "pp1", family=True)
+    k["h3.disc.pos"] = ("results", "primary.H3.discordance.positive", "int")
+    k["h3.disc.neg"] = ("results", "primary.H3.discordance.negative", "int")
+    k["soldigit.brier"] = ("derived", "soldigit_brier", "dec4")
     k |= _contrast("thetaT", "secondary.theta_T", "sig2", tost=True)
     k |= _contrast("theta2p", "secondary.theta2_prime", "pp1", tost=True)
     for lv in ("L02", "L12"):
@@ -328,7 +331,15 @@ def load_sources(root: Path) -> dict[str, dict]:
     sources = {name: json.loads((root / rel).read_text(encoding="utf-8")) for name, rel in SOURCE_FILES.items()}
     sources["design"] = dict(DESIGN)
     # Total wall time of the five confirmatory TEST runners (their run records), in hours.
-    sources["derived"] = {"test_hours": sum(r["seconds"] for r in sources["results"]["records"].values()) / 3600}
+    p = sources["results"]["tables"]["secondary_metrics"]["wl_L06.generated"]["ranking"]["positive_rate"]
+    q = (9 * p - 1) / 8
+    sources["derived"] = {
+        "test_hours": sum(r["seconds"] for r in sources["results"]["records"].values()) / 3600,
+        # Exploratory analytic reference (peer review, after TEST): a predictor that knows the solution digit
+        # (always a candidate, predicted 1) and gives the other eight digits the rate q that matches the TEST
+        # positive rate p, i.e. 1 + 8q = 9p; its expected Brier loss per bit is 8/9 * q * (1 - q).
+        "soldigit_brier": 8 / 9 * q * (1 - q),
+    }
     sources["plan"] = {
         "h1margin": H1_MARGIN, "theta2pmargin": THETA2P_MARGIN, "thetaTmargin": THETA_T_MARGIN,
         "equivtol": EQUIV_TOLERANCE, "h2practical": H2_PRACTICAL, "h3practical": H3_PRACTICAL,
