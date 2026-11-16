@@ -27,6 +27,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 ## Verification
 
 - Regenerate after any input or generator change: `uv run --locked python scripts/wp4_figures.py`; `--check` verifies the committed `generated/` files are current
+- arXiv package: `uv run --locked python scripts/wp4_arxiv.py` (writes `paper/build/arxiv.tar.gz`); arXiv compiles with pdfLaTeX, so keep the sources ASCII (TeX accents such as `\'a`) and do not set `\pdfoutput` (it switches hyperref to the pdfTeX driver under Tectonic)
 - Build: `uv run --locked python scripts/wp4_build.py` (PDF in `paper/build/main.pdf`); `--arxiv` adds the placeholder check
 - Visual check (no poppler on this machine): render pages to PNG with `uv run --no-project --with pymupdf python -I -c ...` into the git-ignored `.superpowers/preview/`, then inspect them
 - Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py` (the lint test checks `main.tex`, including the abstract, and every section file against `generated/numbers.json`)
