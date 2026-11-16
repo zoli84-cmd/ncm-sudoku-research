@@ -54,6 +54,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [research_plan_v3.md](research_plan_v3.md): frozen English translation of plan v3.0
 - [NCM_Sudoku_kutatasi_terv_v3.md](NCM_Sudoku_kutatasi_terv_v3.md): frozen Hungarian original of plan v3.0
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
+- [LICENSE](LICENSE): MIT licence for the own code (`third_party/ncm` keeps its upstream MIT licence; the paper is CC BY 4.0)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
 - [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy, torch, matplotlib for the WP4 figures; pytest as dev dependency)

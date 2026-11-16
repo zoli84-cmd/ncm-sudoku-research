@@ -14,7 +14,8 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 
 - Number rule: every result number reaches the text only through `\R{key}` (keys defined in `generated/numbers.tex`, listed in `generated/numbers.json`) or a generated table or figure; no numeric result literal is typed in a section file. `\R` with an unknown key stops the build.
 - Claim rule: each confirmatory result is stated with its plan §13 justified claim and "does not follow" boundary; results are conditional on the checkpoint and the intervention policy; descriptive tables carry no inference.
-- Placeholders: author, affiliation and licence use `\placeholder{...}` until the user decides; `scripts/wp4_build.py --arxiv` fails while any remains.
+- Author line (user decision 2026-11-16): Zoltán Kárász, independent researcher, ORCID only, no employer affiliation; paper licence CC BY 4.0 (`\paperlicence` in `preamble.tex`), code licence MIT (root `LICENSE`); `sections/statements.tex` holds the AI-use statement and must stay accurate.
+- Placeholders: only the repository URL remains a `\placeholder{...}` until the repository is public; `scripts/wp4_build.py --arxiv` fails while any remains.
 - Language: English, no compressed prose.
 - Figures: drawn at final size (`wp4figures.WIDTH` = text width from `geometry` letterpaper, margin=1.1in in `preamble.tex`; change both together), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
 
@@ -33,6 +34,6 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 ## Child DOX Index
 
 - `main.tex`, `preamble.tex`: document and shared preamble (page geometry, `\placeholder`, `\input{generated/numbers.tex}`)
-- `sections/`: one file per section (introduction, background, setup, e1, e2, e3, discussion, appendix)
+- `sections/`: one file per section (introduction, background, setup, summary, e1, e2, e3, discussion, statements, appendix)
 - `refs.bib`: bibliography
 - `generated/`: number macros, tables and figures from `scripts/wp4_figures.py`
