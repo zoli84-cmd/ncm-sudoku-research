@@ -54,9 +54,11 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [research_plan_v3.md](research_plan_v3.md): frozen English translation of plan v3.0
 - [NCM_Sudoku_kutatasi_terv_v3.md](NCM_Sudoku_kutatasi_terv_v3.md): frozen Hungarian original of plan v3.0
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
+- [LICENSE](LICENSE): MIT licence for the own code (`third_party/ncm` keeps its upstream MIT licence; the paper is CC BY 4.0)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
 - [.gitattributes](.gitattributes): LF line endings everywhere, so lock hashes match across Windows and WSL
-- [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy; pytest as dev dependency)
+- [pyproject.toml](pyproject.toml), `uv.lock`, `.python-version`: uv project (Python 3.12, numpy, torch, matplotlib for the WP4 figures; pytest as dev dependency)
+- [paper/AGENTS.md](paper/AGENTS.md): WP4 manuscript (LaTeX, Tectonic build, generated numbers, tables and figures; number and claim rules)
 - [src/ncm_sudoku/AGENTS.md](src/ncm_sudoku/AGENTS.md): own package; per-module contracts (frozen `grid.PEER_ORDER`, pinned by `tests/test_peer_order.py`; never reorder; `wp2.py` is the WP2 freeze guard and run-record layer every WP2 runner uses)
 - [tests/](tests/): pytest suite, one test module per package module; `sudoku_cases.py` holds shared fixtures, `e2p2_fakes.py` deterministic fakes of the model pieces `e2p2` uses (`toy_model` with embedding tables, `exact_restart` for code-identity tests), `wp2_fakes.py` a complete synthetic set of WP2 raw outputs and valid run records for one role (`write_role`; the TEST role scores E3 on the E2 ids, as the real TEST does; tests of `scripts/wp2_evaluate.py` and `scripts/wp2_dry_check.py`); `golden/` holds outputs generated from earlier code that pin refactors (`summarize2_toy.json`; `e3_scripts_toy.json`: `stages` of `scripts/e3_wholelayer.py` (K 8) and `scripts/e3_probes.py` (SIZES (4, 8)) on the toy runs with the FAST budget, written before the WP2 helper move); `-m slow` runs real-data checks
 - [scripts/AGENTS.md](scripts/AGENTS.md): run scripts; most result writers are rerun-guarded (`--force` / `--resume`); read the per-script contract there before forcing a rerun
@@ -76,5 +78,5 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - `runs/e3prep/models/` (git-ignored): selected level-6 linear seed probes from `scripts/e3_probes.py` (`L06_linear_seed{0,1,2}.pt` state dicts, `L06_linear.json` config); loaded with `torch.load(weights_only=True)`
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
 - [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans, one per work package (`YYYY-MM-DD-<topic>.md`)
-- [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `query_log.md` (every search query, tool, and result count); repeat the search before submission
+- [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `presubmission_update_2026-11-16.md` (pre-submission repeat of the search and verification of every `paper/refs.bib` entry) and `query_log.md` (every search query, tool, and result count); repeat the search if submission is delayed by more than a few weeks
 - [resources/](resources/): source materials; `2610.14162v1.pdf` is the NCM paper (arXiv:2610.14162), local only

@@ -1,0 +1,64 @@
+\section{E2: level sensitivity and compensation}
+\label{sec:e2}
+
+\subsection{Design}
+\label{sec:e2-design}
+
+E2 asks how strongly the solve outcome depends on a single code at different levels, and whether generating the later levels after an intervention makes up for part of the damage. For each puzzle we record the clean run and then compare four branches that share every code before the intervention level. Branch A replays the clean codes. Branch B restarts generation after the intervention level without changing anything (a sham restart; in a deterministic run B must equal A). Branch C replaces codes at the intervention level and replays the original later levels, so it measures the direct effect of the replacement on decoding. Branch D makes the same replacement and generates the later levels anew, so it measures the total effect, including any adaptation of the later levels.
+
+The primary edit is a single code replacement. A replacement value is drawn from the level's generated code frequencies estimated on the calibration set, excluding the original value (frequency policy); a uniform choice among the other values is the secondary policy. Level~1 has a single code, so instead of sampling we run all alternative values and weight them by their calibration frequencies, which gives the exact expectation over the policy. At the other levels one position and one value are drawn, with three intervention seeds per puzzle and dose. For every replacement we also record its initial damage: the mean over all cells of the total variation distance between the decoder's output distributions in branches C and A, a continuous measure of how much the replacement changes the decoded output before any regeneration. The two primary contrasts are
+\[
+\theta_2 = \mathbb{E}\bigl[(Y_{D,1}-Y_A)-(Y_{D,11}-Y_A)\bigr],
+\]
+and, at level~1,
+\[
+\theta_{\mathrm{comp}} = \mathbb{E}\bigl[(Y_D-Y_C)-(Y_B-Y_A)\bigr],
+\]
+where $Y$ is the binary solve outcome of a branch. A negative $\theta_2$ (H2) means that one replaced code costs more at level~1 than at level~11; a positive $\theta_{\mathrm{comp}}$ (H3) means that regenerating the later levels leaves the puzzle solved more often than replaying them, corrected for the sham restart. One code at each level is an equal number of discrete edits, not an equal semantic change. Level~1 is also architecturally distinct: its single code passes through a learned upsampler, so replacing it changes the whole level-1 state.
+
+The sham restart reproduced the clean run exactly: for every puzzle and every intervention level studied, branch B produced the same codes and the same outcome as branch A, and the level-1 rows that replace a code by itself (weight zero) reproduced A and B as well. The intervention path therefore adds no difference of its own.
+
+\subsection{Level sensitivity (H2)}
+\label{sec:e2-h2}
+
+Under the frequency policy, the single level-1 replacement lowered the solve share from \R{e2.l1.frequency.A}\% in branch A to \R{e2.l1.frequency.D}\% in branch D, while a single replacement at level~11 left it at \R{e2.cfg.L11.frequency.d1.D}\%. The primary contrast was $\theta_2 = \R{h2.est}$ percentage points, with a family interval of [\R{h2.fam.lo}, \R{h2.fam.hi}] (\R{level.family}\%; Figure~\ref{fig:contrasts-forest}); \R{h2.nnz} of \R{h2.n} puzzles had a nonzero difference. The whole interval lies beyond the pre-specified practical threshold of \R{plan.h2practical} points. The uniform policy gave a larger contrast (\R{uniform.theta2.est} points, \R{level.ci95}\% interval [\R{uniform.theta2.ci.lo}, \R{uniform.theta2.ci.hi}]), and so did the puzzles whose clean run was solved (\R{cb.theta2.est} points, \R{cb.theta2.n} puzzles).
+
+Following the registered interpretation, this supports a greater sensitivity of the solve outcome to one code at level~1 than at level~11 under the given replacement policy. It does not show that the coarse code is an explicit plan of a solving algorithm, and because level~1 is a single code behind a learned upsampler, it does not imply a graded sensitivity along the early levels or a sensitivity that is independent of that architecture.
+
+\subsection{Compensation (H3)}
+\label{sec:e2-h3}
+
+At level~1 the direct effect of the replacement (branch C) was a solve share of \R{e2.l1.frequency.C}\%; generating the later levels anew (branch D) gave \R{e2.l1.frequency.D}\%. With the sham correction, $\theta_{\mathrm{comp}} = \R{h3.est}$ percentage points, with a family interval of [\R{h3.fam.lo}, \R{h3.fam.hi}]; \R{h3.nnz} of \R{h3.n} puzzles had a nonzero value. The interval excludes zero, so regenerating the later levels attenuated the effect of the replacement. The estimate lies below the practical threshold of \R{plan.h3practical} points used for sample-size planning, and the interval contains values on both sides of it, so the size of the attenuation is small and its practical relevance is not established. The uniform policy (\R{uniform.thetacomp.est} points) and the correct-baseline subset (\R{cb.thetacomp.est} points) gave estimates of the same sign and size.
+
+NCM training, as described for the method, corrupts earlier levels \citep{kumbong2026ncm}; if this checkpoint was trained that way, a positive compensation is consistent with robustness that the training objective rewards. It does not show that the model detects or repairs logical errors, and the improvement in D need not be logical error correction: the regenerated codes may simply fit the changed prefix better than the replayed ones.
+
+\subsection{Levels 2 and 11, doses and propagation}
+\label{sec:e2-secondary}
+
+A single replacement at level~2 and at level~11 gave practically the same solve outcome: the difference was \R{theta2p.est} points, and because only \R{theta2p.nnz} puzzles had a nonzero difference, the registered rare-event bound replaced the bootstrap: at the one-sided \R{level.ci95}\% level the difference lies within [\R{theta2p.tost.lo}, \R{theta2p.tost.hi}], inside the equivalence range of $\pm$\R{plan.theta2pmargin} points. This supports the absence of a practically relevant difference between levels 2 and 11 under the frequency policy; it does not show that level~2 carries no information or has no causal role.
+
+The dose curves (Figure~\ref{fig:dose-curves}; Table~\ref{tab:e2-dose}) are descriptive and carry no inference. At level~6, replacing codes and replaying the later levels (C) left the solve share at the baseline for every dose under both policies, whereas generating the later levels anew (D) lowered it, to \R{e2.cfg.L06.frequency.d13.D}\% when every level-6 code was replaced under the frequency policy.
+At level~11 both branches declined with the dose, to \R{e2.cfg.L11.frequency.d67.C}\% (C) and \R{e2.cfg.L11.frequency.d67.D}\% (D) when every level-11 code was replaced under the frequency policy. The registered comparison of dose curves plots, for each dose of a level, the mean solve change of D against the mean initial damage, and compares the areas under two such curves over a damage range frozen on the calibration set. It could not be computed: the mean damages of the TEST doses did not cover the frozen range for levels 6 and 11, and no range had been frozen for levels 2 and 11. This is a pre-specified outcome, not a failure of the run. The replacements were unlikely values under the generator's own distribution at every level: across puzzles, the median of the per-puzzle mean probability of the new code was \R{e2.l1.frequency.pnew.med} at level~1 (policy-weighted; \R{e2.l1.frequency.porig.med} for the original code) and \R{e2.cfg.L11.frequency.d1.pnew.med} for the single level-11 replacement (averaged over the three seeds), so a low probability of the replacement alone does not explain the greater sensitivity at level~1. Tables~\ref{tab:e2-diagnostics} and~\ref{tab:e2-replacement} give the damage, latent distance, format errors and replacement diagnostics per configuration; their captions state, per column, whether a value summarizes per-puzzle means or individual runs.
+
+Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels of branch D. A level-1 replacement changed on average \R{e2.prop.level1-frequency.L11} codes at level~11 under the frequency policy; replacing all level-6 codes changed \R{e2.prop.L06-frequency-d13.L11}. The right panel shows the distance of the cumulative state from the clean run relative to the norm of the clean state. In branch C the absolute difference is the same at every level from the intervention level on, because the later levels are replayed and each level adds its own term, so the falling relative distance only reflects the growing clean state. In branch D the relative distance ended slightly above that of C, although D solved more puzzles. Full state tensors were not saved: the cumulative-state distances and intermediate decodings exist for the level-1 enumeration under both policies and for the single level-11 replacement under the frequency policy; further recorded diagnostics are listed in Appendix~\ref{sec:appendix-tables} but not shown.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{generated/figures/contrasts_forest.pdf}
+\caption{E2 contrasts in percentage points. H2 and H3 show the point estimate, the \R{level.family}\% family interval (thick) and the \R{level.ci95}\% interval (thin); the other rows show \R{level.ci95}\% intervals (for the level 2 versus 11 contrasts, the rare-event bound). Dotted marks: practical thresholds of H2 and H3, on their rows; dashed marks: equivalence range of the level 2 versus 11 contrast, on its rows. Rows labelled uniform use the uniform replacement policy; rows labelled correct baseline use the puzzles whose clean run was solved.}
+\label{fig:contrasts-forest}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{generated/figures/dose_curves.pdf}
+\caption{E2 dose curves (descriptive): solve share of branch C (replayed later levels) and branch D (regenerated later levels) against the number of replaced codes, for levels 2, 6 and 11 and both replacement policies.}
+\label{fig:dose-curves}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{generated/figures/propagation.pdf}
+\caption{E2 propagation (descriptive). Left: mean number of codes changed at each later level of branch D, per configuration. Right: distance of the cumulative state from the clean run after each level, relative to the norm of the clean state, branches C (dashed) and D (solid), for the configurations with saved states.}
+\label{fig:propagation}
+\end{figure}

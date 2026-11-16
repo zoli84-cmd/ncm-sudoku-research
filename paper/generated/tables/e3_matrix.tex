@@ -1,0 +1,28 @@
+\begin{tabular}{llrlrr}
+\toprule
+Row & Constr. & Brier & Reference & Rel.\ diff.\ (\%) & Params \\
+\midrule
+wl\_L06.generated & whole\_layer & 0.2307 & -- & -- & 5346 \\
+wl\_L06.permuted & whole\_layer & 0.2335 & wl\_L06.generated & 1.3 & 5346 \\
+wl\_L06\_controls.random & whole\_layer & 0.2337 & wl\_L06.generated & 1.3 & 5346 \\
+wl\_L06\_controls.label\_permuted & whole\_layer & 0.2328 & wl\_L06.generated & 1.0 & 5346 \\
+wl\_teacher\_L06.teacher & whole\_layer & 0.2307 & wl\_L06.generated & 0.0 & 5346 \\
+wl\_teacher\_L12.teacher & whole\_layer & 0.1834 & wl\_L12.generated & 0.0 & 5346 \\
+raw\_projected.linear & input & 0.0014 & wl\_L06.generated & \ensuremath{-}99.4 & 2628 \\
+raw\_unprojected.linear & input & 0.0105 & wl\_L06.generated & \ensuremath{-}95.4 & 2628 \\
+pc\_L06.linear & per\_cell & 0.2310 & -- & -- & 3042 \\
+pc\_L06.mlp & per\_cell & 0.2309 & pc\_L06.linear & 0.0 & 22217 \\
+controls.raw\_linear & input & 0.0105 & pc\_L06.linear & \ensuremath{-}95.4 & 2628 \\
+controls.raw\_mlp & input & 0.0000 & pc\_L06.mlp & \ensuremath{-}100.0 & 19273 \\
+controls.peer\_counts\_linear & input & 0.0142 & pc\_L06.linear & \ensuremath{-}93.9 & 819 \\
+controls.surface\_linear & input & 0.2253 & pc\_L06.linear & \ensuremath{-}2.5 & 828 \\
+controls.permuted\_linear & per\_cell & 0.2326 & pc\_L06.linear & 0.7 & 3042 \\
+controls.random\_linear & per\_cell & 0.2330 & pc\_L06.linear & 0.9 & 3042 \\
+controls.label\_permuted\_linear & per\_cell & 0.2326 & pc\_L06.linear & 0.7 & 3042 \\
+controls.teacher\_L02\_linear & per\_cell & 0.2321 & pc\_L02.linear & 0.0 & 3042 \\
+controls.teacher\_L06\_linear & per\_cell & 0.2310 & pc\_L06.linear & 0.0 & 3042 \\
+controls.teacher\_L12\_linear & per\_cell & 0.1860 & pc\_L12.linear & 0.1 & 3042 \\
+controls.rule & input & 0.0000 & -- & -- & -- \\
+controls.marginal & input & 0.2325 & -- & -- & -- \\
+\bottomrule
+\end{tabular}
