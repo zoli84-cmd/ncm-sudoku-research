@@ -188,3 +188,28 @@ def test_collect_review_round2_keys(sources):
 def test_collect_final_round_keys(sources):
     nums = collect(sources)
     assert nums["unit.gen.brier"] == "0.2333" and nums["unit.raw.brier"] == "0.1361"
+
+
+def test_fmt_str_passes_version_strings_through():
+    assert fmt("2.15.0+cpu", "str") == "2.15.0+cpu"
+    with pytest.raises(ValueError):
+        fmt(None, "str")
+
+
+def test_collect_prepublication_keys(sources):
+    nums = collect(sources)
+    assert nums["cal.n"] == "300"
+    assert nums["prov.upstream"] == "c702742"
+    assert nums["prov.ckpt"] == "d342ce8"
+    assert nums["prov.data"] == "6580ba4"
+    assert nums["env.python"] == "3.12.12" and nums["env.torch"] == "2.15.0+cpu"
+    assert nums["env.numpy"] == "2.5.4" and nums["env.threads"] == "4"
+    assert nums["test.hours"] == "14.7"
+    assert nums["rawgen.proj.est"] == r"\ensuremath{-}0.2292"
+    assert nums["rawgen.proj.ci.lo"] == r"\ensuremath{-}0.2297" and nums["rawgen.proj.ci.hi"] == r"\ensuremath{-}0.2287"
+    assert nums["rawgen.unproj.est"] == r"\ensuremath{-}0.2201"
+
+
+def test_test_hours_is_the_sum_of_run_record_durations(sources):
+    seconds = sum(r["seconds"] for r in sources["results"]["records"].values())
+    assert sources["derived"]["test_hours"] == pytest.approx(seconds / 3600)

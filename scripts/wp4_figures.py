@@ -30,7 +30,8 @@ TABLES = {
     "e1": wp4tables.e1_table,
     "equivariance": wp4tables.equivariance_table,
 }
-FIGURES = ("dose_curves", "contrasts_forest", "propagation", "e3_readability", "e3_supporting", "e1_levels")
+FIGURES = ("dose_curves", "contrasts_forest", "propagation", "e3_readability", "e3_supporting", "e1_levels",
+           "damage_curves")
 
 
 def _write(path: Path, text: str) -> Path:

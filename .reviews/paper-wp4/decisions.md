@@ -54,3 +54,25 @@ Round 1 sources: sol (`round-1/review.sol.md`), carbon (`round-1/review.carbon.m
 | Final | ASTRA-4 | minor | Permuted control: permutation independent in PROBE-TRAIN and PROBE-VAL, own selection, both probes scored on intact TEST pairs | accept | plan §8.2 | spot |
 | Final | ASTRA-5 | minor | Equivariance deviation and group draws undefined | accept | plan §8.4: mean absolute probability difference over originally empty cell-digit pairs; 4 full-group, 2 digit-only, 2 geometric draws per puzzle | spot |
 | Final | ASTRA-6 | minor | Unit-digit Brier (registered endpoint) missing | accept | results.json tables.unit_digit brier | spot |
+| Prepub | SOL-1 + ASTRA-3 | major | "Unrelated state" wording misdescribes the permuted control, which is trained on permuted pairs but scored on intact TEST representations | accept | Rephrase in introduction, e3 and discussion as a probe trained and selected on independently permuted pairs | yes: e3controls.permuted_control scores on the unpermuted score set |
+| Prepub | SOL-2 + ASTRA-1 + CARBON-3 | major | Abstract and introduction still state corruption training as a fact about this checkpoint; the triggered H3 row presumes it | accept | Hedge as "described for the method, assumed for this checkpoint"; note the premise in the summary caption, keep the verbatim registered row | yes: main.tex:12, introduction.tex:16, readings.tex:9 |
+| Prepub | SOL-3 + ASTRA-2 + CARBON-2 | major | Reproducibility lacks upstream code/checkpoint/data revisions, what is released vs. regenerated, CAL size and compute | accept | Add generated macros (revisions, CAL n, environment, TEST runtime) and an availability-and-compute paragraph | yes: provenance JSONs, results.json environment, .gitignore |
+| Prepub | CARBON-1 | major | Quantix sentence asserts the same checkpoint and "generator states", which the literature check marks unverified | accept | Say released NCM Sudoku checkpoints, final-level cell states, residual-omission and state-exchange tests | yes: presubmission_update lines 10, 26, 249 |
+| Prepub | SOL-5 + ASTRA-5 | minor (raised) | Registered solve-change vs. initial-damage curves (plan §7.3) are not shown | accept | Add a descriptive figure from results.json auc nodes; plan requires separate curves without overlap | yes: plan line 211, results.auc.*.nodes |
+| Prepub | SOL-4 | minor | Registered raw-input minus generated estimates omitted | accept | Report both with 95% intervals via macros | yes: results.secondary.raw_minus_generated |
+| Prepub | ASTRA-4 | minor | CAL size and sample-size rationale missing | accept | State CAL n and that TEST n is the largest simulated requirement (plan §11.4) | spot-checked |
+| Prepub | ASTRA-6 | minor | "Configurations with saved states" conflicts with "full state tensors were not saved" | accept | Reword to recorded distances and decodings | spot-checked |
+| Prepub | ASTRA-7 | minor | Gate interval is a 90% Wilson interval, not bootstrap | accept | Name it in setup | yes: gate.wilson_interval |
+| Prepub | ASTRA-8 | minor | "Errors are most costly at the coarsest level" implies a maximum not tested | accept | Restate as the level-1 vs. level-11 comparison | yes |
+| Prepub | SOL-6 | minor | "Many-to-one quantizer can absorb a replaced code" misattributes the mapping | accept | Say different code sequences can decode to the same grid | yes |
+| Prepub | SOL-7 | minor | "One position and one value" misdescribes dose k | accept | Dose k draws k distinct positions and values | spot-checked |
+| Prepub | CARBON-4 | minor | Oh et al. parallel overstated | accept | Rephrase as regeneration under a fixed erroneous context need not undo an error | yes |
+| Prepub | CARBON-5 | minor | Axis label "Brier (score set)" is runner jargon; captions omit teacher levels and panel scope | accept | Relabel "Brier loss (TEST)" and clarify captions | spot-checked |
+| Prepub | CARBON-6 | minor | Raw-input encoding and "projected" undefined | accept | One defining clause | spot-checked |
+| Prepub | CARBON-7 | minor | Appendix tables interleave E2 and E3 | accept | Order E2 tables before E3, per-digit after secondary | spot-checked |
+| Prepub | CARBON-8 | minor | Replacement-table caption aggregation ambiguous | accept | State per-run averaging over positions and the RMS pooling | spot-checked |
+| Prepub | CARBON-9 | minor | "Every number ... generated" overstates (hand-written deviation table, design constants) | accept | Narrow to every result number, result table and figure | yes |
+| Prepub | CARBON-10 | minor | "Embargoed until publication" will read stale | accept | Drop the embargo note; user lifts the OSF embargo at release | yes |
+| Prepub | CARBON-11 | nit | Khoury DOI printed twice | reject | plainnat does not print doi for @misc; rendered entry shows it once | yes: rendered PDF |
+| Prepub | CARBON-12 | nit | D78 row wording and tab:e3-matrix listing | accept | Clarify | spot-checked |
+| Prepub | CARBON-13 | nit | Section reference and plural "probes" | accept | Fix | spot-checked |

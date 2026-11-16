@@ -16,6 +16,7 @@ EXPECTED = {
     "tables/equivariance.tex", "tables/deviations.tex",
     "figures/dose_curves.pdf", "figures/contrasts_forest.pdf", "figures/propagation.pdf",
     "figures/e3_readability.pdf", "figures/e3_supporting.pdf", "figures/e1_levels.pdf",
+    "figures/damage_curves.pdf",
 }
 
 
@@ -44,9 +45,9 @@ def test_generate_writes_every_file_deterministically(tmp_path):
 
 
 def _copy_inputs(dst: Path):
-    for rel_path in ("experiments/wp2/test/results.json", "experiments/g0/reproduction.json",
-                     "experiments/lock/test_set.json", "experiments/wp1/gate.json",
-                     "experiments/e3prep/extract.json", "experiments/wp1/e1_released.json", "DECISIONS.md"):
+    from ncm_sudoku.wp4numbers import SOURCE_FILES
+
+    for rel_path in (*SOURCE_FILES.values(), "DECISIONS.md"):
         (dst / rel_path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel_path, dst / rel_path)
 
