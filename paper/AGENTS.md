@@ -21,7 +21,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 ## Work Guidance
 
 - Tectonic 0.17.0 at `C:\Users\ako2bp\.local\bin\tectonic.exe`; it downloads LaTeX packages on first use through the Px proxy (`HTTPS_PROXY`).
-- `refs.bib` entries are verified against their sources before submission.
+- `refs.bib` entries are verified against their primary sources (all verified 2026-11-16, `literature/presubmission_update_2026-11-16.md`); verify any new entry the same way, never invent author names; arXiv `@misc` entries carry `howpublished = {arXiv:<id>}` because `plainnat` ignores `eprint`.
 
 ## Verification
 

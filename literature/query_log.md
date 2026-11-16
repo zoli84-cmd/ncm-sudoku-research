@@ -101,3 +101,115 @@ Abstracts read but not tabled (judged not relevant enough): 2601.20363, 2604.049
 |---|---|---|---|---|
 | H5 | arXiv HTML (`https://arxiv.org/html/2605.18847`, raw download + stdlib HTML-to-text) | full paper text incl. Appendices A–D | Pin down the exact substructure-probe label, readout position, probe form/training, metrics, and per-cell candidate definition for `literature/kniazev_fijalkow_2026_unit_probe.md` | 1 (full text) |
 | G1 | GitHub REST API (`api.github.com/repos/kameronton/sudoku-residual`, tree + raw file fetch, unauthenticated) | `sudoku/probes/modes.py`, `sudoku/probes/probing.py`, `sudoku/probes/activations.py`, `sudoku/probes/session.py`, `plots/scripts/fig_probe_acc_by_layer.py` at commit `a9b206955bfd1089a7253511fa9371066ecca570` | Verify the paper's probe-protocol prose against the actual probe code (label construction, activation extraction position, probe fitting, exact-match/AUC metric definitions) | 1 (code repo linked from the paper, confirmed via HTML `href` around "Code is available at the link") |
+
+## Pre-submission update (2026-11-16)
+
+All queries were run on 2026-11-16 for [presubmission_update_2026-11-16.md](presubmission_update_2026-11-16.md). API keys were read from environment variables and are not recorded. "Kept" = number of new items from that query that entered table (a) of the update. An item found again by a later query is counted only at its first appearance. The queries ran in this order: Consensus, arXiv, Semantic Scholar (round 1), Exa, then Semantic Scholar (round 2) together with arXiv An8–An11.
+
+### Consensus API (`GET https://api.consensus.app/v1/search`, header `x-api-key`; 11 calls)
+
+The API offers only a year filter, so `year_min=2026` was used. Posting dates after 2026-10-01 were checked by hand.
+
+| # | Tool | Exact query | Date filter | Results | Kept |
+|---|---|---|---|---|---|
+| C1 | Consensus | probing neural network trained on Sudoku for candidate sets and constraint propagation | year_min=2026 | 20 | 0 |
+| C2 | Consensus | mechanistic interpretability of transformer trained to solve Sudoku | year_min=2026 | 20 | 0 |
+| C3 | Consensus | linear probe transformer constraint satisfaction puzzle internal representation of candidates | year_min=2026 | 20 | 1 (2610.22655) |
+| C6 | Consensus | coarse-to-fine autoregressive image generation next-scale prediction error accumulation self-correction | year_min=2026 | 20 | 0 |
+| C9 | Consensus | probing equivariance under symmetry transformations of board game world model representations | year_min=2026 | 20 | 0 |
+| C13 | Consensus | next-concept modeling hierarchical latent concepts coarse-to-fine generation | year_min=2026 | 20 | 0 |
+| C14 | Consensus | probe decodability versus causal use amnesic probing intervention representation | year_min=2026 | 20 | 2 (2609.02438, 2609.01048) |
+| C15 | Consensus | self-repair compensation after ablation in transformer later layers | year_min=2026 | 20 | 0 |
+| C17 | Consensus | linear probe world model transformer causal intervention board game puzzle 2025 2026 | year_min=2026 | 20 | 1 (2608.07077) |
+| Cn1 | Consensus | interventions on discrete residual quantized codes hierarchical text generation level sensitivity | year_min=2026 | 20 | 0 |
+| Cn2 | Consensus | Sudoku neural solver internal representation intermediate states probing 2026 | year_min=2026 | 20 | 0 |
+
+### arXiv export API, keyword search (`https://export.arxiv.org/api/query?search_query=<query> AND submittedDate:[202610010000 TO 202611162359]&max_results=50&sortBy=submittedDate`)
+
+| # | Tool | Exact `search_query` (before the date clause) | Date filter | Results | Kept |
+|---|---|---|---|---|---|
+| A1 | arXiv API | `all:"next-concept modeling"` | 2026-10-01 to 2026-11-16 | 1 | 0 (NCM itself only) |
+| A2 | arXiv API | `abs:sudoku AND abs:probe` | same | 1 | 0 |
+| A3 | arXiv API | `abs:sudoku AND abs:interpretability` | same | 3 | 0 |
+| A4 | arXiv API | `abs:sudoku AND abs:mechanistic` | same | 0 | 0 |
+| A6 | arXiv API | `abs:"next-scale prediction" AND abs:"error propagation"` | same | 0 | 0 |
+| A7 | arXiv API | `abs:"self-repair" AND abs:ablation` | same | 1 | 0 (Ahmad et al., already cited) |
+| An1 | arXiv API | `abs:sudoku` | same | 36 | 1 (2611.17320) |
+| An2 | arXiv API | `abs:"coarse-to-fine" AND abs:"residual" AND abs:quantiz*` | same | 2 | 0 |
+| An3 | arXiv API | `abs:"next-scale" AND (abs:interpretability OR abs:intervention)` | same | 2 | 0 (LoCo, already tabled on 2026-11-08) |
+| An4 | arXiv API | `abs:probe AND abs:equivariance` | same | 8 | 0 |
+| An5 | arXiv API | `abs:decodab* AND abs:causal AND abs:probe` | same | 0 | 0 |
+| An6 | arXiv API | `all:"next-concept"` | same | 1 | 0 (NCM itself only) |
+| An7 | arXiv API | `abs:"constraint propagation" AND abs:transformer` | same | 0 | 0 |
+| An8 | arXiv API | `abs:"coarse-to-fine" AND abs:"text generation"` | same | 1 | 0 |
+| An9 | arXiv API | `abs:"residual" AND abs:"vector quantiz*" AND abs:probe` | same | 1 | 0 |
+| An10 | arXiv API | `abs:sudoku AND abs:"linear probe"` | same | 0 | 0 |
+| An11 | arXiv API | `abs:"self-repair"` | same | 5 | 0 |
+
+### Semantic Scholar Graph API (`https://api.semanticscholar.org/graph/v1/`, unauthenticated)
+
+| # | Tool | Exact query or endpoint | Date filter | Results | Kept |
+|---|---|---|---|---|---|
+| S1 | Semantic Scholar | `paper/arXiv:2610.14162/citations` (NCM) | none | 0 citing papers (after one HTTP 429 retry) | 0 |
+| S2 | Semantic Scholar | `paper/arXiv:2605.18847/citations` (Kniazev & Fijalkow) | none | 0 citing papers (after two 429 retries) | 0 |
+| S3 | Semantic Scholar | `paper/arXiv:2609.22197/citations` (Rodrigues & Kang) | none | 0 citing papers | 0 |
+| S4 | Semantic Scholar | `paper/search`, query `next-concept modeling` | `publicationDateOrYear=2026-10-01:` | **failed**: HTTP 429 on all 9 attempts (two rounds) | – |
+| S5 | Semantic Scholar | `paper/search`, query `sudoku interpretability probe` | `publicationDateOrYear=2026-10-01:` | 50 of 370 (round 2; round 1 failed with 429) | 1 (2610.08544) |
+| S6 | Semantic Scholar | `paper/search`, query `coarse-to-fine residual quantized generator intervention` | `publicationDateOrYear=2026-10-01:` | **failed**: HTTP 429 on all 9 attempts | – |
+| S7 | Semantic Scholar | `paper/search`, query `self-repair compensation ablation` | `publicationDateOrYear=2026-10-01:` | **failed**: HTTP 429 on all 9 attempts | – |
+| S8 | Semantic Scholar | `paper/arXiv:2610.14162` (citation count) | none | **failed**: HTTP 429 on all 5 attempts | – |
+| S9 | Semantic Scholar | `paper/arXiv:2409.10502` (venue lookup for Shah et al.) | none | **failed**: HTTP 429 | – (venue verified on the NeurIPS proceedings page instead) |
+
+Retry of the failed Semantic Scholar calls later on 2026-11-16 (same endpoints, parameters and date filter; `fields` = title, external ids, publication date, venue, url, abstract; `limit=100`; unauthenticated, no `S2_API_KEY` in the environment; up to 6 attempts per call with exponential backoff from 5 s):
+
+| # | Exact call | Results | Kept |
+|---|---|---|---|
+| S4r | S4 repeated | **failed**: HTTP 429 on all 6 attempts | – |
+| S6r | S6 repeated | **failed**: HTTP 429 on all 6 attempts | – |
+| S7r | S7 repeated | 25 of 25 (first attempt) | 0 (the only relevant hit, arXiv:2610.02173, is already `ahmad2026dose`; the rest are from unrelated fields) |
+| S8r | S8 repeated | NCM (arXiv:2610.14162): citationCount 0, referenceCount 52 (second attempt) | – |
+| S9r | S9 repeated | **failed**: HTTP 429 on all 6 attempts | – (venue already verified on the proceedings page) |
+
+### Exa search API (`POST https://api.exa.ai/search`, `type=auto`, `numResults=12`)
+
+| # | Tool | Exact query | Date filter (`startPublishedDate`) | Results | Kept |
+|---|---|---|---|---|---|
+| E1 | Exa | linear probes of a transformer trained on Sudoku reveal candidate sets and constraint propagation | 2026-10-01 | 12 | 0 |
+| E4 | Exa | interpretability of Next-Concept Modeling NCM coarse-to-fine text generation residual codes | 2026-10-01 | 12 | 1 (VineOK aggregator page, which led to the Quantix-eng repository) |
+| E5 | Exa | arXiv paper citing Next-Concept Modeling Kumbong 2026 coarse-to-fine residual vector quantized latent generation | 2026-10-01 | 12 | 0 |
+| E6 | Exa | intervening on coarse scale tokens in next-scale prediction model, effect on finer scales and self-correction | 2026-10-01 | 12 | 0 |
+| E7 | Exa | interpretability of discrete diffusion model on Sudoku: probing intermediate denoising states for constraint information | 2026-10-01 | 12 | 0 |
+| E14 | Exa | probing classifier equivariance test under input symmetry group transformations as validity check for probes | 2026-10-01 | 12 | 1 (2611.07805) |
+| E16 | Exa | Next-Concept Modeling Sudoku latent codes analysis levels hierarchy | 2026-10-01 | 12 | 0 |
+| En1 | Exa | Next-Concept Modeling follow-up study, NCM checkpoint analysis or extension | 2026-10-01 | 12 | 2 (Zenodo 23564347, Zenodo 23837501) |
+| En2 | Exa | decodable but not causally used: linear probe versus intervention evidence in a puzzle-solving transformer | 2026-10-01 | 12 | 1 (2610.07270) |
+| En3 | Exa | self-repair or compensation when later stages regenerate after an early error in a hierarchical generator | 2026-10-01 | 12 | 0 |
+| En4 | Exa | mechanistic interpretability of a recurrent or looped reasoning model on Sudoku | 2026-10-01 | 12 | 0 |
+| En5 | Exa | github repository exploratory studies and controls Next-Concept Modeling NCM interpretability | 2026-10-01 | 12 | 0 (secondary pages pointing to the same repository; counted in E4) |
+| En6 | Exa | Sudoku next-concept model probing levels candidate mask code replacement | 2026-10-01 | 12 | 0 |
+| EV1 | Exa, `includeDomains` = proceedings.neurips.cc, papers.nips.cc, neurips.cc, openreview.net, `numResults=8` (verification, not discovery) | Causal Language Modeling Can Elicit Search and Reasoning Capabilities on Logic Puzzles | none | 8 | – |
+
+### Exa contents API (`POST https://api.exa.ai/contents`, text extraction of known URLs)
+
+| # | Tool | URLs requested | Results | Kept |
+|---|---|---|---|---|
+| X1 | Exa contents | vineok.com/items/103127; falsegreen.dev/posts/the-most-interesting-checkpoint-is-five-bytes-long/; gautamparab.com/writing/twelve-steps-coarse-to-fine/; zenodo.org/records/23564347; doi:10.5281/zenodo.23837501 | 5 | counted in E4/En1 |
+| X2 | Exa contents | reddit.com/r/MachineLearning/comments/1xh3e7o/ (the source post behind VineOK) | **failed**: HTTP 403 `SOURCE_NOT_AVAILABLE` (direct curl of the Reddit JSON also returned 403) | – |
+| X3 | Exa contents | tensorjournal.com/en/news/ncm-experiment-notes-exploratory-repository; devplace.net (Reddit repost with the repository link); beyondmarketintelligence.com (same) | 3 | 0 (pointers only) |
+
+### Primary-source retrieval (verification, not discovery)
+
+| # | Tool | Target | Results |
+|---|---|---|---|
+| G2 | GitHub REST API (unauthenticated) and raw file fetch | `api.github.com/repos/Quantix-eng/ncm-experiment-notes` (metadata, recursive tree at `89a165ce01f06ce27dc097c2b2f805c288d6dde3`); raw `README.md`, `CITATION.cff`, `docs/scope.md`, `docs/related-work.md`, `experiments/README.md`, `experiments/catalog.csv`, READMEs of experiments 01, 06, 09, 10, 12, 16; from `experiments/10-initial-audit/`: `experiment.json`, `src/analyze.py`, `src/experiments.py`, `src/extract.py`, `src/prepare.py`, `src/continue.py`, `recorded/summary.csv`, `recorded/probes.csv`, `recorded/symmetry.json`, `recorded/constant_level.json`, `recorded/tokenizer_errors.json`, `recorded/naked_single.json` | all fetched; the extraction code that produces `local_hidden` was not found in the two adapter files searched |
+| Z1 | Zenodo records API | `zenodo.org/api/records/23737645` (resolves to the latest version, 23826875, v2 of 2026-10-31) and its PDF | fetched; the first attempt failed with curl exit 35 (TLS), the retry succeeded |
+| R1 | arXiv API `id_list` | 2610.14162, 2605.18847, 2609.22197, 2610.02173, 2409.10502 (bib entries) | 5 |
+| V7 | arXiv API `id_list` | 2610.22655, 2611.07805, 2610.37411, 2611.17320, 2610.18174, 2610.18127, 2610.29255, 2610.02193, 2610.07270, 2611.05033, 2608.07077, 2609.01048 | 12 |
+| V8 | arXiv API `id_list` | 2609.35475, 2609.02438, 2606.03003, 2602.04054, 2610.16427, 2610.25646, 2611.17309, 2609.26487, 2610.15081, 2607.05381, 2611.03454, 2611.08977, 2610.26542 | 13 |
+| V9 | arXiv API `id_list` | 2610.08544 | 1 |
+| H6 | arXiv HTML full text | 2610.14162v1, 2605.18847v1, 2609.22197v1, 2610.02173v1, 2409.10502v1 | 5 (keyword-searched for each citing sentence) |
+| P1 | ACL Anthology | D19-1275 page and `.bib`; 2022.cl-1.7 page, `.bib` and PDF | all fetched |
+| P2 | NeurIPS proceedings | `proceedings.neurips.cc/paper_files/paper/2024/hash/67b31ca159553d5593e62d7b998d63ea-Abstract-Conference.html` and its BibTeX file | fetched |
+| D1 | DBLP search API | `q=Causal Language Modeling Can Elicit Search and Reasoning` | **failed**: HTTP 202 with an empty body |
+
+Abstracts read but not tabled: 2610.37411, 2610.29255, 2610.02193, 2610.18174, 2610.18127, 2610.25646, 2610.16427, 2609.26487, 2611.08977, 2611.17309, 2610.26542, 2610.15081, 2611.05033, 2609.35475, 2606.03003, 2602.04054, 2607.05381, 2611.03454.
