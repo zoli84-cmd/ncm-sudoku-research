@@ -94,3 +94,13 @@ def test_repo_manuscript_is_clean():
     assert lint(manuscript_files(ROOT), nums) == []
 
 
+
+
+def test_manuscript_labels_are_unique():
+    import collections
+    import re as _re
+
+    labels = collections.Counter()
+    for path in [ROOT / "paper" / "main.tex", *sorted((ROOT / "paper" / "sections").glob("*.tex"))]:
+        labels.update(_re.findall(r"\\label\{([^}]+)\}", path.read_text(encoding="utf-8")))
+    assert [k for k, n in labels.items() if n > 1] == []
