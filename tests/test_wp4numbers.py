@@ -225,3 +225,10 @@ def test_solution_digit_reference_follows_from_the_label_rate(sources):
     p = sources["results"]["tables"]["secondary_metrics"]["wl_L06.generated"]["ranking"]["positive_rate"]
     q = (9 * p - 1) / 8
     assert sources["derived"]["soldigit_brier"] == pytest.approx(8 / 9 * q * (1 - q))
+
+
+def test_collect_damage_comparison_keys(sources):
+    nums = collect(sources)
+    assert nums["e2.l1.frequency.tv.med"] == "0.00089" and nums["e2.l1.frequency.tvempty.med"] == "0.00046"
+    assert nums["e2.cfg.L11.frequency.d67.tv.med"] == "0.00055"
+    assert nums["e2.cfg.L11.frequency.d67.tvempty.med"] == "0.00046"

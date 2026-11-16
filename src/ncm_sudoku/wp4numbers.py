@@ -196,6 +196,12 @@ def _keys() -> dict[str, tuple[str, str, str]]:
     k["e2.l1.frequency.pnew.med"] = ("results", f"{rp}.level1-frequency.p_new.2", "sig2")
     k["e2.l1.frequency.porig.med"] = ("results", f"{rp}.level1-frequency.p_orig.2", "sig2")
     k["e2.cfg.L11.frequency.d1.pnew.med"] = ("results", f"{rp}.L11-frequency-d1.p_new.2", "sig2")
+    # initial damage (median TV, all cells and originally empty cells) of the level-1 replacement and of replacing
+    # every level-11 code, both under the frequency policy (descriptive comparison, D87)
+    for key, path in (("e2.l1.frequency", "tables.e2.level1.frequency"),
+                      ("e2.cfg.L11.frequency.d67", "tables.e2.configurations[level=11,policy=frequency,dose=67]")):
+        k[f"{key}.tv.med"] = ("results", f"{path}.quantiles.tv.2", "sig2")
+        k[f"{key}.tvempty.med"] = ("results", f"{path}.quantiles.tv_empty.2", "sig2")
     k["rel.n"] = ("released", "n", "int")
     k["rel.solve"] = ("released", "generated.solve", "pct1")
     k["rel.teacher"] = ("released", "teacher.exact_share", "pct1")
