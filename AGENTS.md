@@ -78,5 +78,6 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - `runs/e3prep/models/` (git-ignored): selected level-6 linear seed probes from `scripts/e3_probes.py` (`L06_linear_seed{0,1,2}.pt` state dicts, `L06_linear.json` config); loaded with `torch.load(weights_only=True)`
 - [.reviews/](.reviews/): external Copilot reviews per artifact (`review-plan.md`, `decisions.md`, briefs, reviewer outputs); transcripts are not committed
 - [docs/superpowers/plans/](docs/superpowers/plans/): implementation plans, one per work package (`YYYY-MM-DD-<topic>.md`)
+- [docs/venue/](docs/venue/): target-venue rules from primary sources (`tmlr_submission_rules_2026-11-17.md`: TMLR anonymization, length, style file, LLM policy, OpenReview profile, timeline); re-check before submitting
 - [literature/](literature/): `related_work_novelty_check.md` (related work and novelty verdicts per experiment, 2026-11-08) and `presubmission_update_2026-11-16.md` (pre-submission repeat of the search and verification of every `paper/refs.bib` entry) and `query_log.md` (every search query, tool, and result count); repeat the search if submission is delayed by more than a few weeks
 - [resources/](resources/): source materials; `2610.14162v1.pdf` is the NCM paper (arXiv:2610.14162), local only
