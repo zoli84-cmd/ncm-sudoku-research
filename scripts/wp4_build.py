@@ -2,7 +2,8 @@
 TMLR submission (`paper/main_anon.tex` -> `paper/build/main_anon.pdf`).
 
 `--check` (alias `--arxiv`) refuses to build while any `\\placeholder{...}` remains; for the anonymous variant it also
-checks, after compiling, that the PDF text and metadata contain no identifying string (`FORBIDDEN`) and that the main
+checks, after compiling, that the PDF text and metadata contain no identifying string (`FORBIDDEN` plus the generated
+code commit), that the LaTeX log has no overfull box or undefined or multiply defined reference, and that the main
 text (up to `\\label{main-end}`) ends on page `MAX_MAIN_PAGES` or earlier (TMLR Regular submission).
 """
 
@@ -24,6 +25,8 @@ FORBIDDEN = (
     "m28fx", "10.17605", "1047668", "prereg-v3.7", "wp2-code", "bosch", "ppke", "sztaki", "independent researcher",
 )
 MAIN_END = re.compile(r"\\newlabel\{main-end\}\{\{[^{}]*\}\{(\d+)\}")
+CODE_COMMIT = re.compile(r"\\wpdef\{code\.commit\}\{([^}]*)\}")
+LOG_WARNING = re.compile(r"^(Overfull \\[hv]box.*|.*LaTeX Warning: .*(undefined|multiply defined).*|.*Warning: Citation .*)$", re.M)
 
 
 def find_placeholders(paths: list[Path]) -> list[tuple[Path, int, str]]:
@@ -47,11 +50,30 @@ def normalize(text: str) -> str:
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).lower()
 
 
-def anon_violations(pdf_text: str, metadata: dict[str, str]) -> list[str]:
-    """Forbidden identifying strings found in the PDF text or in any metadata value, in `FORBIDDEN` order."""
+def anon_violations(pdf_text: str, metadata: dict[str, str], extra: tuple[str, ...] = ()) -> list[str]:
+    """Forbidden identifying strings (`FORBIDDEN`, then `extra`) found in the PDF text or any metadata value.
+
+    Matching also runs on a copy without whitespace and line-end hyphens, because PDF text extraction breaks
+    wrapped URLs and hyphenated words ("osf. io", "Ka- rasz")."""
     haystack = normalize(" ".join([pdf_text, *[str(v) for v in metadata.values() if v]]))
-    haystack = re.sub(r"\s+", " ", haystack)
-    return [s for s in FORBIDDEN if s in haystack]
+    spaced = re.sub(r"\s+", " ", haystack)
+    compact = re.sub(r"\s+", "", re.sub(r"-\s+", "", haystack))
+    found = []
+    for s in (*FORBIDDEN, *(normalize(e) for e in extra)):
+        if s and (s in spaced or re.sub(r"\s+", "", s) in compact) and s not in found:
+            found.append(s)
+    return found
+
+
+def generated_identifiers(root: Path) -> tuple[str, ...]:
+    """Identifiers that reach the PDF through generated values: the frozen code commit from `numbers.tex`."""
+    m = CODE_COMMIT.search((root / "paper" / "generated" / "numbers.tex").read_text(encoding="utf-8"))
+    return (m.group(1),) if m else ()
+
+
+def log_warnings(log_text: str) -> list[str]:
+    """Overfull boxes, undefined or multiply defined references and citation warnings in a LaTeX log."""
+    return [m.group(0).strip() for m in LOG_WARNING.finditer(log_text)]
 
 
 def main_end_page(aux_text: str) -> int:
@@ -65,7 +87,7 @@ def main_end_page(aux_text: str) -> int:
 def compile_variant(variant: str) -> int:
     paper = ROOT / "paper"
     (paper / "build").mkdir(exist_ok=True)
-    cmd = ["tectonic", "-X", "compile", f"{TOP[variant]}.tex", "--outdir", "build", "--keep-intermediates"]
+    cmd = ["tectonic", "-X", "compile", f"{TOP[variant]}.tex", "--outdir", "build", "--keep-intermediates", "--keep-logs"]
     return subprocess.run(cmd, cwd=paper).returncode
 
 
@@ -78,6 +100,10 @@ def read_pdf(path: Path) -> tuple[str, dict[str, str]]:
 
 def read_aux(variant: str) -> str:
     return (ROOT / "paper" / "build" / f"{TOP[variant]}.aux").read_text(encoding="utf-8", errors="replace")
+
+
+def read_log(variant: str) -> str:
+    return (ROOT / "paper" / "build" / f"{TOP[variant]}.log").read_text(encoding="utf-8", errors="replace")
 
 
 def main(argv=None) -> int:
@@ -97,7 +123,9 @@ def main(argv=None) -> int:
         return code
     problems = []
     text, metadata = read_pdf(ROOT / "paper" / "build" / f"{TOP['anon']}.pdf")
-    problems += [f"identifying string in the anonymous PDF: {s}" for s in anon_violations(text, metadata)]
+    extra = generated_identifiers(ROOT)
+    problems += [f"identifying string in the anonymous PDF: {s}" for s in anon_violations(text, metadata, extra)]
+    problems += [f"LaTeX log: {w}" for w in log_warnings(read_log("anon"))]
     page = main_end_page(read_aux("anon"))
     if page > MAX_MAIN_PAGES:
         problems.append(f"main text ends on page {page}, above the limit of {MAX_MAIN_PAGES}")
