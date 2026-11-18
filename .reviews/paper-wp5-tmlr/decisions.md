@@ -1,0 +1,9 @@
+| Round | ID(s) | Severity | Finding (one line) | Decision | Reason | Verified in code |
+|---|---|---|---|---|---|---|
+| tmlr-final | ASTRA-1 | major | The short main-text sentence on the solution-digit reference lost its post-TEST disclosure and follows a level-6 sentence although it concerns level 12 | accept | A disclosure must stay in the main text (spec anti-goal); restore "computed after TEST" and "close to both level-12 probes" | yes: discussion.tex:29 |
+| tmlr-final | ASTRA-2 | minor | The E2 dose summary gives one reason for the two unavailable area comparisons; propagation result not stated | accept | results.json: 6 vs. 11 "TEST nodes do not cover the frozen range", 2 vs. 11 "no frozen range"; state both; add the level-1 propagation value | yes: results.json auc reasons |
+| tmlr-final | ASTRA-3 | minor | "Other readouts were not tested" ignores the per-cell MLP | accept | Name the untested nonlinear whole-layer readout and the fixed peer projection | spot-checked |
+| tmlr-final | ASTRA-4 | minor | The registered expectation of the equivariance pattern belongs in the main-text summary | accept | Answers the open placement question; a registered expectation is context the reader needs; keep the exploratory label | yes: research_plan_v3.7.md §8 equivariance |
+| tmlr-final | ASTRA-5 | minor | Registration date missing in Setup | accept | The design keeps the date; it does not identify the author; supply it as a generated value so texlint stays clean | spot-checked |
+| tmlr-final | ASTRA-6 | minor | Anonymity check reads visible text and PDF Info, not link targets or XMP | accept | Extend read_pdf to link URIs and XMP, with a test; current PDF already clean | spot-checked |
+| tmlr-final | ASTRA claims note | nit | Mark the first E1 pointer as Appendix A.3 | accept | Same as the deferred minor from the code review; cheap for print readers | spot-checked |

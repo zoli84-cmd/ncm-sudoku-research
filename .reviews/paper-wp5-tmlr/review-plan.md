@@ -4,4 +4,5 @@ Tier: high — public journal submission, hard to withdraw; broken anonymity mea
 
 | Step | Reviewers | Scope | Status | Accepted blocker/major |
 |---|---|---|---|---|
-| Final (tmlr-final) | astra | full anonymous manuscript, emphasis on the restructuring | running 2026-11-18 | |
+| Final (tmlr-final) | astra | full anonymous manuscript, emphasis on the restructuring | done 2026-11-18 (1 major, 5 minor; triage pending user approval) | 1 major |
+| Final, second reviewer (user request) | carbon | same scope, astra findings given as already triaged | running 2026-11-18 | |
