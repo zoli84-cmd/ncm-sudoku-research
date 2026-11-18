@@ -108,6 +108,19 @@ def test_manuscript_labels_are_unique():
     import re as _re
 
     labels = collections.Counter()
-    for path in [ROOT / "paper" / "main.tex", *sorted((ROOT / "paper" / "sections").glob("*.tex"))]:
+    from ncm_sudoku.texlint import manuscript_files
+
+    for path in manuscript_files(ROOT):
         labels.update(_re.findall(r"\\label\{([^}]+)\}", path.read_text(encoding="utf-8")))
     assert [k for k, n in labels.items() if n > 1] == []
+
+
+def test_baseline_keys_still_used():
+    # Every result key used before the WP5 restructuring must still be used somewhere in the manuscript.
+    import json
+
+    from ncm_sudoku.texlint import manuscript_files, used_keys
+
+    baseline = set(json.loads((ROOT / "tests" / "golden" / "wp5_baseline_keys.json").read_text(encoding="utf-8")))
+    now = set().union(*(used_keys(p.read_text(encoding="utf-8")) for p in manuscript_files(ROOT)))
+    assert sorted(baseline - now) == []
