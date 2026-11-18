@@ -119,7 +119,7 @@ def readings_table(results: dict) -> str:
              escape(r["does_not_follow"])]
             for r in results["readings"] if r["row"]]
     header = ["", "Registered result", "Justified claim", "Does not follow"]
-    return _tabular("p{1.3cm} p{2.9cm} p{3.2cm} p{3.9cm}", header, rows)
+    return _tabular("p{1.3cm} p{3.9cm} p{4.3cm} p{5.2cm}", header, rows)  # fits the 6.5 in TMLR text width
 
 
 SECONDARY_ROWS = (
