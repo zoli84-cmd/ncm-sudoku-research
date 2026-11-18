@@ -36,5 +36,6 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 
 - `main.tex`, `preamble.tex`: document and shared preamble (page geometry, `\placeholder`, `\input{generated/numbers.tex}`)
 - `sections/`: one file per section (introduction, background, setup, summary, e1, e2, e3, discussion, statements, appendix)
+- `tmlr.sty`, `tmlr.bst`, `fancyhdr.sty`: TMLR style files vendored unmodified from JmlrOrg/tmlr-style-file at commit 7bf90efe3a0debbba703c05c43f3ff7e4d4a2992; never edit (TMLR may reject modified style files), SHA-256 pinned by `tests/test_tmlr_style.py`
 - `refs.bib`: bibliography
 - `generated/`: number macros, tables and figures from `scripts/wp4_figures.py`
