@@ -1,15 +1,14 @@
-% Shared preamble of the WP4 manuscript. Result numbers come only from generated/numbers.tex via \R{key}.
-\usepackage[T1]{fontenc}
-\usepackage[letterpaper,margin=1.1in]{geometry}
+% Shared preamble, loaded after tmlr.sty (which sets the layout, fonts and author-year natbib). Result numbers come only from generated/numbers.tex via \R{key}.
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{adjustbox}
 \usepackage{xcolor}
-\usepackage[numbers]{natbib}
 \usepackage{hyperref}
 % Licence name with a version number, kept out of the section files so texlint sees no result literal.
 \newcommand{\paperlicence}{\href{https://creativecommons.org/licenses/by/4.0/}{CC BY 4.0}}
+% Identifying text: \anon{named}{anonymous}.
+\newcommand{\anon}[2]{\ifanonymous#2\else#1\fi}
 \newcommand{\placeholder}[1]{\textcolor{red}{[#1]}}
 \input{generated/numbers.tex}

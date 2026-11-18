@@ -6,7 +6,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 
 ## Ownership
 
-- `main.tex`, `preamble.tex`, `sections/*.tex`, `refs.bib`: hand-written manuscript sources
+- `main.tex`, `main_anon.tex`, `body.tex`, `preamble.tex`, `sections/*.tex`, `refs.bib`: hand-written manuscript sources
 - `generated/`: written only by `scripts/wp4_figures.py`; never edited by hand; committed
 - `build/`: Tectonic output, git-ignored
 
@@ -17,7 +17,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 - Author line (user decision 2026-11-16): Zoltán Kárász, independent researcher, ORCID only, no employer affiliation; paper licence CC BY 4.0 (`\paperlicence` in `preamble.tex`), code licence MIT (root `LICENSE`); `sections/statements.tex` holds the AI-use statement and must stay accurate.
 - Placeholders: none remain (repository URL set 2026-11-16 after the repository went public); `scripts/wp4_build.py --arxiv` fails if a `\placeholder{...}` is added again.
 - Language: English with US spelling (license, labeled, analyzed), no Oxford comma, no compressed prose; style edits never change a registered term ("do not follow", "attenuated", "two one-sided test") or a hedge.
-- Figures: drawn at final size (`wp4figures.WIDTH` = text width from `geometry` letterpaper, margin=1.1in in `preamble.tex`; change both together), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
+- Figures: drawn at final size (`wp4figures.WIDTH` at most the 6.5 in TMLR text width set by `tmlr.sty`), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
 
 ## Work Guidance
 
@@ -34,7 +34,9 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 
 ## Child DOX Index
 
-- `main.tex`, `preamble.tex`: document and shared preamble (page geometry, `\placeholder`, `\input{generated/numbers.tex}`)
+- `main.tex` (named build, `\usepackage[preprint]{tmlr}`), `main_anon.tex` (anonymous TMLR submission, `\usepackage{tmlr}`): set `\ifanonymous`, load the TMLR style, then `preamble.tex` and `body.tex`; the two builds may differ only through `\anon{named}{anonymous}`
+- `body.tex`: title, author, abstract, section inputs, `\label{main-end}` before the bibliography (`tmlr` style)
+- `preamble.tex`: shared packages after `tmlr.sty` (no geometry, fontenc or numeric natbib), `\anon`, `\placeholder`, `\paperlicence`, `\input{generated/numbers.tex}`
 - `sections/`: one file per section (introduction, background, setup, summary, e1, e2, e3, discussion, statements, appendix)
 - `tmlr.sty`, `tmlr.bst`, `fancyhdr.sty`: TMLR style files vendored unmodified from JmlrOrg/tmlr-style-file at commit 7bf90efe3a0debbba703c05c43f3ff7e4d4a2992; never edit (TMLR may reject modified style files), SHA-256 pinned by `tests/test_tmlr_style.py`
 - `refs.bib`: bibliography

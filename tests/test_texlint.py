@@ -86,6 +86,13 @@ def test_manuscript_files_include_main_with_abstract(tmp_path):
     assert any("0.25" in p for p in lint(files, {}))
 
 
+def test_manuscript_files_include_body_and_both_top_files():
+    from ncm_sudoku.texlint import manuscript_files
+
+    names = [p.name for p in manuscript_files(ROOT)]
+    assert {"main.tex", "main_anon.tex", "body.tex"} <= set(names)
+
+
 def test_repo_manuscript_is_clean():
     from ncm_sudoku.texlint import manuscript_files
 
