@@ -33,7 +33,7 @@ Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpo
 - Visual check (no poppler on this machine): render pages to PNG with `uv run --no-project --with pymupdf python -I -c ...` into the git-ignored `.superpowers/preview/`, then inspect them
 - Result-key baseline: `tests/golden/wp5_baseline_keys.json` lists every `\R{key}` used before the WP5 restructuring; `test_baseline_keys_still_used` fails if one disappears
 - Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py tests/test_tmlr_style.py` (the lint test checks `main.tex`, `main_anon.tex`, `body.tex` with the abstract, and every section file against `generated/numbers.json`; the build tests run both real `--check` builds when Tectonic is installed)
-- Appendix floats are numbered A.1, A.2, ... (counters reset after `\appendix` in `body.tex`); appendix subsections from A.3 on start with `\clearpage` so their floats stay inside them
+- Appendix floats are numbered A.1, A.2, ... (counters reset after `\appendix` in `body.tex`); appendix subsections from A.3 on start with `\clearpage` so their floats stay inside them, and the first float of A.3, A.4 and A.5 is placed `[!hb]` so it does not print above its own subsection heading
 
 ## Child DOX Index
 
