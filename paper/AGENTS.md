@@ -2,7 +2,7 @@
 
 ## Purpose
 
-WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`).
+Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`), restructured in WP5 for the TMLR submission: anonymous and named TMLR builds from one source, main text at most 12 pages (design `docs/superpowers/specs/2026-11-18-wp5-tmlr-design.md`, D89).
 
 ## Ownership
 
@@ -23,7 +23,7 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 ## Work Guidance
 
 - Tectonic 0.17.0 at `C:\Users\ako2bp\.local\bin\tectonic.exe`; it downloads LaTeX packages on first use through the Px proxy (`HTTPS_PROXY`).
-- `refs.bib` entries are verified against their primary sources (all verified 2026-11-16, `literature/presubmission_update_2026-11-16.md`); verify any new entry the same way, never invent author names; arXiv `@misc` entries carry `howpublished = {arXiv:<id>}` because `plainnat` ignores `eprint`.
+- `refs.bib` entries are verified against their primary sources (all verified 2026-11-16, `literature/presubmission_update_2026-11-16.md`); verify any new entry the same way, never invent author names; arXiv `@misc` entries carry `howpublished = {arXiv:<id>}` because `tmlr.bst` ignores `eprint`.
 
 ## Verification
 
@@ -32,7 +32,8 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 - Build: `uv run --locked python scripts/wp4_build.py [--variant named|anon] [--check]` (PDFs `paper/build/main.pdf` and `paper/build/main_anon.pdf`); `--check` (alias `--arxiv`) fails on placeholders and, for `anon`, on any identifying string in the PDF text or metadata (`FORBIDDEN`) and on a main text past page 12 (`\label{main-end}`)
 - Visual check (no poppler on this machine): render pages to PNG with `uv run --no-project --with pymupdf python -I -c ...` into the git-ignored `.superpowers/preview/`, then inspect them
 - Result-key baseline: `tests/golden/wp5_baseline_keys.json` lists every `\R{key}` used before the WP5 restructuring; `test_baseline_keys_still_used` fails if one disappears
-- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py` (the lint test checks `main.tex`, including the abstract, and every section file against `generated/numbers.json`)
+- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py tests/test_tmlr_style.py` (the lint test checks `main.tex`, `main_anon.tex`, `body.tex` with the abstract, and every section file against `generated/numbers.json`; the build tests run both real `--check` builds when Tectonic is installed)
+- Appendix floats are numbered A.1, A.2, ... (counters reset after `\appendix` in `body.tex`); appendix subsections from A.3 on start with `\clearpage` so their floats stay inside them
 
 ## Child DOX Index
 

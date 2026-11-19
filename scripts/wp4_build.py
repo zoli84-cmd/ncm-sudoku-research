@@ -26,7 +26,7 @@ FORBIDDEN = (
 )
 MAIN_END = re.compile(r"\\newlabel\{main-end\}\{\{[^{}]*\}\{(\d+)\}")
 CODE_COMMIT = re.compile(r"\\wpdef\{code\.commit\}\{([^}]*)\}")
-LOG_WARNING = re.compile(r"^(Overfull \\[hv]box.*|.*LaTeX Warning: .*(undefined|multiply defined).*|.*Warning: Citation .*)$", re.M)
+LOG_WARNING = re.compile(r"^(Overfull \\[hv]box.*|.*LaTeX Warning: .*(undefined|multiply[- ]defined).*|.*Warning: Citation .*)$", re.M)
 
 
 def find_placeholders(paths: list[Path]) -> list[tuple[Path, int, str]]:
@@ -95,7 +95,11 @@ def read_pdf(path: Path) -> tuple[str, dict[str, str]]:
     import pymupdf  # dev dependency; only needed for the anonymous check
 
     with pymupdf.open(path) as doc:
-        return " ".join(page.get_text() for page in doc), dict(doc.metadata or {})
+        text = " ".join(page.get_text() for page in doc)
+        metadata = dict(doc.metadata or {})
+        metadata["xmp"] = doc.get_xml_metadata() or ""
+        metadata["links"] = " ".join(link.get("uri", "") for page in doc for link in page.get_links() if link.get("uri"))
+        return text, metadata
 
 
 def read_aux(variant: str) -> str:
@@ -119,16 +123,16 @@ def main(argv=None) -> int:
         if found:
             return 2
     code = compile_variant(args.variant)
-    if code or not (args.check and args.variant == "anon"):
+    if code or not args.check:
         return code
-    problems = []
-    text, metadata = read_pdf(ROOT / "paper" / "build" / f"{TOP['anon']}.pdf")
-    extra = generated_identifiers(ROOT)
-    problems += [f"identifying string in the anonymous PDF: {s}" for s in anon_violations(text, metadata, extra)]
-    problems += [f"LaTeX log: {w}" for w in log_warnings(read_log("anon"))]
-    page = main_end_page(read_aux("anon"))
-    if page > MAX_MAIN_PAGES:
-        problems.append(f"main text ends on page {page}, above the limit of {MAX_MAIN_PAGES}")
+    problems = [f"LaTeX log: {w}" for w in log_warnings(read_log(args.variant))]
+    if args.variant == "anon":
+        text, metadata = read_pdf(ROOT / "paper" / "build" / f"{TOP['anon']}.pdf")
+        extra = generated_identifiers(ROOT)
+        problems += [f"identifying string in the anonymous PDF: {s}" for s in anon_violations(text, metadata, extra)]
+        page = main_end_page(read_aux("anon"))
+        if page > MAX_MAIN_PAGES:
+            problems.append(f"main text ends on page {page}, above the limit of {MAX_MAIN_PAGES}")
     for p in problems:
         print(p)
     return 2 if problems else 0

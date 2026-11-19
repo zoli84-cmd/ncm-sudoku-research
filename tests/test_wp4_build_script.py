@@ -144,3 +144,37 @@ def test_check_does_not_read_outputs_when_compile_fails(monkeypatch):
 
     monkeypatch.setattr(mod, "read_pdf", boom)
     assert mod.main(["--variant", "anon", "--check"]) == 1
+
+
+
+# --- TMLR final-round review fixes (ASTRA-6, CARBON-5) ------------------------------------------------
+
+def test_log_warnings_finds_hyphenated_multiply_defined():
+    assert mod.log_warnings("LaTeX Warning: There were multiply-defined labels.\n")
+
+
+def test_named_check_fails_on_log_warning(monkeypatch):
+    monkeypatch.setattr(mod, "compile_variant", lambda variant: 0)
+    monkeypatch.setattr(mod, "read_log", lambda variant: "Overfull \\hbox (2.0pt too wide) in paragraph\n")
+    monkeypatch.setattr(mod, "find_placeholders", lambda paths: [])
+    assert mod.main(["--variant", "named", "--check"]) == 2
+
+
+def test_anon_check_reads_link_targets_and_xmp(monkeypatch, tmp_path):
+    pymupdf = pytest.importorskip("pymupdf")
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((72, 72), "Anonymous authors")
+    page.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(72, 60, 200, 80), "uri": "https://osf.io/hb8vq"})
+    doc.set_xml_metadata("<x:xmpmeta xmlns:x='adobe:ns:meta/'><dc>zoli84</dc></x:xmpmeta>")
+    path = tmp_path / "t.pdf"
+    doc.save(path)
+    text, metadata = mod.read_pdf(path)
+    found = mod.anon_violations(text, metadata)
+    assert "osf.io" in found and "zoli84" in found
+
+
+@pytest.mark.skipif(shutil.which("tectonic") is None, reason="no tectonic")
+def test_real_builds_pass_their_checks():
+    assert mod.main(["--variant", "anon", "--check"]) == 0
+    assert mod.main(["--variant", "named", "--check"]) == 0
