@@ -24,3 +24,4 @@ resources/*.pdf
 .reviews/**/transcript.*.md
 
 paper/build/
+paper/*.pdf

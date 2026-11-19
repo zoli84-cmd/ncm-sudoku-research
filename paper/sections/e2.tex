@@ -37,10 +37,7 @@ NCM training, as described for the method, corrupts earlier levels \citep{kumbon
 
 A single replacement at level~2 and at level~11 gave practically the same solve outcome: the difference was \R{theta2p.est} points, and because only \R{theta2p.nnz} puzzles had a nonzero difference, the registered rare-event bound replaced the bootstrap: at the one-sided \R{level.ci95}\% level the difference lies within [\R{theta2p.tost.lo}, \R{theta2p.tost.hi}], inside the equivalence range of $\pm$\R{plan.theta2pmargin} points. This supports the absence of a practically relevant difference between levels 2 and 11 under the frequency policy; it does not show that level~2 carries no information or has no causal role.
 
-The dose curves (Figure~\ref{fig:dose-curves}; Table~\ref{tab:e2-dose}) are descriptive and carry no inference. At level~6, replacing codes and replaying the later levels (C) left the solve share at the baseline for every dose under both policies, whereas generating the later levels anew (D) lowered it, to \R{e2.cfg.L06.frequency.d13.D}\% when every level-6 code was replaced under the frequency policy.
-At level~11 both branches declined with the dose, to \R{e2.cfg.L11.frequency.d67.C}\% (C) and \R{e2.cfg.L11.frequency.d67.D}\% (D) when every level-11 code was replaced under the frequency policy. The registered comparison of dose curves plots, for each dose of a level, the mean solve change of D against the mean initial damage, and compares the areas under two such curves over a damage range frozen on the calibration set. It could not be computed: the mean damages of the TEST doses did not cover the frozen range for levels 6 and 11, and no range had been frozen for levels 2 and 11. This is a pre-specified outcome, not a failure of the run; as registered for this case, Figure~\ref{fig:damage-curves} shows the separate curves instead, which are descriptive. The level-2 nodes lie entirely below the damage range of level~11, and the level-6 nodes overlap it only at its low end, so the registered equal-damage comparison of levels was not available. The replacements were unlikely values under the generator's own distribution at every level: across puzzles, the median of the per-puzzle mean probability of the new code was \R{e2.l1.frequency.pnew.med} at level~1 (policy-weighted; \R{e2.l1.frequency.porig.med} for the original code) and \R{e2.cfg.L11.frequency.d1.pnew.med} for the single level-11 replacement (averaged over the three seeds), so a low probability of the replacement alone does not explain the greater sensitivity at level~1. Tables~\ref{tab:e2-diagnostics} and~\ref{tab:e2-replacement} give the damage, latent distance, format errors and replacement diagnostics per configuration; their captions state, per column, whether a value summarizes per-puzzle means or individual runs.
-
-Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels of branch D. A level-1 replacement changed on average \R{e2.prop.level1-frequency.L11} codes at level~11 under the frequency policy; replacing all level-6 codes changed \R{e2.prop.L06-frequency-d13.L11}. The right panel shows the distance of the cumulative state from the clean run relative to the norm of the clean state. In branch C the absolute difference is the same at every level from the intervention level on, because the later levels are replayed and each level adds its own term, so the falling relative distance only reflects the growing clean state. In branch D the relative distance ended slightly above that of C, although D solved more puzzles. We did not save full state tensors: the cumulative-state distances and intermediate decodings exist for the level-1 enumeration under both policies and for the single level-11 replacement under the frequency policy; further recorded diagnostics are listed in Appendix~\ref{sec:appendix-tables} but not shown.
+The descriptive dose curves, the curves on the initial-damage axis and the spread of a replacement to the later levels are reported in Appendix~\ref{sec:appendix-e2} (Figures~\ref{fig:dose-curves} to~\ref{fig:damage-curves}). At level~6, replaying the later levels left the solve share at the baseline for every dose, whereas regenerating them lowered it; at level~11 both branches declined with the dose. The registered comparison of dose curves over a damage range frozen on the calibration set could not be computed: for levels 6 and 11 the TEST damage values did not cover the range frozen on the calibration set, and for levels 2 and 11 no range had been frozen; this is a pre-specified outcome, not a failure of the run. A single level-1 replacement changed on average \R{e2.prop.level1-frequency.L11} codes at level~11 under the frequency policy (Figure~\ref{fig:propagation}).
 
 \begin{figure}[t]
 \centering
@@ -49,23 +46,3 @@ Figure~\ref{fig:propagation} shows how a replacement spreads to the later levels
 \label{fig:contrasts-forest}
 \end{figure}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{generated/figures/dose_curves.pdf}
-\caption{E2 dose curves (descriptive): solve share of branch C (replayed later levels) and branch D (regenerated later levels) against the number of replaced codes, for levels 2, 6 and 11 and both replacement policies.}
-\label{fig:dose-curves}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{generated/figures/propagation.pdf}
-\caption{E2 propagation (descriptive). Left: mean number of codes changed at each later level of branch D, per configuration. Right: distance of the cumulative state from the clean run after each level, relative to the norm of the clean state, branches C (dashed) and D (solid), for the configurations with recorded cumulative-state distances.}
-\label{fig:propagation}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{generated/figures/damage_curves.pdf}
-\caption{E2 sensitivity on the damage axis (descriptive, frequency policy): for each dose of levels 2, 6 and 11, the mean initial damage (total variation distance between the decoder outputs of C and A, logarithmic axis) against the mean solve change of branch D relative to A, averaged within puzzle over seeds and then over puzzles. Shaded: the range frozen on the calibration set for the comparison of levels 6 and 11, which the TEST nodes of level~6 do not cover.}
-\label{fig:damage-curves}
-\end{figure}

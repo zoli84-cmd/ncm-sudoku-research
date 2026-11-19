@@ -1,23 +1,8 @@
 \section{E1: tokenizer versus generator}
 \label{sec:e1}
 
-A failure of the full model can come from two places: the tokenizer, which maps a solved grid to codes and back, or the generator, which must produce those codes from the puzzle alone. E1 separates the two on the \R{e1.n} TEST puzzles. For each puzzle, we decode two code sequences: the teacher codes, obtained by encoding the reference solution, and the generated codes, produced from the puzzle. We report both with the official exact-match metric and with our own validator, which checks the rules, clue preservation and format independently of the reference solution (Table~\ref{tab:e1}).
+A failure of the full model can come from two places: the tokenizer, which maps a solved grid to codes and back, or the generator, which must produce those codes from the puzzle alone. E1 separates the two on the \R{e1.n} TEST puzzles. For each puzzle, we decode two code sequences: the teacher codes, obtained by encoding the reference solution, and the generated codes, produced from the puzzle. We report both with the official exact-match metric and with our own validator, which checks the rules, clue preservation and format independently of the reference solution (Table~\ref{tab:e1} in Appendix~\ref{sec:appendix-e1}).
 
 Decoding the teacher codes reproduced the reference solution exactly for \R{e1.teacher}\% of the puzzles, so on this set the tokenizer adds no error, and every failure of the full model is a generation failure. The generated codes solved \R{e1.solve}\% of the puzzles, matching the official metric (\R{e1.official}\%). Every generated output was well formed (\R{e1.wellformed}\%) and kept every clue (\R{e1.clues}\%); cell accuracy was \R{e1.cellacc}\% over all cells and \R{e1.cellacc.empty}\% over the originally empty cells, and a generated grid contained on average \R{e1.violations} rule violations. Teacher reconstruction is not an upper bound on generation in general: a code sequence that differs from the teacher codes can still decode to a correct grid, and a differing code is not by itself a logical error. On the \R{rel.n} released hard puzzles, analyzed before the registration and reported as a secondary, non-confirmatory stratum, teacher decoding was exact for \R{rel.teacher}\% and generation solved \R{rel.solve}\%.
 
-Figure~\ref{fig:e1-levels} follows the two code sequences through the hierarchy. The share of generated codes matching the teacher codes was \R{e1.lv1.agree}\% at level~1 and \R{e1.lv12.agree}\% at level~\R{model.levels}, with no monotonic trend in between. Decoding the full-length cumulative state after each level with the final decoder gave a cell accuracy of \R{e1.lv1.cellacc}\% at level~1, \R{e1.lv11.cellacc}\% at level~11 and \R{e1.cellacc}\% after the last level; no partial state before the last level decoded to a solved grid. These curves describe what the final decoder reads from a partial state. They do not show what information the earlier levels carry in another form, which is the question of E3 (Section~\ref{sec:e3}).
-
-\begin{table}[htbp]
-\centering
-\caption{E1 on the TEST puzzles: generated output, official metric and teacher reconstruction. Hamming distances are the mean share of tokens or cells in which the generated output differs from the teacher reconstruction.}
-\label{tab:e1}
-\small
-\adjustbox{max width=\linewidth}{\input{generated/tables/e1.tex}}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{generated/figures/e1_levels.pdf}
-\caption{E1 per level (descriptive). Blue: share of generated codes equal to the teacher codes at that level. Orange: cell accuracy when the full-length cumulative state after that level is decoded with the final decoder.}
-\label{fig:e1-levels}
-\end{figure}
+Figure~\ref{fig:e1-levels} in Appendix~\ref{sec:appendix-e1} follows the two code sequences through the hierarchy. The share of generated codes matching the teacher codes was \R{e1.lv1.agree}\% at level~1 and \R{e1.lv12.agree}\% at level~\R{model.levels}, with no monotonic trend in between. Decoding the full-length cumulative state after each level with the final decoder gave a cell accuracy of \R{e1.lv1.cellacc}\% at level~1, \R{e1.lv11.cellacc}\% at level~11 and \R{e1.cellacc}\% after the last level; no partial state before the last level decoded to a solved grid. These curves describe what the final decoder reads from a partial state. They do not show what information the earlier levels carry in another form, which is the question of E3 (Section~\ref{sec:e3}).

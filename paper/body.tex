@@ -1,0 +1,33 @@
+% Shared manuscript body for main.tex (named, TMLR preprint option) and main_anon.tex (anonymous TMLR submission).
+% main-end marks the end of the main text; the anonymous build checks its page (TMLR Regular: at most 12 pages).
+\title{Hierarchical sensitivity and logical readability in a coarse-to-fine Sudoku generator: a preregistered study}
+\author{Zolt\'an K\'ar\'asz\\ Independent researcher\\ {\small ORCID: \url{https://orcid.org/0009-0009-7094-6727}}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Next-Concept Modeling (NCM) generates a Sudoku solution as a hierarchy of discrete codes, from one coarse code to many fine ones. In a preregistered confirmatory study on one released checkpoint and \R{n.test} fresh puzzles, we ask where the logic of the puzzle shows up in this hierarchy. Decoding teacher codes reproduced every solution, so all failures came from generation. Replacing the single level-1 code lowered the solve share by \R{h2.est.abs} percentage points more than replacing one level-11 code (\R{level.family}\% family interval [\R{h2.fam.abs.lo}, \R{h2.fam.abs.hi}]), under a frequency-based replacement policy, while one replaced level-2 code and one replaced level-11 code gave practically equivalent solve shares (within $\pm$\R{plan.theta2pmargin} points). Regenerating the later levels after a level-1 replacement attenuated the damage by \R{h3.est} points ([\R{h3.fam.lo}, \R{h3.fam.hi}]), below the \R{plan.h3practical}-point practical threshold used for planning and consistent with the training against corrupted levels described for NCM, if this checkpoint was trained that way; it does not show logical error correction. The candidate mask of the puzzle was linearly readable from the level-6 state above a permuted control, but only by \R{h1.est} in Brier loss ([\R{h1.fam.lo}, \R{h1.fam.hi}]), inside the registered equivalence range of $\pm$\R{plan.h1margin}, while the same label is almost exactly readable from the raw puzzle, and surface statistics of the puzzle give a lower Brier loss. At the last level, the readout matched the teacher state that encodes the solution; in an exploratory analysis, it was not equivariant under the sampled Sudoku symmetries. The results locate a large sensitivity at the coarsest level, while the intermediate level-6 state exposes the puzzle's candidate structure to a linear readout only below the practical threshold; we report each result with the claims that do not follow from it.
+\end{abstract}
+
+\input{sections/introduction.tex}
+\input{sections/background.tex}
+\input{sections/setup.tex}
+\input{sections/summary.tex}
+\input{sections/e1.tex}
+\input{sections/e2.tex}
+\input{sections/e3.tex}
+\input{sections/discussion.tex}
+\input{sections/statements.tex}
+
+\label{main-end}
+\bibliographystyle{tmlr}
+\bibliography{refs}
+
+\appendix
+\setcounter{figure}{0}\setcounter{table}{0}
+\renewcommand{\thefigure}{A.\arabic{figure}}\renewcommand{\thetable}{A.\arabic{table}}
+\renewcommand{\theHfigure}{A.\arabic{figure}}\renewcommand{\theHtable}{A.\arabic{table}}
+\input{sections/appendix.tex}
+\end{document}

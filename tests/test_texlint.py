@@ -86,6 +86,13 @@ def test_manuscript_files_include_main_with_abstract(tmp_path):
     assert any("0.25" in p for p in lint(files, {}))
 
 
+def test_manuscript_files_include_body_and_both_top_files():
+    from ncm_sudoku.texlint import manuscript_files
+
+    names = [p.name for p in manuscript_files(ROOT)]
+    assert {"main.tex", "main_anon.tex", "body.tex"} <= set(names)
+
+
 def test_repo_manuscript_is_clean():
     from ncm_sudoku.texlint import manuscript_files
 
@@ -101,6 +108,54 @@ def test_manuscript_labels_are_unique():
     import re as _re
 
     labels = collections.Counter()
-    for path in [ROOT / "paper" / "main.tex", *sorted((ROOT / "paper" / "sections").glob("*.tex"))]:
+    from ncm_sudoku.texlint import manuscript_files
+
+    for path in manuscript_files(ROOT):
         labels.update(_re.findall(r"\\label\{([^}]+)\}", path.read_text(encoding="utf-8")))
     assert [k for k, n in labels.items() if n > 1] == []
+
+
+def test_baseline_keys_still_used():
+    # Every result key used before the WP5 restructuring must still be used somewhere in the manuscript.
+    import json
+
+    from ncm_sudoku.texlint import manuscript_files, used_keys
+
+    baseline = set(json.loads((ROOT / "tests" / "golden" / "wp5_baseline_keys.json").read_text(encoding="utf-8")))
+    now = set().union(*(used_keys(p.read_text(encoding="utf-8")) for p in manuscript_files(ROOT)))
+    assert sorted(baseline - now) == []
+
+
+
+def test_baseline_keys_survive_in_the_anonymous_expansion():
+    # Expanding \anon{named}{anonymous} to its anonymous branch must keep every baseline key except the own commit.
+    import json
+    import re as _re
+
+    from ncm_sudoku.texlint import manuscript_files, used_keys
+
+    def anonymous(tex: str) -> str:
+        out, i = [], 0
+        while (j := tex.find("\\anon{", i)) >= 0:
+            out.append(tex[i:j])
+            k, args = j + len("\\anon"), []
+            for _ in range(2):
+                depth, start = 0, k
+                while True:
+                    ch = tex[k]
+                    depth += ch == "{"
+                    depth -= ch == "}"
+                    k += 1
+                    if depth == 0:
+                        break
+                args.append(tex[start + 1:k - 1])
+            out.append(args[1])
+            i = k
+        out.append(tex[i:])
+        return "".join(out)
+
+    baseline = set(json.loads((ROOT / "tests" / "golden" / "wp5_baseline_keys.json").read_text(encoding="utf-8")))
+    files = [p for p in manuscript_files(ROOT) if p.name != "main.tex"]
+    now = set().union(*(used_keys(anonymous(p.read_text(encoding="utf-8"))) for p in files))
+    assert sorted(baseline - {"code.commit"} - now) == []
+    assert _re  # keep import used

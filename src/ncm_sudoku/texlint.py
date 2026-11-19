@@ -50,9 +50,10 @@ def used_keys(tex: str) -> set[str]:
 
 
 def manuscript_files(root: Path) -> list[Path]:
-    """`paper/main.tex` (title, abstract) first, then every section file in name order."""
+    """The top-level files and the shared body (title, abstract) that exist, then every section file in name order."""
     paper = root / "paper"
-    return [paper / "main.tex", *sorted((paper / "sections").glob("*.tex"))]
+    tops = [paper / name for name in ("main.tex", "main_anon.tex", "body.tex") if (paper / name).exists()]
+    return [*tops, *sorted((paper / "sections").glob("*.tex"))]
 
 
 def lint(section_paths: list[Path], numbers: dict[str, str]) -> list[str]:

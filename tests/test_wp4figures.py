@@ -133,10 +133,17 @@ def test_figure_font_matches_computer_modern():
     assert f.plt.rcParams["font.serif"][0] == "cmr10"
 
 
-def test_figure_width_equals_text_width():
+def test_figure_width_fits_tmlr_text_width():
+    # tmlr.sty sets a 6.5 in text width; figures are drawn at WIDTH and must not be scaled down
+    assert f.WIDTH <= 6.5
+    assert r"\usepackage{tmlr}" in (ROOT / "paper/main_anon.tex").read_text(encoding="utf-8")
+    assert r"\usepackage[preprint]{tmlr}" in (ROOT / "paper/main.tex").read_text(encoding="utf-8")
+
+
+def test_preamble_has_no_layout_overrides():
     preamble = (ROOT / "paper/preamble.tex").read_text(encoding="utf-8")
-    assert r"\usepackage[letterpaper,margin=1.1in]{geometry}" in preamble
-    assert f.WIDTH == pytest.approx(8.5 - 2 * 1.1)
+    for forbidden in ("geometry", "[numbers]{natbib}", "fontenc"):
+        assert forbidden not in preamble, forbidden
 
 
 def test_forest_thresholds_drawn_only_on_their_rows(results):

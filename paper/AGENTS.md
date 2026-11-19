@@ -2,11 +2,11 @@
 
 ## Purpose
 
-WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`).
+Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`), restructured in WP5 for the TMLR submission: anonymous and named TMLR builds from one source, main text at most 12 pages (design `docs/superpowers/specs/2026-11-18-wp5-tmlr-design.md`, D89).
 
 ## Ownership
 
-- `main.tex`, `preamble.tex`, `sections/*.tex`, `refs.bib`: hand-written manuscript sources
+- `main.tex`, `main_anon.tex`, `body.tex`, `preamble.tex`, `sections/*.tex`, `refs.bib`: hand-written manuscript sources
 - `generated/`: written only by `scripts/wp4_figures.py`; never edited by hand; committed
 - `build/`: Tectonic output, git-ignored
 
@@ -15,26 +15,32 @@ WP4 manuscript: the arXiv preprint of the preregistered E1–E3 study (design `d
 - Number rule: every result number reaches the text only through `\R{key}` (keys defined in `generated/numbers.tex`, listed in `generated/numbers.json`) or a generated table or figure; no numeric result literal is typed in a section file. `\R` with an unknown key stops the build.
 - Claim rule: each confirmatory result is stated with its plan §13 justified claim and "does not follow" boundary; results are conditional on the checkpoint and the intervention policy; descriptive tables carry no inference.
 - Author line (user decision 2026-11-16): Zoltán Kárász, independent researcher, ORCID only, no employer affiliation; paper licence CC BY 4.0 (`\paperlicence` in `preamble.tex`), code licence MIT (root `LICENSE`); `sections/statements.tex` holds the AI-use statement and must stay accurate.
+- Anonymity (TMLR, double-blind): identifying text (repository and OSF links, the DOI, the own commit and tag names) is written as `\anon{named}{anonymous}`; the first sentence of the introduction carries the AI-use footnote that TMLR requires on page 1; `wp4_build.py --variant anon --check` must report no identifying string
 - Placeholders: none remain (repository URL set 2026-11-16 after the repository went public); `scripts/wp4_build.py --arxiv` fails if a `\placeholder{...}` is added again.
 - Language: English with US spelling (license, labeled, analyzed), no Oxford comma, no compressed prose; style edits never change a registered term ("do not follow", "attenuated", "two one-sided test") or a hedge.
-- Figures: drawn at final size (`wp4figures.WIDTH` = text width from `geometry` letterpaper, margin=1.1in in `preamble.tex`; change both together), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
+- Figures: drawn at final size (`wp4figures.WIDTH` at most the 6.5 in TMLR text width set by `tmlr.sty`), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
 
 ## Work Guidance
 
 - Tectonic 0.17.0 at `C:\Users\ako2bp\.local\bin\tectonic.exe`; it downloads LaTeX packages on first use through the Px proxy (`HTTPS_PROXY`).
-- `refs.bib` entries are verified against their primary sources (all verified 2026-11-16, `literature/presubmission_update_2026-11-16.md`); verify any new entry the same way, never invent author names; arXiv `@misc` entries carry `howpublished = {arXiv:<id>}` because `plainnat` ignores `eprint`.
+- `refs.bib` entries are verified against their primary sources (all verified 2026-11-16, `literature/presubmission_update_2026-11-16.md`); verify any new entry the same way, never invent author names; arXiv `@misc` entries carry `howpublished = {arXiv:<id>}` because `tmlr.bst` ignores `eprint`.
 
 ## Verification
 
 - Regenerate after any input or generator change: `uv run --locked python scripts/wp4_figures.py`; `--check` verifies the committed `generated/` files are current
-- arXiv package: `uv run --locked python scripts/wp4_arxiv.py` (writes `paper/build/arxiv.tar.gz`); arXiv compiles with pdfLaTeX, so keep the sources ASCII (TeX accents such as `\'a`) and do not set `\pdfoutput` (it switches hyperref to the pdfTeX driver under Tectonic)
-- Build: `uv run --locked python scripts/wp4_build.py` (PDF in `paper/build/main.pdf`); `--arxiv` adds the placeholder check
+- Sources stay ASCII (TeX accents such as `\'a`); do not set `\pdfoutput` (it switches hyperref to the pdfTeX driver under Tectonic). The arXiv package script was retired in WP5 (arXiv rejected the preprint, D88)
+- Build: `uv run --locked python scripts/wp4_build.py [--variant named|anon] [--check]` (PDFs `paper/build/main.pdf` and `paper/build/main_anon.pdf`); `--check` (alias `--arxiv`) fails on placeholders and, for `anon`, on any identifying string in the PDF text or metadata (`FORBIDDEN`) and on a main text past page 12 (`\label{main-end}`)
 - Visual check (no poppler on this machine): render pages to PNG with `uv run --no-project --with pymupdf python -I -c ...` into the git-ignored `.superpowers/preview/`, then inspect them
-- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py` (the lint test checks `main.tex`, including the abstract, and every section file against `generated/numbers.json`)
+- Result-key baseline: `tests/golden/wp5_baseline_keys.json` lists every `\R{key}` used before the WP5 restructuring; `test_baseline_keys_still_used` fails if one disappears
+- Tests: `uv run --locked pytest -q tests/test_wp4_build_script.py tests/test_wp4_figures_script.py tests/test_texlint.py tests/test_tmlr_style.py` (the lint test checks `main.tex`, `main_anon.tex`, `body.tex` with the abstract, and every section file against `generated/numbers.json`; the build tests run both real `--check` builds when Tectonic is installed)
+- Appendix floats are numbered A.1, A.2, ... (counters reset after `\appendix` in `body.tex`); appendix subsections from A.3 on start with `\clearpage` so their floats stay inside them
 
 ## Child DOX Index
 
-- `main.tex`, `preamble.tex`: document and shared preamble (page geometry, `\placeholder`, `\input{generated/numbers.tex}`)
+- `main.tex` (named build, `\usepackage[preprint]{tmlr}`), `main_anon.tex` (anonymous TMLR submission, `\usepackage{tmlr}`): set `\ifanonymous`, load the TMLR style, then `preamble.tex` and `body.tex`; the two builds may differ only through `\anon{named}{anonymous}`
+- `body.tex`: title, author, abstract, section inputs, `\label{main-end}` before the bibliography (`tmlr` style)
+- `preamble.tex`: shared packages after `tmlr.sty` (no geometry, fontenc or numeric natbib), `\anon`, `\placeholder`, `\paperlicence`, `\input{generated/numbers.tex}`
 - `sections/`: one file per section (introduction, background, setup, summary, e1, e2, e3, discussion, statements, appendix)
+- `tmlr.sty`, `tmlr.bst`, `fancyhdr.sty`: TMLR style files vendored unmodified from JmlrOrg/tmlr-style-file at commit 7bf90efe3a0debbba703c05c43f3ff7e4d4a2992; never edit (TMLR may reject modified style files), SHA-256 pinned by `tests/test_tmlr_style.py`
 - `refs.bib`: bibliography
 - `generated/`: number macros, tables and figures from `scripts/wp4_figures.py`

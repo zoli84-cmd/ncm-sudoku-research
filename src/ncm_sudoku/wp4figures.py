@@ -19,7 +19,7 @@ plt.rcParams.update({"pdf.fonttype": 42, "font.family": "serif", "font.serif": [
                      "legend.fontsize": 7, "xtick.labelsize": 7, "ytick.labelsize": 7})
 # Okabe-Ito colour-blind-safe palette
 BLUE, ORANGE, GREEN, VERMILLION, PURPLE, GREY = "#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#999999"
-WIDTH = 6.3  # inches, the text width set by geometry (letterpaper, margin=1.1in) in paper/preamble.tex
+WIDTH = 6.3  # inches; fits the 6.5 in TMLR text width (tmlr.sty) without scaling down
 
 
 def save_pdf(fig, path: Path) -> None:

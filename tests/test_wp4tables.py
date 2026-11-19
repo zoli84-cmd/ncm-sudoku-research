@@ -150,3 +150,12 @@ def test_per_digit_f1_table(results):
 def test_deviations_mention_hidden_single_items():
     tex = t.deviations_table(ROOT / "DECISIONS.md")
     assert "(puzzle, unit, digit, cell)" in tex
+
+
+def test_readings_table_uses_the_tmlr_text_width(results):
+    # TMLR text width 6.5 in (16.5 cm); 8 tabcolsep of 6 pt take about 1.7 cm, so the p-columns may use up to 14.8 cm.
+    import re
+
+    widths = [float(w) for w in re.findall(r"p\{([0-9.]+)cm\}", t.readings_table(results).split("\n", 1)[0])]
+    assert len(widths) == 4
+    assert 14.0 <= sum(widths) <= 14.8
