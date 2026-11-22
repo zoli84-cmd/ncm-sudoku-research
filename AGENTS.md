@@ -30,7 +30,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - Coding style: Karpathy guidelines (surface assumptions, verifiable success criteria, surgical changes); Ponytail and Caveman are disabled for this project in `.claude/settings.json`
 - Environment: `uv`-managed Python 3.12 on native Windows, pytest; supplementary GLMM as an R script with lme4
 - Library docs: Context7 for PyTorch, huggingface_hub, statsmodels, scipy APIs
-- Literature: Consensus API for peer-reviewed methodology search; Lacuna (Tiptree Systems) MCP server `lacuna-research` for ML/AI papers, authors and research directions (read-only, no key; no citation graph; cite its canonical Lacuna URLs and verify claims against the primary paper); supplement with arXiv / Semantic Scholar / Exa for recent ML preprints; save results and the query log under `literature/`
+- Literature: Consensus API for peer-reviewed methodology search; Lacuna (Tiptree Systems) MCP server `lacuna-research` for ML/AI papers, authors and research directions (read-only, no key; no citation graph; no Zenodo coverage and some key prior work missing, so use it only as a supplement for watching recent arXiv papers, see `literature/query_log.md` 2026-11-22; cite its canonical Lacuna URLs and verify claims against the primary paper); supplement with arXiv / Semantic Scholar / Exa for recent ML preprints; save results and the query log under `literature/`
 - Code-graph tooling: use at most one of Graft or graphify; neither is set up for this project yet
 
 ## Verification

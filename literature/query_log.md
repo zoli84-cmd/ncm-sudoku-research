@@ -213,3 +213,27 @@ Retry of the failed Semantic Scholar calls later on 2026-11-16 (same endpoints, 
 | D1 | DBLP search API | `q=Causal Language Modeling Can Elicit Search and Reasoning` | **failed**: HTTP 202 with an empty body |
 
 Abstracts read but not tabled: 2610.37411, 2610.29255, 2610.02193, 2610.18174, 2610.18127, 2610.25646, 2610.16427, 2609.26487, 2611.08977, 2611.17309, 2610.26542, 2610.15081, 2611.05033, 2609.35475, 2606.03003, 2602.04054, 2607.05381, 2611.03454.
+
+## Lacuna MCP evaluation (2026-11-22)
+
+All queries were run on 2026-11-22 through the project MCP server `lacuna-research` (https://lacuna.tiptreesystems.com/api/mcp, read-only, no credentials). Purpose: decide whether Lacuna is useful for this project, not a full related-work search. "Kept" = number of items not already in `paper/refs.bib`, `related_work_novelty_check.md` or `presubmission_update_2026-11-16.md` that are worth a follow-up.
+
+| # | Tool | Exact query or identifier | Parameters | Results | Kept |
+|---|---|---|---|---|---|
+| L1 | `get_paper` | 2610.14162 | `figure_limit=0` | found (NCM paper; 0 citations listed in Lacuna) | 0 |
+| L2 | `search_lacuna` | next-concept modeling coarse-to-fine residual vector quantization text generation | `search_type=paper`, `date_from=2026-10`, `limit=10` | 11 (only the NCM paper is relevant) | 0 |
+| L3 | `search_lacuna` | probing Sudoku reasoning transformer candidate representations | `search_type=cluster`, `limit=5` | 1 (direction 13064, numerical reasoning in transformers; not relevant) | 0 |
+| L4 | `search_lacuna` | error propagation across scales in coarse-to-fine hierarchical generation interventions | `search_type=hypothesis`, `limit=5` | 5 (other domains: parsing, slide search, flow generation, dialogue, vision; not relevant) | 0 |
+| L5 | `search_lacuna` | linear probes Sudoku transformer candidates causal patching interpretability | `search_type=paper`, `ranking_profile=semantic`, `limit=10` | 10 (Shah et al. 2024 found again; the rest are general interpretability papers) | 0 |
+| L6 | `get_paper` | 2605.18847 (Kniazev & Fijalkow 2026) | `view=neighbors` | **not found** in Lacuna | – |
+| L7 | `get_paper` | 10.5281/zenodo.23737645 (Khoury 2026) | `view=preview` | **not found** in Lacuna | – |
+| L8 | `search_lacuna` | Transformers Linearly Represent Highly Structured World Models | `search_type=paper`, `limit=3` | 3, `exact_title_missing=true` (the Kniazev & Fijalkow title is not indexed) | 0 |
+| L9 | `get_paper` | 2609.22197 (Rodrigues & Kang 2026) | `view=preview` | **not found** in Lacuna | – |
+| L10 | `search_lacuna` | Sudoku hierarchical reasoning model mechanistic probing | `search_type=paper`, `date_from=2026-11-10`, `limit=8` | 14 total, 8 returned | 1 (2611.20371) |
+| L11 | `get_paper` | 2611.20371 | `view=blog` | Lacuna-generated summary read; the primary paper was not read | counted in L10 |
+
+New item (not applied to `paper/refs.bib`; the claims below come from the Lacuna summary only and must be checked against the primary paper before any use):
+
+- "Pretty Linear Liars: Unregularized Probes Favor Intervention-Unfaithful Features", arXiv:2611.20371, 2026-11-16 ([Lacuna](https://lacuna.tiptreesystems.com/work/pretty-linear-liars-unregularized-probes-favor-intervention)). According to the summary, unregularized (OLS) regression probes give large weights to low-variance directions that the model does not use, and ridge regularization moves the probe direction towards the direction found by Distributed Alignment Search (DAS). Tested on a toy HMM transformer and on Llama-2-7B. Relevance: E3 decodability versus causal use (plan §1). Our level-wise probes use AdamW with weight decay (`src/ncm_sudoku/probes.py`), and the whole-layer probes read a PCA truncated to 256 components. These PCA components are whitened, and whitening may partly re-amplify the low-variance directions among those 256 components. This is an unverified possible reviewer question, not a finding.
+
+Assessment of the tool (as of 2026-11-22): Lacuna covers arXiv and OpenReview papers, including very recent ones, but it does not index Zenodo and it is missing the two closest prior works (L6, L8, L9). It has no citation graph, and no research direction covers Sudoku or puzzle-model interpretability (L3). It is useful as a supplementary tool for watching recent arXiv papers with date-filtered or semantic paper search. It does not replace Consensus, the arXiv API, Semantic Scholar or Exa.
