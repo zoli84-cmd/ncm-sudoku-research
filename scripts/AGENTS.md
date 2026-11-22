@@ -19,6 +19,8 @@ Command-line entry points that fetch data, generate subsets, run experiments, an
 
 ## Work Guidance
 
+Completed (D83); kept unchanged because D81-D83 cite its step numbers and it records the single-look and dry-snapshot rules.
+
 WP2 freeze/dry/TEST runbook (run every command from the project root as `uv run --locked python scripts/<script> ...`; without `--locked`, `uv run` may re-lock or re-sync, which dirties `uv.lock` or changes the environment, and a later `--resume` is then refused):
 
 1. Whole-branch review.

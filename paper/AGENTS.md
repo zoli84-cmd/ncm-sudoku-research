@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`), restructured in WP5 for the TMLR submission: anonymous and named TMLR builds from one source, main text at most 12 pages (design `docs/superpowers/specs/2026-11-18-wp5-tmlr-design.md`, D89).
+Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpowers/specs/2026-11-15-wp4-manuscript-design.md`), restructured in WP5 for the TMLR submission: anonymous and named TMLR builds from one source, main text at most 12 pages (design `docs/superpowers/specs/2026-11-18-wp5-tmlr-design.md`, D89). Submitted to TMLR on 2026-11-19 (submission 14707, D90).
 
 ## Ownership
 
@@ -12,11 +12,12 @@ Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpo
 
 ## Local Contracts
 
+- Under review (D90): TMLR submission 14707 (OpenReview forum `rDTv8xpA9g`), the anonymous build from commit `fc61836`. D90: "no change to the manuscript while under review except through the OpenReview revision process". The uploaded PDF is the one on OpenReview; `paper/build/main_anon.pdf` is only the build path and is overwritten by the next build (including the real-build tests). Update this bullet when the review ends.
 - Number rule: every result number reaches the text only through `\R{key}` (keys defined in `generated/numbers.tex`, listed in `generated/numbers.json`) or a generated table or figure; no numeric result literal is typed in a section file. `\R` with an unknown key stops the build.
 - Claim rule: each confirmatory result is stated with its plan §13 justified claim and "does not follow" boundary; results are conditional on the checkpoint and the intervention policy; descriptive tables carry no inference.
 - Author line (user decision 2026-11-16): Zoltán Kárász, independent researcher, ORCID only, no employer affiliation; paper licence CC BY 4.0 (`\paperlicence` in `preamble.tex`), code licence MIT (root `LICENSE`); `sections/statements.tex` holds the AI-use statement and must stay accurate.
 - Anonymity (TMLR, double-blind): identifying text (repository and OSF links, the DOI, the own commit and tag names) is written as `\anon{named}{anonymous}`; the first sentence of the introduction carries the AI-use footnote that TMLR requires on page 1; `wp4_build.py --variant anon --check` must report no identifying string
-- Placeholders: none remain (repository URL set 2026-11-16 after the repository went public); `scripts/wp4_build.py --arxiv` fails if a `\placeholder{...}` is added again.
+- Placeholders: none remain; `scripts/wp4_build.py --check` fails on an uncommented single-line `\placeholder{...}` in `main.tex`, `main_anon.tex`, `body.tex` or `sections/*.tex`.
 - Language: English with US spelling (license, labeled, analyzed), no Oxford comma, no compressed prose; style edits never change a registered term ("do not follow", "attenuated", "two one-sided test") or a hedge.
 - Figures: drawn at final size (`wp4figures.WIDTH` at most the 6.5 in TMLR text width set by `tmlr.sty`), Computer Modern (`cmr10`, mathtext `cm`), no text below 6 pt, symbols and comparisons as mathtext, not unicode or plain `<`/`>`; pinned by `tests/test_wp4figures.py`.
 
@@ -28,7 +29,7 @@ Manuscript of the preregistered E1–E3 study (WP4 content, design `docs/superpo
 ## Verification
 
 - Regenerate after any input or generator change: `uv run --locked python scripts/wp4_figures.py`; `--check` verifies the committed `generated/` files are current
-- Sources stay ASCII (TeX accents such as `\'a`); do not set `\pdfoutput` (it switches hyperref to the pdfTeX driver under Tectonic). The arXiv package script was retired in WP5 (arXiv rejected the preprint, D88)
+- Sources stay ASCII (TeX accents such as `\'a`); do not set `\pdfoutput` (it switches hyperref to the pdfTeX driver under Tectonic)
 - Build: `uv run --locked python scripts/wp4_build.py [--variant named|anon] [--check]` (PDFs `paper/build/main.pdf` and `paper/build/main_anon.pdf`); `--check` (alias `--arxiv`) fails on placeholders and, for `anon`, on any identifying string in the PDF text or metadata (`FORBIDDEN`) and on a main text past page 12 (`\label{main-end}`)
 - Visual check (no poppler on this machine): render pages to PNG with `uv run --no-project --with pymupdf python -I -c ...` into the git-ignored `.superpowers/preview/`, then inspect them
 - Result-key baseline: `tests/golden/wp5_baseline_keys.json` lists every `\R{key}` used before the WP5 restructuring; `test_baseline_keys_still_used` fails if one disappears
