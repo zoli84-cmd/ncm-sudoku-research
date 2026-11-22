@@ -237,3 +237,15 @@ New item (not applied to `paper/refs.bib`; the claims below come from the Lacuna
 - "Pretty Linear Liars: Unregularized Probes Favor Intervention-Unfaithful Features", arXiv:2611.20371, 2026-11-16 ([Lacuna](https://lacuna.tiptreesystems.com/work/pretty-linear-liars-unregularized-probes-favor-intervention)). According to the summary, unregularized (OLS) regression probes give large weights to low-variance directions that the model does not use, and ridge regularization moves the probe direction towards the direction found by Distributed Alignment Search (DAS). Tested on a toy HMM transformer and on Llama-2-7B. Relevance: E3 decodability versus causal use (plan §1). Our level-wise probes use AdamW with weight decay (`src/ncm_sudoku/probes.py`), and the whole-layer probes read a PCA truncated to 256 components. These PCA components are whitened, and whitening may partly re-amplify the low-variance directions among those 256 components. This is an unverified possible reviewer question, not a finding.
 
 Assessment of the tool (as of 2026-11-22): Lacuna covers arXiv and OpenReview papers, including very recent ones, but it does not index Zenodo and it is missing the two closest prior works (L6, L8, L9). It has no citation graph, and no research direction covers Sudoku or puzzle-model interpretability (L3). It is useful as a supplementary tool for watching recent arXiv papers with date-filtered or semantic paper search. It does not replace Consensus, the arXiv API, Semantic Scholar or Exa.
+
+## 2026-11-22 — Kniazev & Fijalkow artifact availability (E5 positive control, D91)
+
+| # | Tool | Query / URL | Result |
+|---|---|---|---|
+| K1 | WebFetch | https://github.com/kameronton/sudoku-residual (README) | README expects released artifacts (`data/bt_traces_3m.npz`, `results/3M-backtracking-packing/{config.json, train_log.json, checkpoint/, activations.npz}`) and says raw trace files are not in the repository; no download link |
+| K2 | WebFetch | https://github.com/kameronton/sudoku-residual/releases | no releases |
+| K3 | WebFetch | https://huggingface.co/api/models?author=kameronton, `?search=sudoku-residual`, `?search=backtracking-packing` | empty lists |
+| K4 | WebFetch | https://huggingface.co/api/datasets?author=kameronton | empty list |
+| K5 | WebFetch | https://arxiv.org/abs/2605.18847 | abstract page gives no artifact location |
+
+Conclusion: the trained model and its activations are not publicly downloadable as of 2026-11-22.

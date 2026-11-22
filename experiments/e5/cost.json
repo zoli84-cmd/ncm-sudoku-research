@@ -1,0 +1,167 @@
+{
+  "date": "2026-11-22",
+  "note": "non-confirmatory E5 feasibility measurement; first 20 released hard puzzles",
+  "n_puzzles": 20,
+  "batch_size": 20,
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code_state": {
+    "commit": "06def795e8ff5257e83ccb20cad798bffad6ab6b",
+    "dirty": true,
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "model": {
+    "n_layer": 8,
+    "n_embd": 512,
+    "prefix_len": 91,
+    "levels": [
+      1,
+      2,
+      4,
+      6,
+      9,
+      13,
+      18,
+      26,
+      37,
+      50,
+      67,
+      89
+    ],
+    "captured_layers": 9,
+    "layer_definition": "0 = input of block 1 (embedding); k = output of block k"
+  },
+  "passes": {
+    "count": 12,
+    "lengths": [
+      92,
+      93,
+      95,
+      97,
+      100,
+      104,
+      109,
+      117,
+      128,
+      141,
+      158,
+      180
+    ],
+    "positions_total": 1414
+  },
+  "timing_seconds": {
+    "repetitions": 3,
+    "plain_runs": [
+      53.055,
+      30.484,
+      34.103
+    ],
+    "capture_runs": [
+      39.892,
+      35.38,
+      33.267
+    ],
+    "plain_generation_median": 34.103,
+    "generation_with_capture_median": 35.38,
+    "plain_per_puzzle": 1.7052,
+    "capture_per_puzzle": 1.769,
+    "capture_overhead_ratio": 1.037
+  },
+  "codes_identical_with_hooks": true,
+  "prefix_max_abs_diff_across_passes_per_layer": [
+    0.0,
+    3.814697265625e-06,
+    7.62939453125e-06,
+    1.52587890625e-05,
+    1.9073486328125e-05,
+    2.86102294921875e-05,
+    3.24249267578125e-05,
+    3.0517578125e-05,
+    0.00012111663818359375
+  ],
+  "fp16_max_abs_roundtrip_error": 0.03118896484375,
+  "rss_mb": {
+    "start": 195.2,
+    "after_model_load": 516.8,
+    "after_capture": 1232.7
+  },
+  "peak_working_set_mb": 1698.6,
+  "in_memory_fp32_bytes": {
+    "total": 521256960,
+    "per_puzzle": 26062848
+  },
+  "storage": {
+    "all_passes_all_positions_fp32": {
+      "files": 12,
+      "disk_bytes": 521258496,
+      "disk_bytes_per_puzzle": 26062924,
+      "write_seconds": 2.943
+    },
+    "all_passes_all_positions_fp16": {
+      "files": 12,
+      "disk_bytes": 260630016,
+      "disk_bytes_per_puzzle": 13031500,
+      "write_seconds": 0.435
+    },
+    "prefix_once_plus_targets_fp32": {
+      "files": 13,
+      "disk_bytes": 152249984,
+      "disk_bytes_per_puzzle": 7612499,
+      "write_seconds": 0.308
+    },
+    "prefix_once_plus_targets_fp16": {
+      "files": 13,
+      "disk_bytes": 76125824,
+      "disk_bytes_per_puzzle": 3806291,
+      "write_seconds": 0.126
+    },
+    "prefix_81_cells_fp32": {
+      "files": 1,
+      "disk_bytes": 29859968,
+      "disk_bytes_per_puzzle": 1492998,
+      "write_seconds": 0.066
+    },
+    "prefix_81_cells_fp16": {
+      "files": 1,
+      "disk_bytes": 14930048,
+      "disk_bytes_per_puzzle": 746502,
+      "write_seconds": 0.012
+    },
+    "level7_pass_targets_fp32": {
+      "files": 1,
+      "disk_bytes": 6635648,
+      "disk_bytes_per_puzzle": 331782,
+      "write_seconds": 0.009
+    }
+  }
+}
