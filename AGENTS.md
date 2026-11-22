@@ -30,7 +30,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - Coding style: Karpathy guidelines (surface assumptions, verifiable success criteria, surgical changes); Ponytail and Caveman are disabled for this project in `.claude/settings.json`
 - Environment: `uv`-managed Python 3.12 on native Windows, pytest; supplementary GLMM as an R script with lme4
 - Library docs: Context7 for PyTorch, huggingface_hub, statsmodels, scipy APIs
-- Literature: Consensus API for peer-reviewed methodology search; supplement with arXiv / Semantic Scholar / Exa for recent ML preprints; save results and the query log under `literature/`
+- Literature: Consensus API for peer-reviewed methodology search; Lacuna (Tiptree Systems) MCP server `lacuna-research` for ML/AI papers, authors and research directions (read-only, no key; no citation graph; cite its canonical Lacuna URLs and verify claims against the primary paper); supplement with arXiv / Semantic Scholar / Exa for recent ML preprints; save results and the query log under `literature/`
 - Code-graph tooling: use at most one of Graft or graphify; neither is set up for this project yet
 
 ## Verification
@@ -53,6 +53,7 @@ Personal research project on hierarchical sensitivity, error propagation, and lo
 - [DECISIONS.md](DECISIONS.md): decision log and post-lock deviation log
 - [research_plan_v3.md](research_plan_v3.md): frozen English translation of plan v3.0
 - [NCM_Sudoku_kutatasi_terv_v3.md](NCM_Sudoku_kutatasi_terv_v3.md): frozen Hungarian original of plan v3.0
+- [.mcp.json](.mcp.json): project MCP servers; `lacuna-research` (https://lacuna.tiptreesystems.com/api/mcp, Streamable HTTP, read-only, no credentials)
 - [.claude/settings.json](.claude/settings.json): project Claude Code settings; disables `caveman@caveman` and `ponytail@ponytail` plugins and sets `CAVEMAN_DEFAULT_MODE=off` (the user-level caveman hooks read this)
 - [LICENSE](LICENSE): MIT licence for the own code (`third_party/ncm` keeps its upstream MIT licence; the paper is CC BY 4.0)
 - [.gitignore](.gitignore): excludes checkpoints, data, run outputs, paper PDFs, secrets
