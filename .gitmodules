@@ -1,3 +1,6 @@
 [submodule "third_party/ncm"]
 	path = third_party/ncm
 	url = https://github.com/HazyResearch/ncm.git
+[submodule "third_party/sudoku-residual"]
+	path = third_party/sudoku-residual
+	url = https://github.com/kameronton/sudoku-residual

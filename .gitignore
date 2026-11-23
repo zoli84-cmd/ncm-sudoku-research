@@ -1,5 +1,6 @@
 # Python / uv
 .venv/
+.venv-kf/
 __pycache__/
 *.pyc
 .pytest_cache/

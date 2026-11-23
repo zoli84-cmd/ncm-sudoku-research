@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-23",
+  "note": "E5 positive control (D94), non-confirmatory; activations of the Kniazev & Fijalkow model",
+  "dtype": "bfloat16",
+  "n_puzzles": 6400,
+  "batch": 64,
+  "anchor": "SEP position n_clues[i]",
+  "layers": "post_mlp of blocks 1..8 (index 0..7)",
+  "upstream_commit": "a9b206955bfd1089a7253511fa9371066ecca570",
+  "checkpoint_step": 25452,
+  "inputs": {
+    "activations_npz_sha256": "8c86e5100a3d1b32c0b7f2d69cd9d9c66f76b13565e090a0bd61bf666d0f5d57"
+  },
+  "outputs": {
+    "acts": {
+      "path": "runs/e5/kf/acts_bfloat16.npy",
+      "sha256": "1ba70dde737275f552597f78ed361631931065a7b158e945ad3876ca1809164c",
+      "shape": [
+        6400,
+        8,
+        576
+      ]
+    },
+    "split": {
+      "path": "runs/e5/kf/split.npy",
+      "sha256": "fd1e12a9e0e41d83a42548992e157fc44a4476eb2f315a178b7442535d5fb048",
+      "n_train_entries": 290305,
+      "n_test_entries": 72616,
+      "rule": "per cell: puzzles with the cell empty, train_test_split(arange(n), test_size=0.2, random_state=42)"
+    }
+  },
+  "seconds": {
+    "load": 7.2,
+    "forward": 2107.5
+  },
+  "environment": {
+    "python": "3.13.12",
+    "jax": "0.9.0.1",
+    "numpy": "2.3.5",
+    "devices": [
+      "TFRT_CPU_0"
+    ],
+    "platform": "Windows-11-10.0.22631-SP0"
+  },
+  "code_state": {
+    "commit": "5fb32c602c8bccc4b3678e82005c9546988daa2b",
+    "dirty": true
+  }
+}

@@ -249,3 +249,4 @@ Assessment of the tool (as of 2026-11-22): Lacuna covers arXiv and OpenReview pa
 | K5 | WebFetch | https://arxiv.org/abs/2605.18847 | abstract page gives no artifact location |
 
 Conclusion: the trained model and its activations are not publicly downloadable as of 2026-11-22.
+| K6 | arXiv PDF text | arXiv:2605.18847v1, page 2 | correction (2026-11-23): Section 1 says "Code is available at the link, and the dataset and a model checkpoint at Hugging Face"; the artifacts are at https://huggingface.co/datasets/residual-sudoku-dataset/residual-sudoku-dataset (MIT), which K3–K4 missed because they searched the GitHub account name; the conclusion above is wrong (D93) |

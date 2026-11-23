@@ -1,0 +1,43 @@
+{
+  "repo_id": "residual-sudoku-dataset/residual-sudoku-dataset",
+  "repo_type": "dataset",
+  "revision": "c9537268fcf7ecdfb38e5397ad197d8b9cd37349",
+  "last_modified": "2026-05-06T12:40:48Z",
+  "license": "MIT",
+  "file": "sudoku_residual_paper_artifacts.zip",
+  "bytes": 1189126209,
+  "sha256": "18f8021fbcc37d664f9e3939e3af140ed4b186360ae8f5136f8daa3efad0ed57",
+  "sha256_matches_hub_lfs_oid": true,
+  "downloaded": "2026-11-23",
+  "local_paths": {
+    "zip": "data/kf/download/",
+    "extracted": "data/kf/artifacts/"
+  },
+  "contents": {
+    "entries": 46,
+    "uncompressed_bytes": 3949596873,
+    "unsafe_paths": 0,
+    "checkpoint": "results/3M-backtracking-packing/checkpoint/25452/ (Orbax, OCDBT; params, opt_state, model/train/schedule configs)",
+    "checkpoint_step": 25452,
+    "schedule_total_steps": 25452,
+    "model_config": {
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_model": 576,
+      "d_ff": 3456,
+      "vocab_size": 734,
+      "max_seq_len": 300,
+      "use_pos_emb": true,
+      "dtype": "bfloat16"
+    },
+    "activations_npz": "metadata only (puzzles, sequences, n_clues, solutions for 6,400 puzzles); activation arrays are regenerated locally",
+    "probing_set": "the 6,400 puzzles equal puzzles_test[:6400] of bt_traces_3m.npz in order, solutions equal",
+    "bt_traces_3m_npz": "train 2,700,000 / val 150,000 / test 150,000 traces of length 250 (int16), puzzles, solutions, n_clues"
+  },
+  "code": {
+    "repo": "https://github.com/kameronton/sudoku-residual",
+    "commit": "a9b206955bfd1089a7253511fa9371066ecca570",
+    "note": "latest commit on 2026-11-23; the author states its dependency versions are the ones used"
+  },
+  "paper": "arXiv:2605.18847v1, Section 1: 'the dataset and a model checkpoint at Hugging Face'"
+}
