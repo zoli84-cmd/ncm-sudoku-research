@@ -1,0 +1,52 @@
+{
+  "note": "E5 causal pilot (D102(1)): refitted pilot heads",
+  "date": "2026-11-25",
+  "code_state": {
+    "commit": "db565eab67ffca968a20ebc33c7ec6af130765b3",
+    "dirty": true,
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "heads": {
+    "P2": {
+      "config": [
+        0,
+        0.003
+      ],
+      "max_abs_diff_vs_pilot": 0.0,
+      "file": "runs/e5/causal/heads/P2.pt",
+      "sha256": "377cab2c14cca17bac0142dec96a75a75ed043e1ec609f9cca9027b4f219f412",
+      "seconds": 56.9,
+      "state_row_singular_values": [
+        5.643866215560355,
+        5.586320613869106,
+        5.5270072687925165,
+        5.382472146405041,
+        5.337738017597633,
+        5.293310180579443,
+        5.2117405376538475,
+        5.120505884760251,
+        4.779225721584316
+      ]
+    },
+    "P4": {
+      "config": [
+        0,
+        0.003
+      ],
+      "max_abs_diff_vs_pilot": 0.0,
+      "file": "runs/e5/causal/heads/P4.pt",
+      "sha256": "41a70c235d7726517cb3430806331d5839b2574f9c58c16358db7584532f35f2",
+      "seconds": 53.5
+    },
+    "P8": {
+      "config": [
+        0,
+        0.003
+      ],
+      "max_abs_diff_vs_pilot": 0.0,
+      "file": "runs/e5/causal/heads/P8.pt",
+      "sha256": "288fc7f5acedf589f1916780ae7bf1f209e0bf13484677aa601ddaf763c941c8",
+      "seconds": 54.5
+    }
+  }
+}
