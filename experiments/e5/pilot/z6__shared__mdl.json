@@ -1,0 +1,77 @@
+{
+ "C": 1.0,
+ "blocks": [
+  10,
+  20,
+  40,
+  80,
+  160,
+  320,
+  640,
+  1280,
+  2000
+ ],
+ "first_block_uniform_bits": 4590.0,
+ "block_bits": [
+  {
+   "from": 10,
+   "to": 20,
+   "bits": 11927.616631524426,
+   "labels": 4590
+  },
+  {
+   "from": 20,
+   "to": 40,
+   "bits": 12979.52984395202,
+   "labels": 9180
+  },
+  {
+   "from": 40,
+   "to": 80,
+   "bits": 20062.86628721575,
+   "labels": 18360
+  },
+  {
+   "from": 80,
+   "to": 160,
+   "bits": 37529.39312909663,
+   "labels": 36720
+  },
+  {
+   "from": 160,
+   "to": 320,
+   "bits": 71394.6939251578,
+   "labels": 73440
+  },
+  {
+   "from": 320,
+   "to": 640,
+   "bits": 141271.9737772963,
+   "labels": 146880
+  },
+  {
+   "from": 640,
+   "to": 1280,
+   "bits": 279268.8576624715,
+   "labels": 293760
+  },
+  {
+   "from": 1280,
+   "to": 2000,
+   "bits": 313371.12967684073,
+   "labels": 330480
+  }
+ ],
+ "online_codelength_bits": 892396.0609335551,
+ "uniform_codelength_bits": 918000.0,
+ "compression": 1.0286912282419312,
+ "representation": "z6",
+ "readout": "shared",
+ "seconds": 221.0,
+ "code_state": {
+  "commit": "54a533149ed127592a39ec65799360ab79085aab",
+  "dirty": true,
+  "diff_sha256": "684b681167bc16769bd80f97f81cd469c3e454f0c3ed8d93f2fc1a5790c9cb8b"
+ },
+ "note": "E5 pilot (D101(6)), non-confirmatory; fit on PROBE-TRAIN pairs, scored on PROBE-VAL pairs"
+}

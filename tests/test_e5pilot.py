@@ -28,3 +28,36 @@ def test_scatter_places_rows_on_empty_cells():
     empty[0, 3] = empty[1, 5] = True
     out = scatter(np.arange(18, dtype=float).reshape(2, 9), empty)
     assert out[0, 3, 0] == 0 and out[1, 5, 8] == 17 and np.isnan(out[0, 0, 0])
+
+
+def _toy_train(n=200, informative=True, seed=0):
+    rng = np.random.default_rng(seed)
+    mask = (rng.random((n, 81, 9)) < 0.4).astype(np.float32)
+    empty = rng.random((n, 81)) < 0.3
+    rep = rng.standard_normal((n, 81, 12)).astype(np.float32)
+    if informative:
+        rep[..., :9] += 3 * (2 * mask - 1)
+    return rep, {"mask": mask, "empty": empty}
+
+
+def test_lbfgs_fits_informative_rows():
+    import torch
+    from ncm_sudoku.e5pilot import fit_lbfgs, standardized_rows
+
+    rep, d = _toy_train()
+    X, _, _, _ = standardized_rows(rep, d["empty"])
+    Y = torch.from_numpy(d["mask"][d["empty"]].astype(np.float64))
+    W, b, n_iter, conv = fit_lbfgs(X, Y, C=1.0)
+    acc = ((torch.sigmoid(X @ W + b) > 0.5).double() == Y).double().mean().item()
+    assert acc > 0.95 and n_iter > 0
+
+
+def test_online_mdl_compresses_only_informative_labels():
+    from ncm_sudoku.e5pilot import online_mdl
+
+    blocks = (10, 20, 40, 80, 160)
+    rep, d = _toy_train(160, True)
+    good = online_mdl(rep, d, blocks=blocks)
+    rep0, d0 = _toy_train(160, False)
+    noise = online_mdl(rep0, d0, blocks=blocks)
+    assert good["compression"] > 1.5 and noise["compression"] < 1.1

@@ -140,3 +140,88 @@ def save(result: dict, out_json: Path, out_npy: Path) -> None:
     np.save(out_npy, result["pred"].astype(np.float32))
     body = {k: v for k, v in result.items() if k != "pred"}
     out_json.write_text(json.dumps(body, indent=1) + "\n", encoding="utf-8", newline="\n")
+
+
+# --- D101(6): converged L-BFGS reference and online MDL on the shared own-position readout ---
+
+LBFGS_CS = (0.01, 0.1, 1.0, 10.0, 100.0)
+MDL_BLOCKS = (10, 20, 40, 80, 160, 320, 640, 1280, 2000)  # cumulative PROBE-TRAIN puzzles
+
+
+def standardized_rows(rep, empty, mean=None, std=None):
+    """Own-position rows (state standardized with PROBE-TRAIN statistics || cell one-hot),
+    row-major over np.nonzero(empty); returns (X, puzzle_idx, mean, std)."""
+    pz, pos = np.nonzero(empty)
+    state = np.asarray(rep, np.float64)[pz, pos]
+    if mean is None:
+        mean, std = state.mean(axis=0), state.std(axis=0)
+        std = np.where(std > 0, std, 1.0)
+    X = np.concatenate([(state - mean) / std, np.eye(81)[pos]], axis=1)
+    return torch.from_numpy(X), pz, mean, std
+
+
+def fit_lbfgs(X: torch.Tensor, Y: torch.Tensor, C: float, max_iter: int = 1000, tol: float = 1e-7):
+    """L2 logistic regression, sklearn objective scaled by 1/n:
+    mean BCE + ||W||^2 / (2 C n), bias unpenalized; full-batch L-BFGS in float64.
+    Returns (W, b, n_iter, converged)."""
+    torch.manual_seed(0)
+    n, d = X.shape
+    W = torch.zeros(d, Y.shape[1], dtype=torch.float64, requires_grad=True)
+    b = torch.zeros(Y.shape[1], dtype=torch.float64, requires_grad=True)
+    opt = torch.optim.LBFGS([W, b], lr=1.0, max_iter=max_iter, tolerance_grad=tol, tolerance_change=1e-12,
+                            history_size=50, line_search_fn="strong_wolfe")
+
+    def closure():
+        opt.zero_grad()
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(X @ W + b, Y) * Y.shape[1]
+        loss = loss + (W ** 2).sum() / (2 * C * n)
+        loss.backward()
+        return loss
+
+    opt.step(closure)
+    n_iter = opt.state[opt._params[0]]["n_iter"]
+    with torch.no_grad():
+        grad = torch.cat([W.grad.flatten(), b.grad])
+    return W.detach(), b.detach(), int(n_iter), bool(grad.abs().max() <= tol * 10 or n_iter < max_iter)
+
+
+def run_lbfgs(rep_tr, rep_va, train, val, Cs=LBFGS_CS) -> dict:
+    Xtr, _, mean, std = standardized_rows(rep_tr, train["empty"])
+    Xva, pz_va, _, _ = standardized_rows(rep_va, val["empty"], mean, std)
+    Ytr = torch.from_numpy(train["mask"][train["empty"]].astype(np.float64))
+    yva = val["mask"][val["empty"]]
+    grid, best = [], None
+    for C in Cs:
+        W, b, n_iter, conv = fit_lbfgs(Xtr, Ytr, C)
+        p = torch.sigmoid(Xva @ W + b).numpy()
+        brier = float(np.nanmean([((p[pz_va == i] - yva[pz_va == i]) ** 2).mean() for i in np.unique(pz_va)]))
+        grid.append({"C": C, "val_brier": brier, "n_iter": n_iter, "converged": conv})
+        if best is None or brier < best[0]:
+            best = (brier, C, p)
+    pred = scatter(best[2], val["empty"])
+    return {"summary": {"config": ["lbfgs", best[1]], "val_brier_mean": best[0], "grid": grid},
+            "w_auc": w_auc(pred, val), "metrics": cell_metrics(pred, val), "pred": pred}
+
+
+def online_mdl(rep_tr, train, C: float = 1.0, blocks=MDL_BLOCKS) -> dict:
+    """Online code length (Voita & Titov 2020) of the PROBE-TRAIN candidate bits over
+    cumulative puzzle blocks: the first block is sent with the uniform code (1 bit per
+    label bit); each later block with -log2 p of an L-BFGS logistic probe fitted on all
+    earlier blocks (inputs standardized on the earlier blocks)."""
+    empty, mask = train["empty"], train["mask"]
+    bits = []
+    first_bits = float(mask[: blocks[0]][empty[: blocks[0]]].size)
+    total = first_bits
+    for lo, hi in zip(blocks[:-1], blocks[1:]):
+        Xa, _, mean, std = standardized_rows(rep_tr[:lo], empty[:lo])
+        Ya = torch.from_numpy(mask[:lo][empty[:lo]].astype(np.float64))
+        W, b, _, _ = fit_lbfgs(Xa, Ya, C)
+        Xb, _, _, _ = standardized_rows(rep_tr[lo:hi], empty[lo:hi], mean, std)
+        yb = mask[lo:hi][empty[lo:hi]]
+        p = torch.sigmoid(Xb @ W + b).numpy().clip(1e-12, 1 - 1e-12)
+        block_bits = float(-(yb * np.log2(p) + (1 - yb) * np.log2(1 - p)).sum())
+        bits.append({"from": int(lo), "to": int(hi), "bits": block_bits, "labels": int(yb.size)})
+        total += block_bits
+    uniform = float(mask[: blocks[-1]][empty[: blocks[-1]]].size)
+    return {"C": C, "blocks": list(blocks), "first_block_uniform_bits": first_bits, "block_bits": bits,
+            "online_codelength_bits": total, "uniform_codelength_bits": uniform, "compression": uniform / total}
