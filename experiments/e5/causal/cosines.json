@@ -1,0 +1,28 @@
+{
+  "note": "E5 causal pilot diagnostic (D104): cosine between the injected step and Delta = x_d \u2212 x_r per condition; computed from the saved fp16 level-7-pass prefix activations; no model run",
+  "n_cells": 8103,
+  "n_pairs": 250,
+  "cell_mean": {
+    "Q": 0.5413722616020293,
+    "high_variance": 0.4712961307944245,
+    "shuffled_digit": -0.0017474644436355708,
+    "random_mean_over_draws": 0.12751910234549416,
+    "random_draw_min": 0.11509703035970466,
+    "random_draw_max": 0.14173422843545397
+  },
+  "pair_mean": {
+    "Q": 0.5416654076978186,
+    "high_variance": 0.4711686572403846,
+    "shuffled_digit": -0.0017502845536730158,
+    "random_mean_over_draws": 0.12749664778890088
+  },
+  "validation": {
+    "cos_Q_logged_by_primary_run_fp32": 0.5413720500211526,
+    "cos_Q_here_fp16": 0.5413722616020293
+  },
+  "code_state": {
+    "commit": "1cfcd34f912de11330dfba2e33656572d59ca565",
+    "dirty": true,
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
