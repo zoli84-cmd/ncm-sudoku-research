@@ -22,9 +22,10 @@ the run continues for the other claim.
 Stages under `e5run.RUN_DIR[mode]` (each written atomically and recorded in run.json; a resumed
 run skips recorded stages): `pairs.npz` (a, b, solutions and ids in raw order, the processing
 `order`, and `meta_json` with the screening log and internal collisions), `extract/<a|b>/batch_<k>.npz` (every `extract_batch` array plus
-`check_failures`: shapes of the 9 captured layers, z6 shapes, codes equal to a clean
+`pair_index` (raw), `pair_ids` and `check_failures`: shapes of the 9 captured layers, z6 shapes, codes equal to a clean
 `generate_codes` call on the same batch in dry modes and the first TEST batch of each member),
-`probes.npz` (per-seed and mean predictions and the identical-input flags for P2 and Z<=6),
+`probes.npz` (per-seed and mean predictions and the identical-input flags for P2 and Z<=6;
+per-row `pair_ids` and `member`),
 `causal/<ab|ba>_batch_<k>.npz` (per recipient: `pair_index` (position in the raw-ordered pair
 set), `pair_ids`, `order` (0 = ab, 1 = ba), every `evaluate_batch` array, `invalid_reasons`),
 `decisions.json`. Batches of 50: extraction a-members then b-members, probe inference over the
@@ -34,8 +35,10 @@ Outputs: `e5run.OUT_DIR[mode]/results.json` (per-pair rows by pair id in raw ord
 inputs, log K, outcomes, bootstrap intervals, eligibility, screening, invalid reasons, input
 hashes, threads, code state; dry modes also the max abs difference to the saved pilot
 predictions, information only) and `report.md` (the §8 rows selected by the outcomes, copied
-verbatim from the protocol). A non-finite value, a failed extraction check, an internal
-collision or a shared hash mismatch stops the run: status `invalid`, both claims invalid.
+verbatim from the protocol), plus `screening_log.json` (the per-raw-index screening log). A
+non-finite value (also inside greedy generation, `e5extract` hooks), a failed extraction check or
+capture, a TEST generation error, an internal collision or a shared hash mismatch stops the run:
+status `invalid`, both claims invalid.
 """
 
 import argparse
@@ -67,6 +70,7 @@ from ncm_sudoku.e5test import (
 )
 from ncm_sudoku.g0 import code_state, environment_record
 from ncm_sudoku.gate import GATE_N
+from ncm_sudoku.generate import GenerationError
 from ncm_sudoku.model import ROOT, load_model
 from ncm_sudoku.released import load_released
 from ncm_sudoku.runner import generate_codes, puzzle_tensor
@@ -84,6 +88,7 @@ CODE_FILES = ["scripts/e5_test.py", "e5_protocol_v1.md"] + [
                                        "symmetry", "subsets", "generate", "solve", "wp2")]
 DRY_NOTE = "DRY RUN on the PROBE-VAL pairs (protocol §9.4); not TEST"
 STOP_ROW = "Internal collision, shared failure or non-finite stop"
+NOT_ESTIMABLE = "If the number of eligible pairs for a claim is 0, the claim is not estimable and not made."  # §5.3
 
 
 class Stop(Exception):
@@ -216,8 +221,14 @@ class Runner:
         def compute():
             if self.mode == "test":
                 entries, corpus = self._corpus()
-                accepted, log = screen_pairs(
-                    lambda i: e5pairs.generate_pair(e5pairs.PAIR_SEEDS["pairs_test"], i), external_index(entries), N_TEST)
+                def make(i):
+                    try:
+                        return e5pairs.generate_pair(e5pairs.PAIR_SEEDS["pairs_test"], i)
+                    except GenerationError as e:  # §4.1: a generation error stops the run, never a silent step
+                        self.inv["shared"].append(f"generation_error: {i}: {e}")
+                        raise Stop("generation error") from e
+
+                accepted, log = screen_pairs(make, external_index(entries), N_TEST)
                 arrays = {k: np.stack([getattr(p, f) for p in accepted]).astype(np.uint8)
                           for k, f in (("a", "a"), ("b", "b"), ("solutions", "solution"))}
                 ids, order = [p.pair_id for p in accepted], np.arange(N_TEST)
@@ -235,6 +246,7 @@ class Runner:
         meta = json.loads(str(arrays["meta_json"]))
         self.ids, self.order, self.n = arrays["ids"].tolist(), np.asarray(arrays["order"]), len(arrays["ids"])
         self.info["screening"] = {k: v for k, v in meta["screen"].items() if k != "log"}
+        self.screen_log = meta["screen"].get("log", [])
         self.info["internal_collisions"] = meta["internal_collisions"]
         if meta["internal_collisions"]:
             self.inv["shared"] += [f"internal_collision: {x} {y}" for x, y in meta["internal_collisions"]]
@@ -270,12 +282,20 @@ class Runner:
                 rows = slice(mi * self.n + s, mi * self.n + min(s + BATCH, self.n))
                 name = f"extract/{member}/batch_{k}"
 
-                def compute(rows=rows, name=name, k=k):
+                def compute(rows=rows, name=name, k=k, s=s):
                     pz = self.puzzles[rows]
-                    out = extract_batch(self.model(), pz, self.solutions[rows])
+                    try:
+                        out = extract_batch(self.model(), pz, self.solutions[rows])
+                    except NonFiniteError:
+                        raise
+                    except RuntimeError as e:  # e.g. "pass 6 not captured completely": a failed extraction check
+                        self.inv["shared"].append(f"extraction_check: {name}: {e}")
+                        raise Stop("extraction failure") from e
                     check_finite(name, *(v for v in out.values() if v.dtype.kind == "f"))
                     fails = self._extract_checks(out, pz, self.mode != "test" or k == 0)
-                    return {**out, "check_failures": np.array(fails, dtype=str)}
+                    pidx = self.order[s:s + len(pz)]
+                    return {**out, "pair_index": pidx, "pair_ids": np.array([self.ids[i] for i in pidx]),
+                            "check_failures": np.array(fails, dtype=str)}
 
                 out = self.stage(name, self.rd / "extract" / member / f"batch_{k}.npz", compute)
                 if out["check_failures"].size:
@@ -313,7 +333,8 @@ class Runner:
                 check_finite(f"probes/{rep}", per_seed, mean[self.empty])
                 out |= {f"{rep}_per_seed": per_seed, f"{rep}_mean": mean,
                         f"{rep}_same_input": same_inputs(self.feats[rep], self.n)}
-            return out
+            ids = [self.ids[i] for i in self.order]
+            return {**out, "pair_ids": np.array(ids + ids), "member": np.array(["a"] * self.n + ["b"] * self.n)}
 
         pr = self.stage("probes", self.rd / "probes.npz", compute)
         self.scores = {rep: pair_scores(pr[f"{rep}_mean"], self.mask, self.empty, pr[f"{rep}_same_input"], self.n)
@@ -377,9 +398,9 @@ class Runner:
              "hv": pv[:, ci["hv"]], "shuf": pv[:, ci["shuf"]], "full_be": pv[:, ci["full_be"]]}
         w = {rep: {k: R(self.scores[rep][k]) for k in ("n_disc", "w", "w_pilot_rule")} for rep in ("P2", "z6")}
         ea, eb = R(self.elig_a), R(self.elig_b)
-        check_finite("per_pair_A", w["P2"]["w"][ea], w["z6"]["w"][ea])
-        check_finite("per_pair_B", *v.values())
         delta = w["P2"]["w"] - w["z6"]["w"]
+        check_finite("per_pair_A", *(w[r][k][ea] for r in ("P2", "z6") for k in ("w", "w_pilot_rule")), delta[ea])
+        check_finite("per_pair_B", *v.values())
 
         def compute():
             dec = decide(w["P2"]["w"], w["z6"]["w"], ea, v["Q"], v["random_mean"], v["hv"], v["shuf"], eb,
@@ -412,9 +433,15 @@ def section8_rows(protocol_text: str) -> dict[str, list[str]]:
 
 
 def select_rows(out_a: str, out_b: str, stopped: bool) -> list[str]:
-    """§8 rows that apply to the two outcomes (first cells); the stop row when none applies."""
+    """§8 rows that apply to the two outcomes (first cells). A stopped run gets the stop row.
+    "Claim B invalid (§6), claim A valid" needs claim A readable (holds or not shown) and
+    "Claim A invalid or not estimable, claim B valid" needs claim B readable; a not-estimable
+    claim is never called valid. When no row applies (e.g. one claim not estimable and the
+    other invalid, or both invalid by claim-specific checks), the list is empty and the report
+    states each claim's status instead."""
     if stopped:
         return [STOP_ROW]
+    readable = ("holds", "not_shown")
     rows = []
     rows += {"holds": ["Claim A holds"], "not_shown": ["Claim A not shown (any of A1, A2 fails)"]}.get(out_a, [])
     rows += {"holds": ["Claim B holds"], "not_shown": ["Claim B not shown (any of B1–B4 fails)"]}.get(out_b, [])
@@ -422,11 +449,11 @@ def select_rows(out_a: str, out_b: str, stopped: bool) -> list[str]:
              ("not_shown", "holds"): "Claim B holds, claim A not shown"}
     if (out_a, out_b) in joint:
         rows.append(joint[(out_a, out_b)])
-    if out_b == "invalid" and out_a != "invalid":
+    if out_b == "invalid" and out_a in readable:
         rows.append("Claim B invalid (§6), claim A valid")
-    if out_a in ("invalid", "not_estimable") and out_b != "invalid":
+    if out_a in ("invalid", "not_estimable") and out_b in readable:
         rows.append("Claim A invalid or not estimable, claim B valid")
-    return rows or [STOP_ROW]
+    return rows
 
 
 def report(mode: str, results: dict) -> str:
@@ -445,6 +472,14 @@ def report(mode: str, results: dict) -> str:
               "Rows selected by the outcomes; text copied verbatim from `e5_protocol_v1.md` §8.", "",
               "| Result | Justified claim | Does not follow |", "|---|---|---|"]
     lines += ["| " + " | ".join(table[k]) + " |" for k in keys]
+    notes = []
+    for claim in ("A", "B"):
+        if out[claim] == "not_estimable":
+            notes.append(f"- Claim {claim} is not estimable (no eligible pair). Protocol §5.3: \"{NOT_ESTIMABLE}\"")
+        elif out[claim] == "invalid" and not keys:
+            notes.append(f"- Claim {claim} is invalid (§6); no reading of claim {claim}.")
+    if notes:
+        lines += ["", *(["No §8 row applies to these outcomes."] if not keys else []), *notes]
     return "\n".join(lines) + "\n"
 
 
@@ -458,6 +493,9 @@ def _finish(mode: str, rn: Runner | None, inputs: dict, inv: dict, status: str, 
                       "code_state": code_state(), "environment": environment_record(),
                       "seconds": round(time.perf_counter() - t0, 1)})
     out = e5run.OUT_DIR[mode]
+    if rn is not None and hasattr(rn, "screen_log"):
+        atomic_json(out / "screening_log.json", _plain({"mode": mode, "screening": rn.info["screening"],
+                                                        "log": rn.screen_log}))
     atomic_json(out / "results.json", results)
     atomic_write(out / "report.md", report(mode, results))
     e5run.finish_run(mode, status, {"outcomes": outcomes, "invalid_reasons": inv})

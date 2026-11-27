@@ -170,6 +170,12 @@ def test_stage_outputs_are_keyed_by_pair_id_under_permutation(tmp_path, monkeypa
     assert first["pair_ids"].tolist() == [ids[int(j)] for j in s.PERMUTATION[:50]]
     assert first["pair_index"].tolist() == s.PERMUTATION[:50].tolist()
     assert (first["order"] == 0).all()
+    ext = np.load(tmp_path / "runs" / "dry_perm" / "extract" / "b" / "batch_1.npz", allow_pickle=False)
+    assert ext["pair_index"].tolist() == s.PERMUTATION[50:100].tolist()
+    assert ext["pair_ids"].tolist() == [ids[int(j)] for j in s.PERMUTATION[50:100]]
+    pr = np.load(tmp_path / "runs" / "dry_perm" / "probes.npz", allow_pickle=False)
+    assert pr["pair_ids"].tolist() == [ids[int(j)] for j in s.PERMUTATION] * 2
+    assert pr["member"].tolist() == ["a"] * N + ["b"] * N
 
 
 def test_non_finite_extraction_stops_with_both_claims_invalid(tmp_path, monkeypatch):
@@ -234,7 +240,80 @@ def test_every_outcome_pair_selects_existing_section8_rows():
     for a in outcomes:
         for b in outcomes:
             rows = s.select_rows(a, b, stopped=False)
-            assert rows and all(r in table for r in rows)
+            assert all(r in table for r in rows)
     assert s.select_rows("holds", "holds", stopped=False) == ["Claim A holds", "Claim B holds", "Claims A and B hold"]
     assert s.select_rows("holds", "holds", stopped=True) == [s.STOP_ROW]
-    assert s.select_rows("invalid", "invalid", stopped=False) == [s.STOP_ROW]
+    assert s.select_rows("invalid", "invalid", stopped=False) == []
+    assert s.select_rows("not_estimable", "invalid", stopped=False) == []
+    assert s.select_rows("invalid", "not_estimable", stopped=False) == []
+    assert s.select_rows("holds", "invalid", stopped=False) == ["Claim A holds", "Claim B invalid (§6), claim A valid"]
+
+
+def test_capture_failure_stops_with_both_claims_invalid(tmp_path, monkeypatch):
+    def broken(m, puzzles, solutions):
+        raise RuntimeError("pass 6 not captured completely (8 tensors)")
+
+    s, _ = _setup(tmp_path, monkeypatch, extract=broken)
+    assert s.run("dry", resume=False) == "invalid"
+    res = _results(tmp_path, "dry")
+    assert res["outcomes"] == {"A": "invalid", "B": "invalid"}
+    assert any(r.startswith("extraction_check: extract/a/batch_0: pass 6") for r in res["invalid_reasons"]["shared"])
+    assert _run_json(tmp_path, "dry")["status"] == "invalid"
+    assert not (tmp_path / "runs" / "dry" / ".lock").exists()
+
+
+def test_test_generation_error_stops_with_reason(tmp_path, monkeypatch):
+    from ncm_sudoku.generate import GenerationError
+
+    s, _ = _setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(e5run, "require_lock", lambda manifest, dry_record: None)
+    monkeypatch.setattr(s, "_inputs", lambda mode, P: ({"mode": mode}, {}))
+    monkeypatch.setattr(s, "_start_checks", lambda *a: {"shared": [], "A": [], "B": []})
+    monkeypatch.setattr(s.Runner, "_corpus", lambda self: ({}, {"counts": {}}))
+    real = e5pairs.generate_pair
+
+    def gen(seed, index):
+        assert seed == 10
+        if index == 1:
+            raise GenerationError("30 clues not reached in 50 attempts")
+        return real(seed, index)
+
+    monkeypatch.setattr(e5pairs, "generate_pair", gen)
+    assert s.run("test", resume=False) == "invalid"
+    res = _results(tmp_path, "test")
+    assert res["outcomes"] == {"A": "invalid", "B": "invalid"}
+    assert res["invalid_reasons"]["shared"] == ["generation_error: 1: 30 clues not reached in 50 attempts"]
+    assert _run_json(tmp_path, "test")["status"] == "invalid"
+
+
+def _tamper_head(s, tmp_path, rel, width):
+    torch.save(_head(np.random.default_rng(99), width), s.ROOT / rel)
+
+
+@pytest.mark.parametrize("target,expect", [
+    ("z6", {"A": True, "B": False, "shared": False}),
+    ("P4", {"A": False, "B": True, "shared": False}),
+    ("P2", {"A": True, "B": True, "shared": True}),
+    ("pairs", {"A": True, "B": True, "shared": True}),
+])
+def test_start_hash_categories(tmp_path, monkeypatch, target, expect):
+    s, _ = _setup(tmp_path, monkeypatch)
+    if target == "z6":
+        _tamper_head(s, tmp_path, "runs/e5/lock/z6.pt", Z)
+    elif target in ("P2", "P4"):
+        _tamper_head(s, tmp_path, f"runs/e5/causal/heads/{target}.pt", D)
+    else:
+        pv = s.ROOT / "runs" / "e5" / "pairs" / "probe_val"
+        a = np.load(pv / "a.npy")
+        a[0, np.flatnonzero(a[0])[0]] = 0
+        np.save(pv / "a.npy", a)
+    status = s.run("dry", resume=False)
+    res = _results(tmp_path, "dry")
+    assert status == ("invalid" if expect["shared"] else "finished")
+    assert bool(res["invalid_reasons"]["shared"]) == expect["shared"]
+    assert (res["outcomes"]["A"] == "invalid") == expect["A"]
+    assert (res["outcomes"]["B"] == "invalid") == expect["B"]
+    if not expect["shared"]:
+        assert len(res["pairs"]) == N  # the run continued for the other claim
+        key = "component/z6_head" if target == "z6" else f"head/{target}"
+        assert res["invalid_reasons"][expect["A"] and "A" or "B"] == [f"hash_mismatch: {key}"]

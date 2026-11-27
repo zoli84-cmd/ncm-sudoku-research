@@ -7,11 +7,19 @@ generates plan level p + 1; pass 6 generates level 7 from the downsampled cumula
 state Z<=6, so its prefix positions are the puzzle representation the level-7 queries
 read. The hooks only copy tensors; the generated codes are unchanged
 (`tests/test_e5extract.py`).
+
+Protocol §6 finiteness (ruling R6): in every pass, read-only hooks check the input of
+blocks[0], the output of every block and the output of every code head (`net.lm_heads`
+and, if present, `net.lm_head_l0`; with temperature 0 and no CFG upstream `generate`
+takes the argmax of exactly these outputs) and raise `e5test.NonFiniteError` on a
+non-finite element, before the argmax is taken. The hooks never return a value, so no
+output is modified.
 """
 
 import numpy as np
 import torch
 
+from ncm_sudoku.e5test import NonFiniteError
 from ncm_sudoku.grid import CELL_TOKEN_INDICES
 from ncm_sudoku.model import NcmModel
 from ncm_sudoku.runner import decode_codes, puzzle_tensor, teacher_codes
@@ -28,17 +36,31 @@ def generate_capture_pass(net, x: torch.Tensor, pass_index: int = LEVEL7_PASS):
     layers: list[torch.Tensor] = []
     blocks = net.transformer.blocks
 
+    def finite(name: str, t: torch.Tensor) -> None:
+        if not bool(torch.isfinite(t).all()):
+            raise NonFiniteError(f"{name} (generation pass {count['pass']})")
+
     def pre0(_mod, args, kwargs):
         count["pass"] += 1
+        finite("blocks[0] input", args[0])
         if count["pass"] == pass_index:
             layers.append(args[0].detach().clone())
 
     def post(_mod, _args, out):
+        finite("block output", out)
         if count["pass"] == pass_index:
             layers.append(out.detach().clone())
 
+    def head(_mod, _args, out):
+        finite("code logits", out)
+
+    heads = {id(h): h for h in (net.lm_heads[i] for i in range(len(net.lm_heads)))}  # indexed: _SharedHeads
+    if getattr(net, "lm_head_l0", None) is not None:
+        heads[id(net.lm_head_l0)] = net.lm_head_l0
+    heads = list(heads.values())
     handles = [blocks[0].register_forward_pre_hook(pre0, with_kwargs=True)]
     handles += [b.register_forward_hook(post) for b in blocks]
+    handles += [h.register_forward_hook(head) for h in heads]
     try:
         codes = net.generate(None, x, temperature=0.0, top_k=0, top_p=1.0, cfg_scale=0.0)
     finally:
