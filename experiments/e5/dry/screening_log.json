@@ -1,0 +1,8 @@
+{
+  "mode": "dry",
+  "screening": {
+    "applied": false,
+    "note": "dry mode: PROBE-VAL pairs, screened at generation (D99)"
+  },
+  "log": []
+}

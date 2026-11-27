@@ -1,0 +1,122 @@
+{
+  "note": "E5 dry-run pass rule (e5_protocol_v1.md \u00a79.4); exact comparisons, no tolerance",
+  "date": "2026-11-27",
+  "passed": true,
+  "parts": {
+    "code_state": {
+      "passed": true,
+      "reasons": [],
+      "commits": {
+        "dry": "367ebce170c4afd89c3c174fa83c9b53649d0568",
+        "dry_perm": "367ebce170c4afd89c3c174fa83c9b53649d0568",
+        "check": "367ebce170c4afd89c3c174fa83c9b53649d0568"
+      }
+    },
+    "a": {
+      "passed": true,
+      "reasons": [],
+      "sha256_ids": "de5be8e0211ba8b479ab220ffc7f2af7b1c3867b1d7c03f12530a45f8aaa592d",
+      "expected": "de5be8e0211ba8b479ab220ffc7f2af7b1c3867b1d7c03f12530a45f8aaa592d"
+    },
+    "b": {
+      "passed": true,
+      "reasons": [],
+      "decision_inputs_equal": true,
+      "n_a": 250
+    },
+    "c": {
+      "passed": true,
+      "reasons": [],
+      "raw_equal": true,
+      "pair_means_equal": true,
+      "decision_inputs_equal": true
+    },
+    "d": {
+      "passed": true,
+      "reasons": []
+    },
+    "e": {
+      "passed": true,
+      "reasons": []
+    },
+    "run_records": {
+      "passed": true,
+      "reasons": []
+    }
+  },
+  "tie_rule_effect": {
+    "P2": [],
+    "z6": []
+  },
+  "prediction_max_abs_diff": {
+    "dry_vs_pilot": {
+      "P2": {
+        "max_abs_diff": 2.9103830456733704e-11,
+        "nan_pattern_equal": true
+      },
+      "z6": {
+        "max_abs_diff": 2.9802322387695312e-08,
+        "nan_pattern_equal": true
+      }
+    },
+    "dry_perm_vs_dry": {
+      "P2": {
+        "max_abs_diff": 2.2737367544323206e-13,
+        "nan_pattern_equal": true
+      },
+      "z6": {
+        "max_abs_diff": 5.960464477539063e-08,
+        "nan_pattern_equal": true
+      }
+    }
+  },
+  "ids_sha256": "de5be8e0211ba8b479ab220ffc7f2af7b1c3867b1d7c03f12530a45f8aaa592d",
+  "hashes": {
+    "runs/e5/pilot/P2__shared__none.npy": "820db2d9f9b2b422784540eec66b051efa033f89c15132823e77fefcb13dbe66",
+    "runs/e5/pilot/z6__shared__none.npy": "c8cb200cc0bdc74d7c3d58487e6aeffdfba0a557415f092ac61e69d52a12ebb2",
+    "runs/e5/causal/primary.npz": "f51c9cd76dbb8233ad818418fad3791fd10a9540b7a6eb3f619999185821c905",
+    "runs/e5/pairs/probe_val/ids.json": "b47ebdef644c082ec22276a333b9cd3b2e5e6ec49bbb1c65d9a941dd65884382",
+    "experiments/e5/pairs.json": "72f68adc716726200edf78fd307a94d287e2cc4ab67088dfdb6d2161c99fc470",
+    "experiments/e5/causal/heads.json": "b0add535f98641bddb28b09f88dc9e749c9b06b1ba3f327d190dfdb70e970b38",
+    "experiments/e5/lock/components.json": "03dcaa4f59a27f8e465412ce4c759502e1e715231b55f6eb02e8488c1dcdf670",
+    "runs/e5/pairs/probe_val/a.npy": "8d577413c6034ed223433969185716d76f4db094f18317a38358ce3e90b727ad",
+    "runs/e5/pairs/probe_val/b.npy": "38d1e029ccf3fdda30cf3b5510efb4b7100ca6833c46b8ca4547b2b7da23e167",
+    "runs/e5/acts/probe_val/a/codes.npy": "f47abcd131119eb9a7a5dd4b4a99137070965e1cbc5ea6b1396139fc1f6df8c9",
+    "runs/e5/acts/probe_val/a/solved.npy": "091a3f3501a7fb08a9b882e98fb718a0ba2dbec90cf7404ae391fdc0ea70e632",
+    "runs/e5/acts/probe_val/a/prefix_cells.npy": "7bacf5c42cd1dd02561fd2edbdaf121a38df0ada2218a47f67d7641e923d46e3",
+    "runs/e5/acts/probe_val/a/z6.npy": "96e9a4faf2e006f80f0d35ce90eb43e2cd5d33e65b0312924e5b6f52f37d3be2",
+    "runs/e5/acts/probe_val/b/codes.npy": "4f509abd5c9f11724ab5afa7c5b72b6efcf192c8a7fde75de5ad05afb257bfe1",
+    "runs/e5/acts/probe_val/b/solved.npy": "0db385ebbdd5e911a72d248208102d3c1972e41ceb04097d2d650e8cebbf670d",
+    "runs/e5/acts/probe_val/b/prefix_cells.npy": "b9f211ebfc3e5547c88ceace90ec073389d74f11cb19357e54436adf56fb321a",
+    "runs/e5/acts/probe_val/b/z6.npy": "d7e55a3c59d9f4990583d19aaa8edf89d23749e2cec1061daed3a12ff741ea23",
+    "runs/e5/causal/heads/P2.pt": "377cab2c14cca17bac0142dec96a75a75ed043e1ec609f9cca9027b4f219f412",
+    "runs/e5/causal/heads/P4.pt": "41a70c235d7726517cb3430806331d5839b2574f9c58c16358db7584532f35f2",
+    "runs/e5/causal/heads/P8.pt": "288fc7f5acedf589f1916780ae7bf1f209e0bf13484677aa601ddaf763c941c8",
+    "runs/e5/lock/z6.pt": "d06bd075ecc434801d06bc8a78aa38686488bd075faac5e3950232991cc93fc8",
+    "runs/e5/lock/W.npy": "f6be868cee7957877bb23af86bea123f20b8671471a4fd8da0bab9127c3947ae",
+    "runs/e5/lock/Q.npy": "af1fa1f9d1b311d09000e6a1587bd06f0fa87fa46f4c323260dcb2898d6d4036",
+    "runs/e5/lock/H.npy": "1830a3856ab43a360e56f3e0f6092fb08e74f8fd26a1a2f95af65a9f8bad39ba",
+    "runs/e5/lock/R.npy": "9de13c3444c7e5545a4f05921464246f0799468a5afce4253dcdc9800eff5414",
+    "runs/e5/lock/Pi.npy": "3c28a6020dedc72e1e3d1ad15ef2312ae03d43a806b97ed2ebcdc6b45e20cf24",
+    "experiments/e5/dry/results.json": "7cc50e91df1b50ad3df555df52e1dc94ec047c701492274f2397d2f418a98f07",
+    "runs/e5/dry/run.json": "895efd625757e7c031d838d11140667f338e48ad516f43de93402ca036a64e05",
+    "experiments/e5/dry_perm/results.json": "9eaeba6ddfa5e851386cea55e973a92c848c69c69f28a3582c5f14eac8b5abc4",
+    "runs/e5/dry_perm/run.json": "a8c0d014563459b533969d941045c95e7cb90438a12f34da51be4f4ee6ee368c",
+    "scripts/e5_test.py": "5807f3f9a39de8d865343e9f8f5ad9d18aa2dcc9732bb85e5a9ee3843c93e154",
+    "scripts/e5_dry_check.py": "e807316d9bb7c9f18f878b36b51bb49758bdde11ef65ca230fae4893a56ae8e8",
+    "src/ncm_sudoku/e5test.py": "e739514cd2564f812f8f7b5d424f9234a3399e37dd2dc33eccb71eeeaa7dc186",
+    "src/ncm_sudoku/e5batch.py": "984cb97acd1ea9991a9eb5f380e8e4437d86a9ba1b7fd707760e30fd93647642",
+    "src/ncm_sudoku/e5run.py": "2805eb500aba12ab89f5a3f6138719d55445d6cab3e146a2af933c5f3ac938ae",
+    "src/ncm_sudoku/e5stats.py": "af1d21e11eda28b5709dbc4318703e41a205fdc3439a95df5000c2a50cf65b70",
+    "src/ncm_sudoku/e5causal.py": "97d593f922f0710eb812a64584a2d9e2743a311b4397f28d565070e71ef57966",
+    "src/ncm_sudoku/e5extract.py": "a676934f1e3064410b9c2aa7c362086e5e9f6edbe08ca923bd2b4a1e99d63ce5",
+    "src/ncm_sudoku/probes.py": "6f530642459256c6b5cef47e43ae0d7c93d1afafe4a65d86f66499017ed50898",
+    "src/ncm_sudoku/e5pilot.py": "c3c74fa066f85feea6e4b0c54eb9a1acee74b08a7899b3bac97e789b49a5ae58"
+  },
+  "hash_problems": [],
+  "code_state": {
+    "commit": "367ebce170c4afd89c3c174fa83c9b53649d0568",
+    "dirty": false,
+    "diff_sha256": null
+  }
+}
