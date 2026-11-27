@@ -32,8 +32,10 @@ disk from earlier steps and are hashed as-is.
 Without --verify: writes `experiments/e5/lock/manifest.json`; refuses to overwrite unless --force,
 and refuses to build at all unless the approved code is unchanged since the dry check
 (`approved_code_problem`): `git diff --quiet <check.json code_state.commit> HEAD -- src
-scripts/e5_test.py scripts/e5_dry_check.py pyproject.toml uv.lock e5_protocol_v1.md` must exit 0,
-so the manifest never pins code the dry-run approval did not run.
+":(exclude,glob)src/**/*.md" scripts/e5_test.py scripts/e5_dry_check.py pyproject.toml uv.lock
+e5_protocol_v1.md` must exit 0, so the manifest never pins code the dry-run approval did not run;
+the exclude pathspec lets a doc-only edit under `src/` (e.g. `src/ncm_sudoku/AGENTS.md`) through
+without weakening the gate on `.py` changes.
 With --verify: recomputes every entry through `ncm_sudoku.e5run.verify_manifest` and exits 0, or
 prints the first mismatch (naming the entry) and exits 1.
 
@@ -59,8 +61,10 @@ IN_REPO = "committed in this repository"
 # Screening-corpus subsets not yet saved anywhere else; materialized by this script.
 MATERIALIZE = {"gate": 1000, "cal": 300}
 # Paths the dry-run approval must have run unchanged (compared between its commit and HEAD).
-APPROVED_CODE_PATHS = ("src", "scripts/e5_test.py", "scripts/e5_dry_check.py", "pyproject.toml", "uv.lock",
-                       "e5_protocol_v1.md")
+# `src` excludes its own markdown docs (e.g. `src/ncm_sudoku/AGENTS.md`): a doc-only edit there
+# carries no integrity risk and must not block the manifest.
+APPROVED_CODE_PATHS = ("src", ":(exclude,glob)src/**/*.md", "scripts/e5_test.py", "scripts/e5_dry_check.py",
+                       "pyproject.toml", "uv.lock", "e5_protocol_v1.md")
 EXISTING_COUNTS = {"probe_train": 2000, "probe_val": 500, "test": 600}
 
 

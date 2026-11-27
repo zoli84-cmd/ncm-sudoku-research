@@ -298,10 +298,10 @@ def test_test_generation_error_stops_with_reason(tmp_path, monkeypatch):
     real = e5pairs.generate_pair
 
     def gen(seed, index):
-        assert seed == 10
+        assert seed == e5pairs.PAIR_SEEDS["pairs_test"] == 10
         if index == 1:
             raise GenerationError("30 clues not reached in 50 attempts")
-        return real(seed, index)
+        return real(seed + OFFSET, index)
 
     monkeypatch.setattr(e5pairs, "generate_pair", gen)
     assert s.run("test", resume=False) == "invalid"

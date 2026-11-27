@@ -314,6 +314,18 @@ def test_approved_code_changed_since_the_dry_check_refuses(tmp_path, rel):
     assert problem and commit in problem and "changed" in problem
 
 
+def test_approved_code_doc_only_change_under_src_passes(tmp_path):
+    """A markdown-only edit under `src/` (e.g. `src/ncm_sudoku/AGENTS.md`) carries no integrity risk
+    and must not block the manifest, while a `.py` change under `src/` still does."""
+    m = _mod()
+    _approved_repo(tmp_path)
+    (tmp_path / "src" / "ncm_sudoku" / "AGENTS.md").parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "src" / "ncm_sudoku" / "AGENTS.md").write_text("# doc change\n", encoding="utf-8")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "doc-only change under src")
+    assert m.approved_code_problem(tmp_path) is None
+
+
 def test_approved_code_record_without_commit_or_unknown_commit_refuses(tmp_path):
     m = _mod()
     _approved_repo(tmp_path)
