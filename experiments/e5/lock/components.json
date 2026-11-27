@@ -1,0 +1,148 @@
+{
+  "note": "E5 pre-lock components (protocol \u00a79.1-9.2); PROBE data only, no TEST data",
+  "date": "2026-11-27",
+  "threads": 4,
+  "z6_head": {
+    "config": [
+      0.1,
+      0.001
+    ],
+    "reproduction": {
+      "shape_equal": true,
+      "nan_pattern_equal": true,
+      "finite": true,
+      "n_unequal": 0,
+      "max_abs_diff": 0.0,
+      "passed": true
+    }
+  },
+  "verified_heads": {
+    "P2": {
+      "file": "runs/e5/causal/heads/P2.pt",
+      "sha256": "377cab2c14cca17bac0142dec96a75a75ed043e1ec609f9cca9027b4f219f412"
+    },
+    "P4": {
+      "file": "runs/e5/causal/heads/P4.pt",
+      "sha256": "41a70c235d7726517cb3430806331d5839b2574f9c58c16358db7584532f35f2"
+    },
+    "P8": {
+      "file": "runs/e5/causal/heads/P8.pt",
+      "sha256": "288fc7f5acedf589f1916780ae7bf1f209e0bf13484677aa601ddaf763c941c8"
+    }
+  },
+  "files": {
+    "z6_head": {
+      "file": "runs/e5/lock/z6.pt",
+      "sha256": "d06bd075ecc434801d06bc8a78aa38686488bd075faac5e3950232991cc93fc8",
+      "format": "torch.save list of 3 seed state dicts",
+      "reload_equal": true
+    },
+    "W": {
+      "file": "runs/e5/lock/W.npy",
+      "sha256": "f6be868cee7957877bb23af86bea123f20b8671471a4fd8da0bab9127c3947ae",
+      "shape": [
+        9,
+        512
+      ],
+      "dtype": "float64",
+      "reload_equal": true
+    },
+    "Q": {
+      "file": "runs/e5/lock/Q.npy",
+      "sha256": "af1fa1f9d1b311d09000e6a1587bd06f0fa87fa46f4c323260dcb2898d6d4036",
+      "shape": [
+        512,
+        9
+      ],
+      "dtype": "float64",
+      "reload_equal": true
+    },
+    "H": {
+      "file": "runs/e5/lock/H.npy",
+      "sha256": "1830a3856ab43a360e56f3e0f6092fb08e74f8fd26a1a2f95af65a9f8bad39ba",
+      "shape": [
+        512,
+        9
+      ],
+      "dtype": "float64",
+      "reload_equal": true
+    },
+    "R": {
+      "file": "runs/e5/lock/R.npy",
+      "sha256": "9de13c3444c7e5545a4f05921464246f0799468a5afce4253dcdc9800eff5414",
+      "shape": [
+        20,
+        512,
+        9
+      ],
+      "dtype": "float64",
+      "reload_equal": true
+    },
+    "Pi": {
+      "file": "runs/e5/lock/Pi.npy",
+      "sha256": "3c28a6020dedc72e1e3d1ad15ef2312ae03d43a806b97ed2ebcdc6b45e20cf24",
+      "shape": [
+        9
+      ],
+      "dtype": "int64",
+      "reload_equal": true
+    }
+  },
+  "byte_deterministic_save": true,
+  "checks": {
+    "Q_orthonormal_max_abs": 1.1102230246251565e-15,
+    "H_orthonormal_max_abs": 1.4432899320127035e-15,
+    "QtH_max_abs": 1.1497199602166207e-16,
+    "R_orthonormal_max_abs": 1.1102230246251565e-15,
+    "P2_state_row_singular_values": [
+      5.643866215560355,
+      5.586320613869106,
+      5.5270072687925165,
+      5.382472146405041,
+      5.337738017597633,
+      5.293310180579443,
+      5.2117405376538475,
+      5.120505884760251,
+      4.779225721584316
+    ],
+    "n_probe_train_both_empty_rows": 32068
+  },
+  "seconds": 33.3,
+  "environment": {
+    "python": "3.12.12",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "torch_threads": 4,
+    "deterministic": true,
+    "precision": "fp32, eager, cpu",
+    "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203",
+    "checkpoints": {
+      "checkpoints_license": "MIT",
+      "code_license": "MIT",
+      "files": {
+        "sudoku/hard/config.yaml": {
+          "bytes": 1980,
+          "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f"
+        },
+        "sudoku/hard/generator.pt": {
+          "bytes": 102560203,
+          "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8"
+        },
+        "sudoku/hard/tokenizer.pt": {
+          "bytes": 59816209,
+          "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b"
+        }
+      },
+      "repo_id": "hazyresearch/ncm-checkpoints",
+      "revision": "d342ce8aaea58830eef3b8ad473664673e41f692",
+      "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
+    }
+  },
+  "code_state": {
+    "commit": "9b501d961a03529f1a5fff2511e310e106f7ef4f",
+    "dirty": false,
+    "diff_sha256": null
+  }
+}
