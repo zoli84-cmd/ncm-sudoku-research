@@ -125,6 +125,25 @@ def test_resume_refuses_changed_inputs(tmp_path, monkeypatch):
         e5run.start_run("dry", {"head": "h2"}, resume=True)
 
 
+def test_resume_refuses_reordered_ids_via_sha256_ids(tmp_path, monkeypatch):
+    """Order is only tracked because the caller puts an order-sensitive hash (here
+    `subsets.sha256_ids` of the ordered pair-id list) among `inputs`; a reordering changes that
+    hash, so it is refused by the same "inputs differ" check as any other changed input."""
+    _run_dir(tmp_path, monkeypatch)
+    ids = ["e5pair-v1-10-0", "e5pair-v1-10-1", "e5pair-v1-10-2"]
+    e5run.start_run("dry", {"pairs": subsets.sha256_ids(ids)}, resume=False)
+    (e5run.RUN_DIR["dry"] / ".lock").unlink()
+
+    reordered = [ids[1], ids[0], ids[2]]
+    assert subsets.sha256_ids(reordered) != subsets.sha256_ids(ids)
+    with pytest.raises(e5run.RunStateError, match="inputs"):
+        e5run.start_run("dry", {"pairs": subsets.sha256_ids(reordered)}, resume=True)
+
+    # the unchanged order resumes cleanly
+    rec = e5run.start_run("dry", {"pairs": subsets.sha256_ids(ids)}, resume=True)
+    assert rec["status"] == "running"
+
+
 def test_resume_refuses_changed_threads(tmp_path, monkeypatch):
     _run_dir(tmp_path, monkeypatch)
     e5run.start_run("dry", {"head": "h1"}, resume=False)
@@ -179,12 +198,20 @@ def test_resume_succeeds_with_unchanged_inputs_and_outputs(tmp_path, monkeypatch
 def test_single_writer_lock(tmp_path, monkeypatch):
     _run_dir(tmp_path, monkeypatch)
     e5run.start_run("dry", {"head": "h1"}, resume=False)
-    assert (e5run.RUN_DIR["dry"] / ".lock").is_file()
+    lock_path = e5run.RUN_DIR["dry"] / ".lock"
+    assert lock_path.is_file()
+    lock_info = json.loads(lock_path.read_text(encoding="utf-8"))
+    assert set(lock_info) == {"pid", "host", "started"}
 
-    with pytest.raises(e5run.RunStateError, match="lock"):
+    with pytest.raises(e5run.RunStateError, match="lock") as exc1:
         e5run.start_run("dry", {"head": "h1"}, resume=True)
-    with pytest.raises(e5run.RunStateError, match="lock"):
+    with pytest.raises(e5run.RunStateError, match="lock") as exc2:
         e5run.start_run("dry", {"head": "h1"}, resume=False)
+    # the refusal reports the lock holder's diagnostics and the manual-recovery rule
+    for exc in (exc1, exc2):
+        msg = str(exc.value)
+        assert str(lock_info["pid"]) in msg and lock_info["host"] in msg
+        assert "confirming" in msg and "no longer running" in msg
 
 
 def test_fresh_start_refuses_existing_record_without_resume(tmp_path, monkeypatch):
@@ -308,7 +335,13 @@ def test_verify_manifest_rejects_missing_entry(tmp_path, monkeypatch):
         e5run.verify_manifest(p)
 
 
-@pytest.mark.parametrize("bad_path", ["/etc/passwd", "../outside.bin"])
+@pytest.mark.parametrize("bad_path", [
+    "/etc/passwd",
+    "../outside.bin",
+    "C:\\Windows\\System32\\config\\SAM",   # drive letter, Windows-absolute
+    "..\\..\\outside.bin",                  # backslash traversal, not flagged by PurePosixPath
+    "\\\\host\\share\\file.bin",            # UNC path
+])
 def test_verify_manifest_rejects_unsafe_paths(tmp_path, monkeypatch, bad_path):
     monkeypatch.setattr(e5run, "ROOT", tmp_path)
     manifest = {"entries": [{"name": "bad", "path": bad_path, "format": "file", "sha256": "0" * 64}]}

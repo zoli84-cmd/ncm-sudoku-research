@@ -25,9 +25,10 @@ its recorded value, and the approved dry-run record's own hashes equal and `pass
 
 import json
 import os
+import socket
 import subprocess
 from datetime import datetime, timezone
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import numpy as np
 import torch
@@ -36,7 +37,6 @@ from ncm_sudoku import subsets, wp2
 from ncm_sudoku.model import ROOT
 
 LOCK_TAG = "e5-prereg-v1"
-REQUIRED_THREADS = 4
 
 RUN_DIR = {
     "dry": ROOT / "runs" / "e5" / "dry",
@@ -97,13 +97,28 @@ def input_hashes(paths: dict[str, Path]) -> dict[str, str]:
     return {name: wp2.file_sha256(Path(p)) for name, p in paths.items()}
 
 
+def _lock_info() -> dict:
+    return {"pid": os.getpid(), "host": socket.gethostname(), "started": _now()}
+
+
 def start_run(mode: str, inputs: dict[str, str], resume: bool) -> dict:
     """Begins or resumes a run; never reruns a finished or invalid run (single look).
 
     Fresh start (`resume=False`): refuses if a `run.json` already exists (any status; use
     `resume=True` to continue a `"running"` one). Creates `RUN_DIR[mode]/run.json` with
     `status="running"`, the given `inputs`, the current `torch.get_num_threads()`, the start time
-    and empty `stages`, and the single-writer lock file `RUN_DIR[mode]/.lock` (exclusive create).
+    and empty `stages`, and the single-writer lock file `RUN_DIR[mode]/.lock` (exclusive create,
+    holding the writer's PID, host name and UTC start time as diagnostics; the required thread
+    count, if any, is enforced by the caller, e.g. the runner script's `torch.set_num_threads(4)`
+    before calling this).
+
+    `inputs` is an opaque dict of name -> hash (typically from `input_hashes`, plus any other
+    hash the caller wants checked): identical `inputs` on resume is the *only* thing that checks
+    an input or its processing order did not change. In particular, order is not tracked
+    separately - a caller whose stages depend on an ordered sequence (e.g. the TEST pair ids) must
+    put an order-sensitive hash of that sequence among `inputs`, such as `subsets.sha256_ids` of
+    the ordered id list, so that a reordering (a different hash) is refused on resume exactly like
+    any other changed input.
 
     Resume (`resume=True`): requires a stored record with `status="running"` and `inputs` and
     `threads` identical to the ones given here (a changed checkpoint hash, pair-set hash, thread
@@ -113,7 +128,10 @@ def start_run(mode: str, inputs: dict[str, str], resume: bool) -> dict:
     record unchanged.
 
     Either way, a lock file created by this call is removed again if any later check in this same
-    call fails, so a refused resume can be retried once the problem is fixed."""
+    call fails, so a refused resume can be retried once the problem is fixed. A pre-existing lock
+    file is never broken automatically: its content (pid, host, start time) is reported in the
+    refusal so a human can confirm that process is no longer running before removing the file by
+    hand; only after that manual removal do the usual resume rules apply again."""
     run_path = _run_json(mode)
     lock_path = _lock_file(mode)
     threads = torch.get_num_threads()
@@ -126,9 +144,21 @@ def start_run(mode: str, inputs: dict[str, str], resume: bool) -> dict:
 
     run_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        os.close(os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        try:
+            os.write(fd, json.dumps(_lock_info()).encode("utf-8"))
+        finally:
+            os.close(fd)
     except FileExistsError:
-        raise RunStateError(f"{mode}: lock file {lock_path} exists; refusing a second writer") from None
+        try:
+            held_by = lock_path.read_text(encoding="utf-8")
+        except OSError as e:
+            held_by = f"<unreadable: {e}>"
+        raise RunStateError(
+            f"{mode}: lock file {lock_path} exists (held by {held_by}); refusing a second writer. "
+            "This lock is never broken automatically: remove the file by hand only after confirming "
+            "that the process named in it is no longer running, then retry (the usual --resume "
+            "rules apply once the lock is gone).") from None
 
     try:
         if resume:
@@ -222,12 +252,23 @@ def lock_state(root: Path | None = None) -> dict:
 
 
 def _checked_root_relative_path(rel: object, what: str) -> Path:
+    """Resolves `rel` as a ROOT-relative POSIX path, refusing anything that could point outside
+    ROOT: a non-string; a backslash or a colon (a Windows-style absolute or drive-letter path, or a
+    UNC path, none of which `PurePosixPath` flags as absolute or containing `..`); a POSIX-absolute
+    path or a `..` segment; and, as defence in depth, a path that resolves outside `ROOT` (e.g.
+    through a symlink) even after the checks above."""
     if not isinstance(rel, str):
         raise DataIntegrityError(f"{what}: path is missing or not a string")
+    if "\\" in rel or ":" in rel:
+        raise DataIntegrityError(f"{what}: {rel} is not a ROOT-relative POSIX path")
     rp = PurePosixPath(rel)
-    if rp.is_absolute() or ".." in rp.parts:
+    if rp.is_absolute() or PureWindowsPath(rel).is_absolute() or ".." in rp.parts:
         raise DataIntegrityError(f"{what}: {rel} is not a ROOT-relative path")
-    return ROOT / rp
+    root_resolved = ROOT.resolve()
+    p = (ROOT / rp).resolve()
+    if not p.is_relative_to(root_resolved):
+        raise DataIntegrityError(f"{what}: {rel} escapes ROOT")
+    return p
 
 
 def _manifest_hash(entry: dict) -> str:
