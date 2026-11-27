@@ -5930,11 +5930,11 @@
     "component/H": "1830a3856ab43a360e56f3e0f6092fb08e74f8fd26a1a2f95af65a9f8bad39ba",
     "component/R": "9de13c3444c7e5545a4f05921464246f0799468a5afce4253dcdc9800eff5414",
     "component/Pi": "3c28a6020dedc72e1e3d1ad15ef2312ae03d43a806b97ed2ebcdc6b45e20cf24",
-    "code/scripts/e5_test.py": "5807f3f9a39de8d865343e9f8f5ad9d18aa2dcc9732bb85e5a9ee3843c93e154",
+    "code/scripts/e5_test.py": "1623663180e02c25343c52250ec1476522d39a4d6fbb97406228c6c9091d2d00",
     "code/e5_protocol_v1.md": "3913cac467e175a8d87a49bc1d1ac95648466abcd05c5413d7d173b0df30bf61",
     "code/src/ncm_sudoku/e5test.py": "e739514cd2564f812f8f7b5d424f9234a3399e37dd2dc33eccb71eeeaa7dc186",
     "code/src/ncm_sudoku/e5batch.py": "984cb97acd1ea9991a9eb5f380e8e4437d86a9ba1b7fd707760e30fd93647642",
-    "code/src/ncm_sudoku/e5run.py": "2805eb500aba12ab89f5a3f6138719d55445d6cab3e146a2af933c5f3ac938ae",
+    "code/src/ncm_sudoku/e5run.py": "630c207792178918d3506a88402a5a38189aa792306f09d21918ba8177c15f91",
     "code/src/ncm_sudoku/e5stats.py": "af1d21e11eda28b5709dbc4318703e41a205fdc3439a95df5000c2a50cf65b70",
     "code/src/ncm_sudoku/e5causal.py": "97d593f922f0710eb812a64584a2d9e2743a311b4397f28d565070e71ef57966",
     "code/src/ncm_sudoku/e5extract.py": "a676934f1e3064410b9c2aa7c362086e5e9f6edbe08ca923bd2b4a1e99d63ce5",
@@ -5963,7 +5963,7 @@
   "threads": 4,
   "batch": 50,
   "code_state": {
-    "commit": "367ebce170c4afd89c3c174fa83c9b53649d0568",
+    "commit": "042d788db20e52592fe20a65ee2ae2f78c810c94",
     "dirty": false,
     "diff_sha256": null
   },
@@ -5999,5 +5999,5 @@
       "upstream_commit": "c70274273f489abc73832b2b98584a8483b6b203"
     }
   },
-  "seconds": 2389.4
+  "seconds": 2208.4
 }
