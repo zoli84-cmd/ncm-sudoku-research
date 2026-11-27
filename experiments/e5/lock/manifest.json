@@ -1,0 +1,594 @@
+{
+  "note": "E5 preregistration hash manifest (e5_protocol_v1.md \u00a710)",
+  "date": "2026-11-27",
+  "entries": [
+    {
+      "name": "protocol",
+      "path": "e5_protocol_v1.md",
+      "format": "file",
+      "sha256": "3913cac467e175a8d87a49bc1d1ac95648466abcd05c5413d7d173b0df30bf61",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "uv.lock",
+      "path": "uv.lock",
+      "format": "file",
+      "sha256": "8db585681057f2eacf8ae015807da634943735d8a50b39cbe5495e3f2a1aeaa0",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_run_record",
+      "path": "experiments/e5/dry/check.json",
+      "format": "file",
+      "sha256": "ed2675107ac28d64621179be34c7f2b8d8e6542026a5e6abb106ccc614c9facb",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_run_record_sha256",
+      "path": "experiments/e5/dry/check.sha256",
+      "format": "file",
+      "sha256": "033b08701624e38ebf008b950bb8a9434de93ce41642184243dee17a2b271b00",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "checkpoint:sudoku/hard/config.yaml",
+      "path": "checkpoints/sudoku/hard/config.yaml",
+      "format": "file",
+      "sha256": "8d58c49e6fe52e60191e06df4061937d5bb84f97c5ffbcd93ed9830c32f8df2f",
+      "retrieval": "Hugging Face hazyresearch/ncm-checkpoints revision d342ce8aaea58830eef3b8ad473664673e41f692; scripts/fetch_checkpoints.py"
+    },
+    {
+      "name": "checkpoint:sudoku/hard/generator.pt",
+      "path": "checkpoints/sudoku/hard/generator.pt",
+      "format": "file",
+      "sha256": "9e0bfe44abc1ca3930b7a63cd56cd0b9564b95e29edfe12dd0903207b89df8b8",
+      "retrieval": "Hugging Face hazyresearch/ncm-checkpoints revision d342ce8aaea58830eef3b8ad473664673e41f692; scripts/fetch_checkpoints.py"
+    },
+    {
+      "name": "checkpoint:sudoku/hard/tokenizer.pt",
+      "path": "checkpoints/sudoku/hard/tokenizer.pt",
+      "format": "file",
+      "sha256": "3bc6aecad8e15820f9d9bb09750e3c59bdf91ca953f1f11dbd109aaed1d80c0b",
+      "retrieval": "Hugging Face hazyresearch/ncm-checkpoints revision d342ce8aaea58830eef3b8ad473664673e41f692; scripts/fetch_checkpoints.py"
+    },
+    {
+      "name": "screening_gate_ids",
+      "path": "runs/e5/lock/screening/gate/ids.json",
+      "format": "sha256_ids",
+      "sha256": "19e011183c99ee3f57320dd075886fdcd52d4dfc7e759565658e86ebf19af046",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('gate', 1000) (seed namespace 1); scripts/e5_manifest.py (this script)"
+    },
+    {
+      "name": "screening_gate_solutions",
+      "path": "runs/e5/lock/screening/gate/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "60ae67b7b7979604e4e32647214f1f50d225494fe0b22e62a4454946328d8133",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('gate', 1000) (seed namespace 1); scripts/e5_manifest.py (this script)"
+    },
+    {
+      "name": "screening_cal_ids",
+      "path": "runs/e5/lock/screening/cal/ids.json",
+      "format": "sha256_ids",
+      "sha256": "746d4b387435bdc13bcd6417b9b2c7e90af2de415b6de440177a5689be1354f6",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('cal', 300) (seed namespace 2); scripts/e5_manifest.py (this script)"
+    },
+    {
+      "name": "screening_cal_solutions",
+      "path": "runs/e5/lock/screening/cal/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "a5cd82ba558c3dc41fa4d6517c8ffe741ecdaf93fbe4138baf8d2453f49bc8f1",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('cal', 300) (seed namespace 2); scripts/e5_manifest.py (this script)"
+    },
+    {
+      "name": "screening_probe_train_ids",
+      "path": "runs/e3prep/probe_train/ids.json",
+      "format": "sha256_ids",
+      "sha256": "054e17e6817c730aaf3402dcc1f5b5b41e6f617fc6c01e794b12a84594835991",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('probe_train', 2000) (seed namespace 3); scripts/e3_extract.py"
+    },
+    {
+      "name": "screening_probe_train_solutions",
+      "path": "runs/e3prep/probe_train/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "fd21176686919ef0f6a8cd3c07e982ccb2d7a4415ed08c3721c4bc532817291c",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('probe_train', 2000) (seed namespace 3); scripts/e3_extract.py"
+    },
+    {
+      "name": "screening_probe_val_ids",
+      "path": "runs/e3prep/probe_val/ids.json",
+      "format": "sha256_ids",
+      "sha256": "5e79e92485bf54dde21a4418313143da453783b3a1b9bc912ff1acdf9d993548",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('probe_val', 500) (seed namespace 4); scripts/e3_extract.py"
+    },
+    {
+      "name": "screening_probe_val_solutions",
+      "path": "runs/e3prep/probe_val/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "e2ce65410f7e75e81c6b77e4dd743d4dd17ef78427cd124977e92766a38284f1",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('probe_val', 500) (seed namespace 4); scripts/e3_extract.py"
+    },
+    {
+      "name": "screening_test_ids",
+      "path": "runs/lock/test/ids.json",
+      "format": "sha256_ids",
+      "sha256": "6e019563448e73408cd24a7ae207f5fd2549f0c881e70a37348d06f21ad6f09e",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('test', 600) (seed namespace 6); scripts/lock_test_set.py"
+    },
+    {
+      "name": "screening_test_solutions",
+      "path": "runs/lock/test/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "08b333165f081f8c74d6d558372dc02cbb8d4dc35aac40b5da0ac699031fe471",
+      "retrieval": "ncm_sudoku.subsets.generate_subset('test', 600) (seed namespace 6); scripts/lock_test_set.py"
+    },
+    {
+      "name": "released:sudoku/hard/puzzles.pickle",
+      "path": "data/released/sudoku/hard/puzzles.pickle",
+      "format": "file",
+      "sha256": "dd7b6763e5594094a1366ac8423f87fc9431056721c61df52ce3490023f17d5e",
+      "retrieval": "Hugging Face hazyresearch/ncm-datasets (dataset) revision 6580ba41a4b0a976dde876fbe84d25327617b0e6; scripts/fetch_released_data.py"
+    },
+    {
+      "name": "released:sudoku/hard/solutions.pickle",
+      "path": "data/released/sudoku/hard/solutions.pickle",
+      "format": "file",
+      "sha256": "b52de75f5e4642adca58b18967bcd4bbcafa699c61b21ac33ee0fd7389e0d576",
+      "retrieval": "Hugging Face hazyresearch/ncm-datasets (dataset) revision 6580ba41a4b0a976dde876fbe84d25327617b0e6; scripts/fetch_released_data.py"
+    },
+    {
+      "name": "e5_pairs_probe_train_ids",
+      "path": "runs/e5/pairs/probe_train/ids.json",
+      "format": "sha256_ids",
+      "sha256": "9501010ff26c0516bfd7d7a02d002a13e6cdb0b28a1350776e4595f7af367d14",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 8); scripts/e5_pairs.py (runs/e5/pairs/probe_train/)"
+    },
+    {
+      "name": "e5_pairs_probe_train_a",
+      "path": "runs/e5/pairs/probe_train/a.npy",
+      "format": "sha256_array",
+      "sha256": "72e5c13e31177d3529fd38e2d157de129e59e149aa62acde19b3c7474381d8f0",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 8); scripts/e5_pairs.py (runs/e5/pairs/probe_train/)"
+    },
+    {
+      "name": "e5_pairs_probe_train_b",
+      "path": "runs/e5/pairs/probe_train/b.npy",
+      "format": "sha256_array",
+      "sha256": "40fe58e7b5623965eecb96798f01e8af122caa23545898a31ffb1a728623bc24",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 8); scripts/e5_pairs.py (runs/e5/pairs/probe_train/)"
+    },
+    {
+      "name": "e5_pairs_probe_train_solutions",
+      "path": "runs/e5/pairs/probe_train/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "8d621d6f12ee4b14a377d2ae3fdd9a54835f13cd923916360cbbca5291ca6dd9",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 8); scripts/e5_pairs.py (runs/e5/pairs/probe_train/)"
+    },
+    {
+      "name": "e5_pairs_probe_val_ids",
+      "path": "runs/e5/pairs/probe_val/ids.json",
+      "format": "sha256_ids",
+      "sha256": "de5be8e0211ba8b479ab220ffc7f2af7b1c3867b1d7c03f12530a45f8aaa592d",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 9); scripts/e5_pairs.py (runs/e5/pairs/probe_val/)"
+    },
+    {
+      "name": "e5_pairs_probe_val_a",
+      "path": "runs/e5/pairs/probe_val/a.npy",
+      "format": "sha256_array",
+      "sha256": "a312b1ce670ba2d98b6e45a889a2f3df711c3b7b1746fd6f85550cf9d726bcb8",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 9); scripts/e5_pairs.py (runs/e5/pairs/probe_val/)"
+    },
+    {
+      "name": "e5_pairs_probe_val_b",
+      "path": "runs/e5/pairs/probe_val/b.npy",
+      "format": "sha256_array",
+      "sha256": "dd47f3375eadfb8f26fb61c0e407e5e208420846a33ce0f50904624f6205ecbe",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 9); scripts/e5_pairs.py (runs/e5/pairs/probe_val/)"
+    },
+    {
+      "name": "e5_pairs_probe_val_solutions",
+      "path": "runs/e5/pairs/probe_val/solutions.npy",
+      "format": "sha256_array",
+      "sha256": "960fac99b668d6cdf85917772ec5c9a42cadd818d2269cac8d443c20774037a1",
+      "retrieval": "ncm_sudoku.e5pairs (seed namespace 9); scripts/e5_pairs.py (runs/e5/pairs/probe_val/)"
+    },
+    {
+      "name": "component:z6_head",
+      "path": "runs/e5/lock/z6.pt",
+      "format": "file",
+      "sha256": "d06bd075ecc434801d06bc8a78aa38686488bd075faac5e3950232991cc93fc8",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "component:W",
+      "path": "runs/e5/lock/W.npy",
+      "format": "file",
+      "sha256": "f6be868cee7957877bb23af86bea123f20b8671471a4fd8da0bab9127c3947ae",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "component:Q",
+      "path": "runs/e5/lock/Q.npy",
+      "format": "file",
+      "sha256": "af1fa1f9d1b311d09000e6a1587bd06f0fa87fa46f4c323260dcb2898d6d4036",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "component:H",
+      "path": "runs/e5/lock/H.npy",
+      "format": "file",
+      "sha256": "1830a3856ab43a360e56f3e0f6092fb08e74f8fd26a1a2f95af65a9f8bad39ba",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "component:R",
+      "path": "runs/e5/lock/R.npy",
+      "format": "file",
+      "sha256": "9de13c3444c7e5545a4f05921464246f0799468a5afce4253dcdc9800eff5414",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "component:Pi",
+      "path": "runs/e5/lock/Pi.npy",
+      "format": "file",
+      "sha256": "3c28a6020dedc72e1e3d1ad15ef2312ae03d43a806b97ed2ebcdc6b45e20cf24",
+      "retrieval": "scripts/e5_lock_components.py"
+    },
+    {
+      "name": "head:P2",
+      "path": "runs/e5/causal/heads/P2.pt",
+      "format": "file",
+      "sha256": "377cab2c14cca17bac0142dec96a75a75ed043e1ec609f9cca9027b4f219f412",
+      "retrieval": "scripts/e5_causal_heads.py"
+    },
+    {
+      "name": "head:P4",
+      "path": "runs/e5/causal/heads/P4.pt",
+      "format": "file",
+      "sha256": "41a70c235d7726517cb3430806331d5839b2574f9c58c16358db7584532f35f2",
+      "retrieval": "scripts/e5_causal_heads.py"
+    },
+    {
+      "name": "head:P8",
+      "path": "runs/e5/causal/heads/P8.pt",
+      "format": "file",
+      "sha256": "288fc7f5acedf589f1916780ae7bf1f209e0bf13484677aa601ddaf763c941c8",
+      "retrieval": "scripts/e5_causal_heads.py"
+    },
+    {
+      "name": "secondary:e5_pilot.py",
+      "path": "scripts/e5_pilot.py",
+      "format": "file",
+      "sha256": "029ddff3b605ef8e4374edc8ce9f673003628fb3cf321f9e0b83ab3c72c282bd",
+      "retrieval": "refit deterministically on PROBE data by this script at the locked commit"
+    },
+    {
+      "name": "secondary:e5_pilot_ref.py",
+      "path": "scripts/e5_pilot_ref.py",
+      "format": "file",
+      "sha256": "a2dba348e5d273116575b09dbc09082f5d0a28bc044cd006c30b8ec85309d4cc",
+      "retrieval": "refit deterministically on PROBE data by this script at the locked commit"
+    },
+    {
+      "name": "test_runner",
+      "path": "scripts/e5_test.py",
+      "format": "file",
+      "sha256": "5807f3f9a39de8d865343e9f8f5ad9d18aa2dcc9732bb85e5a9ee3843c93e154",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:__init__.py",
+      "path": "src/ncm_sudoku/__init__.py",
+      "format": "file",
+      "sha256": "9529b54ac7d23cb6506f8332dc23e41e4781315448691d61bc7cbddf1766209a",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:damage.py",
+      "path": "src/ncm_sudoku/damage.py",
+      "format": "file",
+      "sha256": "c7a9fce30b3384067652e562426bfa76a2743c377f80636ec39c05722112ba8a",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:dlx.py",
+      "path": "src/ncm_sudoku/dlx.py",
+      "format": "file",
+      "sha256": "79f54b87eb7e64e5f6e900420cfb0a3fa60dadedd0a36749699f62e887b15429",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e1.py",
+      "path": "src/ncm_sudoku/e1.py",
+      "format": "file",
+      "sha256": "32f64e8f79d34dba21098dcae9a6e3d503181fe537162bbf23b2b25bdd85496e",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e2.py",
+      "path": "src/ncm_sudoku/e2.py",
+      "format": "file",
+      "sha256": "6915cda910073c26f3f35d295abfc2652dfbde493f0ce4cc4567dc3af0ba3f56",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e2p2.py",
+      "path": "src/ncm_sudoku/e2p2.py",
+      "format": "file",
+      "sha256": "7ef9ddda85f57d1aa54da8cb2a45056acab0d1519627e3eb50e1914d5e001054",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e3controls.py",
+      "path": "src/ncm_sudoku/e3controls.py",
+      "format": "file",
+      "sha256": "ab1873a86e673f340af8fa9eba98845baa0ad9c8007530526abdbe5588148171",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e3data.py",
+      "path": "src/ncm_sudoku/e3data.py",
+      "format": "file",
+      "sha256": "6b41596a03ba04220be6fb9ffd163574430ca4d0d27805c8d030d82d6ef4bb96",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e3equiv.py",
+      "path": "src/ncm_sudoku/e3equiv.py",
+      "format": "file",
+      "sha256": "7c0497bc8546169cd1f5794c94e3cc6abdcfea3b873c240decc11b4e165441ed",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e3metrics.py",
+      "path": "src/ncm_sudoku/e3metrics.py",
+      "format": "file",
+      "sha256": "943170be22b6b86099b10ffaa795c11e85167be4a8c383d40235e54f1b466fab",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5batch.py",
+      "path": "src/ncm_sudoku/e5batch.py",
+      "format": "file",
+      "sha256": "984cb97acd1ea9991a9eb5f380e8e4437d86a9ba1b7fd707760e30fd93647642",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5causal.py",
+      "path": "src/ncm_sudoku/e5causal.py",
+      "format": "file",
+      "sha256": "97d593f922f0710eb812a64584a2d9e2743a311b4397f28d565070e71ef57966",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5extract.py",
+      "path": "src/ncm_sudoku/e5extract.py",
+      "format": "file",
+      "sha256": "a676934f1e3064410b9c2aa7c362086e5e9f6edbe08ca923bd2b4a1e99d63ce5",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5pairs.py",
+      "path": "src/ncm_sudoku/e5pairs.py",
+      "format": "file",
+      "sha256": "48cc68eb2e2246cd38a3c2ee05adcedd71fab119be22b9914718ad63e3e3d186",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5pilot.py",
+      "path": "src/ncm_sudoku/e5pilot.py",
+      "format": "file",
+      "sha256": "c3c74fa066f85feea6e4b0c54eb9a1acee74b08a7899b3bac97e789b49a5ae58",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5probes.py",
+      "path": "src/ncm_sudoku/e5probes.py",
+      "format": "file",
+      "sha256": "29be9f7fad668e5dfd972371f7e899191f358c32c586fb19e1a8301a4b5a4742",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5run.py",
+      "path": "src/ncm_sudoku/e5run.py",
+      "format": "file",
+      "sha256": "2805eb500aba12ab89f5a3f6138719d55445d6cab3e146a2af933c5f3ac938ae",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5stats.py",
+      "path": "src/ncm_sudoku/e5stats.py",
+      "format": "file",
+      "sha256": "af1d21e11eda28b5709dbc4318703e41a205fdc3439a95df5000c2a50cf65b70",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:e5test.py",
+      "path": "src/ncm_sudoku/e5test.py",
+      "format": "file",
+      "sha256": "e739514cd2564f812f8f7b5d424f9234a3399e37dd2dc33eccb71eeeaa7dc186",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:g0.py",
+      "path": "src/ncm_sudoku/g0.py",
+      "format": "file",
+      "sha256": "0b6b3bb02ed5b42876b200f4a23abf30f5847de3d719c2e2dc6db6ec762ddd83",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:gate.py",
+      "path": "src/ncm_sudoku/gate.py",
+      "format": "file",
+      "sha256": "5140f267c511f135c4d6c3b1f27a7c00943273040866322969fcdd723621a04b",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:generate.py",
+      "path": "src/ncm_sudoku/generate.py",
+      "format": "file",
+      "sha256": "57a8bfe55767c3e0be450307d5a09a390e13fa5aabe884ed826e200276d2a2ec",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:grid.py",
+      "path": "src/ncm_sudoku/grid.py",
+      "format": "file",
+      "sha256": "d303763fea785f5b82569ae043b70ec71c3190741b4fb4df84df97ae7fe14d7b",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:intervene.py",
+      "path": "src/ncm_sudoku/intervene.py",
+      "format": "file",
+      "sha256": "0aeec4a3fc67664374fd6a08a843896020ba7a2e4d63edb43389aa6be7a49cb8",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:labels.py",
+      "path": "src/ncm_sudoku/labels.py",
+      "format": "file",
+      "sha256": "495f9d8b28bbd22dbdf1b4991935fa2ce23db607497bf9253eaf11abb8d517e6",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:model.py",
+      "path": "src/ncm_sudoku/model.py",
+      "format": "file",
+      "sha256": "5a38168ba3b620235b7be4737496f7d5836e3af6f958d1e80a916f0563f9d6d5",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:official.py",
+      "path": "src/ncm_sudoku/official.py",
+      "format": "file",
+      "sha256": "32a3f9a54e73df773151bdc6dadf8c771dc3a31476f23cddf15a38f07f0aa110",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:perturb.py",
+      "path": "src/ncm_sudoku/perturb.py",
+      "format": "file",
+      "sha256": "f407466884e42f1e70868bb9471852922e94a5848c814de0b52a53b47db1dce0",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:power.py",
+      "path": "src/ncm_sudoku/power.py",
+      "format": "file",
+      "sha256": "f598bd5658e80fddbe99ebd49edf327449b4d3e0295157caa55aaeb51399bcd2",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:probes.py",
+      "path": "src/ncm_sudoku/probes.py",
+      "format": "file",
+      "sha256": "6f530642459256c6b5cef47e43ae0d7c93d1afafe4a65d86f66499017ed50898",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:released.py",
+      "path": "src/ncm_sudoku/released.py",
+      "format": "file",
+      "sha256": "901714357abd41f44f7fa25845b6236b23fb42b6dd72b22f8a989e007b3053aa",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:runner.py",
+      "path": "src/ncm_sudoku/runner.py",
+      "format": "file",
+      "sha256": "c5d22817add706f222e5fa86166d1caef9db67fd31387bdcf810a32599ac98b1",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:solve.py",
+      "path": "src/ncm_sudoku/solve.py",
+      "format": "file",
+      "sha256": "9f3e6df5ca6e0c91c448c459cb164c398ada77c462308d9bc2e07043948c0e5e",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:states.py",
+      "path": "src/ncm_sudoku/states.py",
+      "format": "file",
+      "sha256": "be93bfdc73b8ebc3eed9e2af9ed1de69ca65f092c58a27acc6e56e35f484525f",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:subsets.py",
+      "path": "src/ncm_sudoku/subsets.py",
+      "format": "file",
+      "sha256": "f9ed2ab10b5453fb2e8665dd26a09afddea0fae1177a340372c0f5d3687682f7",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:symmetry.py",
+      "path": "src/ncm_sudoku/symmetry.py",
+      "format": "file",
+      "sha256": "950fe74058c0dbb50ca1126ceb62ff9c60c3f81e348ac2ff7ec2fd2bf6ff89d5",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:texlint.py",
+      "path": "src/ncm_sudoku/texlint.py",
+      "format": "file",
+      "sha256": "062ea221c7cb1a9115d13893550c9090b5f05d88ededc5d7a4373060262b1754",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:validate.py",
+      "path": "src/ncm_sudoku/validate.py",
+      "format": "file",
+      "sha256": "ac94462c12592d02195da379160bc8bb6ce5c079368ec30e1f76317d6a94d722",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wholelayer.py",
+      "path": "src/ncm_sudoku/wholelayer.py",
+      "format": "file",
+      "sha256": "8f25ac0c585d1906ced69afce9ed4c93dedcb1bcc0d495000901cb6d35d33ee4",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp2.py",
+      "path": "src/ncm_sudoku/wp2.py",
+      "format": "file",
+      "sha256": "e83b80371031c4508ebd12690f2a20a69a1800e64792ed8105e945067e817566",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp2e3.py",
+      "path": "src/ncm_sudoku/wp2e3.py",
+      "format": "file",
+      "sha256": "83037de0af0295cf927277198cc7d0ffb6c634c8205c87164f964aacd8da6bfd",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp2eval.py",
+      "path": "src/ncm_sudoku/wp2eval.py",
+      "format": "file",
+      "sha256": "00b0e290f186ebfc90416a02cef69b1da25f0567b1e781f89dfc9ee63565888b",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp4figures.py",
+      "path": "src/ncm_sudoku/wp4figures.py",
+      "format": "file",
+      "sha256": "57c5a48c29f4523c1f9c219893fd9a541f2b9cbbc5f6006269f057c89a7682a2",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp4numbers.py",
+      "path": "src/ncm_sudoku/wp4numbers.py",
+      "format": "file",
+      "sha256": "840ab5f09ffd1ab6288ad32f5e5668622cf47a6d9581b4af4c3761dfc95a9cf0",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "src:wp4tables.py",
+      "path": "src/ncm_sudoku/wp4tables.py",
+      "format": "file",
+      "sha256": "039a72d422af735cd40987f2d0120f7b8b363b75df5fe48d917c021c866a512a",
+      "retrieval": "committed in this repository"
+    }
+  ]
+}

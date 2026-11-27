@@ -1,0 +1,187 @@
+"""Model-free tests of scripts/e5_manifest.py (protocol §10 hash manifest).
+
+Builds a small synthetic repository root under `tmp_path` with every input
+`scripts/e5_manifest.py` reads (checkpoints, released data, screening corpus, E5 pair arrays,
+lock components, code files, the dry-run record), runs `build_manifest(root)` against it and
+checks the result with the real `ncm_sudoku.e5run.verify_manifest` (ROOT monkeypatched to the
+fixture root, as `tests/test_e5run.py` already does for that function)."""
+
+import importlib.util
+import json
+
+import numpy as np
+import pytest
+
+from conftest import ROOT
+from ncm_sudoku import e5run, subsets, wp2
+
+
+def _mod():
+    spec = importlib.util.spec_from_file_location("e5_manifest", ROOT / "scripts" / "e5_manifest.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def _write_json(path, obj):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj), encoding="utf-8")
+
+
+def _write_ids_and_solutions(d, ids, n_cols=9):
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "ids.json").write_text(json.dumps(ids) + "\n", encoding="utf-8", newline="\n")
+    sol = np.arange(len(ids) * n_cols, dtype=np.uint8).reshape(len(ids), n_cols)
+    np.save(d / "solutions.npy", sol)
+
+
+def build_fixture_root(root) -> None:
+    """A minimal, self-contained tree covering every source `build_manifest` reads, so the gate and
+    CAL screening files are already present and no real puzzle generation ever runs in this test."""
+    (root / "e5_protocol_v1.md").write_text("fake protocol\n", encoding="utf-8")
+    (root / "uv.lock").write_text("fake lock\n", encoding="utf-8")
+    (root / "scripts").mkdir(parents=True, exist_ok=True)
+    for name in ("e5_test.py", "e5_pilot.py", "e5_pilot_ref.py"):
+        (root / "scripts" / name).write_text(f"# fake {name}\n", encoding="utf-8")
+    (root / "src" / "ncm_sudoku").mkdir(parents=True, exist_ok=True)
+    for name in ("alpha.py", "beta.py"):
+        (root / "src" / "ncm_sudoku" / name).write_text(f"# fake {name}\n", encoding="utf-8")
+
+    # checkpoints
+    ckpt_rel = "sudoku/hard/generator.pt"
+    (root / "checkpoints" / "sudoku" / "hard").mkdir(parents=True, exist_ok=True)
+    (root / "checkpoints" / ckpt_rel).write_bytes(b"fake checkpoint bytes")
+    _write_json(root / "experiments" / "provenance" / "checkpoints.json",
+                {"files": {ckpt_rel: {"bytes": 21}}, "repo_id": "fake/repo", "revision": "deadbeef"})
+
+    # released data
+    rel_dir = root / "data" / "released" / "sudoku" / "hard"
+    rel_dir.mkdir(parents=True, exist_ok=True)
+    (rel_dir / "puzzles.pickle").write_bytes(b"fake puzzles")
+    (rel_dir / "solutions.pickle").write_bytes(b"fake solutions")
+    _write_json(root / "experiments" / "provenance" / "released_data.json",
+                {"hard": {"files": {"sudoku/hard/puzzles.pickle": {}, "sudoku/hard/solutions.pickle": {}},
+                          "repo_id": "fake/dataset", "repo_type": "dataset", "revision": "cafef00d"}})
+
+    # screening corpus: gate and cal already materialized (so ensure_screening_corpus is a no-op),
+    # plus the three subsets reused from earlier steps
+    _write_ids_and_solutions(root / "runs" / "e5" / "lock" / "screening" / "gate", ["gate-0", "gate-1"])
+    _write_ids_and_solutions(root / "runs" / "e5" / "lock" / "screening" / "cal", ["cal-0", "cal-1"])
+    _write_ids_and_solutions(root / "runs" / "e3prep" / "probe_train", ["pt-0", "pt-1", "pt-2"])
+    _write_ids_and_solutions(root / "runs" / "e3prep" / "probe_val", ["pv-0"])
+    _write_ids_and_solutions(root / "runs" / "lock" / "test", ["t-0", "t-1"])
+
+    # E5 counterfactual pairs
+    for name, ns in (("probe_train", 8), ("probe_val", 9)):
+        d = root / "runs" / "e5" / "pairs" / name
+        d.mkdir(parents=True, exist_ok=True)
+        ids = [f"{name}-0", f"{name}-1"]
+        (d / "ids.json").write_text(json.dumps(ids) + "\n", encoding="utf-8", newline="\n")
+        for member in ("a", "b", "solutions"):
+            np.save(d / f"{member}.npy", np.zeros((2, 81), dtype=np.uint8))
+    _write_json(root / "experiments" / "e5" / "pairs.json",
+                {"subsets": {"probe_train": {"seed_namespace": 8, "storage": "runs/e5/pairs/probe_train"},
+                            "probe_val": {"seed_namespace": 9, "storage": "runs/e5/pairs/probe_val"}}})
+
+    # lock components and causal heads
+    lock_dir = root / "runs" / "e5" / "lock"
+    for name in ("z6.pt", "W.npy", "Q.npy", "H.npy", "R.npy", "Pi.npy"):
+        (lock_dir / name).write_bytes(f"fake {name}".encode())
+    heads_dir = root / "runs" / "e5" / "causal" / "heads"
+    heads_dir.mkdir(parents=True, exist_ok=True)
+    for rep in ("P2", "P4", "P8"):
+        (heads_dir / f"{rep}.pt").write_bytes(f"fake {rep}".encode())
+    _write_json(root / "experiments" / "e5" / "lock" / "components.json",
+                {"files": {k: {"file": f"runs/e5/lock/{k}.npy" if k != "z6_head" else "runs/e5/lock/z6.pt"}
+                          for k in ("z6_head", "W", "Q", "H", "R", "Pi")},
+                 "verified_heads": {rep: {"file": f"runs/e5/causal/heads/{rep}.pt"} for rep in ("P2", "P4", "P8")}})
+
+    # dry-run record
+    dry_dir = root / "experiments" / "e5" / "dry"
+    dry_dir.mkdir(parents=True, exist_ok=True)
+    (dry_dir / "check.json").write_text(json.dumps({"passed": True}), encoding="utf-8")
+    (dry_dir / "check.sha256").write_text(wp2.file_sha256(dry_dir / "check.json") + "\n", encoding="utf-8")
+
+
+@pytest.fixture
+def fixture_root(tmp_path):
+    build_fixture_root(tmp_path)
+    return tmp_path
+
+
+def test_build_manifest_verifies_clean(fixture_root, monkeypatch):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    assert manifest["entries"]
+    p = fixture_root / "manifest.json"
+    p.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(e5run, "ROOT", fixture_root)
+    e5run.verify_manifest(p)  # does not raise: --verify passes on a fresh manifest
+
+
+def test_verify_fails_naming_the_tampered_entry(fixture_root, monkeypatch):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    p = fixture_root / "manifest.json"
+    p.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(e5run, "ROOT", fixture_root)
+
+    target = next(e for e in manifest["entries"] if e["name"] == "test_runner")
+    target_path = fixture_root / target["path"]
+    data = bytearray(target_path.read_bytes())
+    data[0] ^= 0xFF  # one-byte change
+    target_path.write_bytes(bytes(data))
+
+    with pytest.raises(e5run.DataIntegrityError, match="test_runner"):
+        e5run.verify_manifest(p)
+
+
+def test_ids_are_hashed_with_sha256_ids_not_sha256_array(fixture_root):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    ids_entries = [e for e in manifest["entries"] if e["path"].endswith("ids.json")]
+    assert ids_entries
+    for e in ids_entries:
+        assert e["format"] == "sha256_ids"
+        ids = json.loads((fixture_root / e["path"]).read_text(encoding="utf-8"))
+        assert e["sha256"] == subsets.sha256_ids(ids)
+        # never the array hash of the same bytes (different format entirely; sha256_array
+        # requires a numeric array and would raise on a list of strings)
+        with pytest.raises((ValueError, TypeError)):
+            subsets.sha256_array(ids)
+
+
+def test_entry_names_are_unique(fixture_root):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    names = [e["name"] for e in manifest["entries"]]
+    assert len(names) == len(set(names))
+
+
+def test_every_entry_has_the_required_shape(fixture_root):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    for e in manifest["entries"]:
+        assert set(e) == {"name", "path", "format", "sha256", "retrieval"}
+        assert e["format"] in ("file", "sha256_ids", "sha256_array")
+        assert isinstance(e["sha256"], str) and len(e["sha256"]) == 64
+        assert "\\" not in e["path"] and not e["path"].startswith("/")
+
+
+def test_ensure_screening_corpus_is_a_noop_when_already_present(fixture_root, monkeypatch):
+    m = _mod()
+    called = []
+    monkeypatch.setattr(m.subsets, "generate_subset", lambda name, n: called.append(name))
+    m.ensure_screening_corpus(fixture_root)
+    assert called == []
+
+
+def test_verify_rejects_missing_entry(fixture_root, monkeypatch):
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    (fixture_root / "runs" / "e5" / "lock" / "W.npy").unlink()
+    p = fixture_root / "manifest.json"
+    p.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(e5run, "ROOT", fixture_root)
+    with pytest.raises(e5run.DataIntegrityError, match="component:W"):
+        e5run.verify_manifest(p)
