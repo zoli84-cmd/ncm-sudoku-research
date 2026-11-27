@@ -19,6 +19,9 @@ from ncm_sudoku.e5batch import CONDITIONS
 from test_e5_test_script import N, _fake_evaluate, _fake_extract, _setup
 
 
+CLEAN = {"commit": "c" * 40, "dirty": False, "diff_sha256": None}
+
+
 def _mod():
     spec = importlib.util.spec_from_file_location("e5_dry_check", ROOT / "scripts" / "e5_dry_check.py")
     m = importlib.util.module_from_spec(spec)
@@ -87,6 +90,9 @@ def tree(built, tmp_path, monkeypatch):
     monkeypatch.setattr(m, "ROOT", root)
     monkeypatch.setattr(e5run, "RUN_DIR", run_dir)
     monkeypatch.setattr(e5run, "OUT_DIR", out_dir)
+    monkeypatch.setattr(m, "code_state", lambda: dict(CLEAN))
+    for mode in ("dry", "dry_perm"):
+        _edit_results(root, mode, lambda res: res.update(code_state=dict(CLEAN)))
     return m, root, ids
 
 
@@ -119,7 +125,8 @@ def test_all_equal_passes_and_record_has_the_lock_format(tree):
     assert _main(m) == 0
     rec = _record(root)
     assert rec["passed"] is True
-    assert all(rec["parts"][k]["passed"] for k in ("a", "b", "c", "d", "e", "run_records")), rec["parts"]
+    assert all(rec["parts"][k]["passed"] for k in ("code_state", "a", "b", "c", "d", "e", "run_records")), \
+        rec["parts"]
     assert rec["parts"]["c"]["raw_equal"] and rec["parts"]["c"]["pair_means_equal"]
     sidecar = (root / "experiments" / "e5" / "dry" / "check.sha256").read_text(encoding="utf-8").strip()
     assert sidecar == wp2.file_sha256(root / "experiments" / "e5" / "dry" / "check.json")
@@ -132,7 +139,8 @@ def test_all_equal_passes_and_record_has_the_lock_format(tree):
     for rel in ("runs/e5/pilot/P2__shared__none.npy", "runs/e5/pilot/z6__shared__none.npy",
                 "runs/e5/causal/primary.npz", "experiments/e5/dry/results.json",
                 "experiments/e5/dry_perm/results.json", "scripts/e5_test.py", "src/ncm_sudoku/e5stats.py",
-                "runs/e5/causal/heads/P2.pt", "runs/e5/lock/Q.npy"):
+                "runs/e5/causal/heads/P2.pt", "runs/e5/lock/Q.npy", "src/ncm_sudoku/e5pilot.py",
+                "runs/e5/pairs/probe_val/a.npy", "runs/e5/acts/probe_val/b/prefix_cells.npy"):
         assert rel in rec["hashes"]
     assert set(rec["tie_rule_effect"]) == {"P2", "z6"}
     assert set(rec["prediction_max_abs_diff"]) == {"dry_vs_pilot", "dry_perm_vs_dry"}
@@ -253,3 +261,93 @@ def test_unreadable_input_exits_nonzero_without_a_record(tree):
     (root / "runs" / "e5" / "causal" / "primary.npz").write_bytes(b"not an npz")
     assert _main(m) == 2
     assert not (out / "check.json").exists() and not (out / "check.sha256").exists()
+
+
+def test_dirty_dry_run_fails_code_state(tree):
+    m, root, _ = tree
+    _edit_results(root, "dry_perm", lambda res: res["code_state"].update(dirty=True))
+    assert _main(m) == 1
+    rec = _record(root)
+    assert rec["passed"] is False and rec["parts"]["code_state"]["passed"] is False
+    assert all(rec["parts"][k]["passed"] for k in ("a", "b", "c", "d", "e", "run_records"))
+
+
+def test_check_at_another_commit_fails_code_state(tree, monkeypatch):
+    m, root, _ = tree
+    monkeypatch.setattr(m, "code_state", lambda: {**CLEAN, "commit": "d" * 40})
+    assert _main(m) == 1
+    cs = _record(root)["parts"]["code_state"]
+    assert cs["passed"] is False and any("commits differ" in r for r in cs["reasons"])
+
+
+def test_missing_code_state_key_fails(tree):
+    m, root, _ = tree
+    _edit_results(root, "dry", lambda res: res["code_state"].pop("dirty"))
+    assert _main(m) == 1
+    assert _record(root)["parts"]["code_state"]["passed"] is False
+
+
+def test_fixed_permutation_matches_the_runner():
+    from test_e5_test_script import _mod as runner
+
+    assert np.array_equal(_mod().fixed_permutation(N), runner().PERMUTATION)
+
+
+def test_other_valid_permutation_fails_part_e(tree):
+    m, root, ids = tree
+    p = root / "runs" / "e5" / "dry_perm" / "pairs.npz"
+    z = _npz(p)
+    other = (21 * np.arange(N) + 3) % N
+    assert sorted(other.tolist()) == list(range(N)) and (other % 50 != np.arange(N) % 50).all()
+    z["order"] = other
+    np.savez(p, **z)
+    from ncm_sudoku import subsets
+    _edit_results(root, "dry_perm", lambda res: res["inputs"].update(order=subsets.sha256_ids([ids[i] for i in other])))
+    assert _main(m) == 1
+    e = _record(root)["parts"]["e"]
+    assert e["passed"] is False and any("fixed permutation" in r for r in e["reasons"])
+
+
+def test_wrong_recorded_threads_fails_part_d(tree):
+    m, root, _ = tree
+    _edit_results(root, "dry", lambda res: res["inputs"].update(threads="3"))
+    assert _main(m) == 1
+    d = _record(root)["parts"]["d"]
+    assert d["passed"] is False and any("threads" in r for r in d["reasons"])
+
+
+def test_nan_in_a_row_with_discordant_bits_fails_part_b(tree):
+    m, root, ids = tree
+
+    def blank(res):
+        row = res["pairs"][ids[5]]
+        assert row["n_disc"] > 0
+        row["w_P2"] = None
+
+    _edit_results(root, "dry", blank)
+    assert _main(m) == 1
+    b = _record(root)["parts"]["b"]
+    assert b["passed"] is False and any("w_P2" in r and ids[5] in r for r in b["reasons"])
+
+
+def test_string_value_in_a_row_fails_part_b(tree):
+    m, root, ids = tree
+
+    def stringify(res):
+        res["pairs"][ids[2]]["w_Z"] = str(res["pairs"][ids[2]]["w_Z"])
+
+    _edit_results(root, "dry", stringify)
+    assert _main(m) == 1
+    b = _record(root)["parts"]["b"]
+    assert b["passed"] is False and any("w_Z" in r for r in b["reasons"])
+
+
+def test_unexpected_error_exits_2_without_a_record(tree, monkeypatch):
+    m, root, _ = tree
+
+    def boom(*a, **k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(m, "_hash_files", boom)
+    assert _main(m) == 2
+    assert not (root / "experiments" / "e5" / "dry" / "check.json").exists()

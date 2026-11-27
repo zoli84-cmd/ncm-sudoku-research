@@ -22,13 +22,16 @@ without a discordant bit); there is no tolerance anywhere. Parts (each `{"passed
   compared per (pair index, order, condition) (`raw_equal`); then the pair means (ab + ba) / 2,
   derived as the runner does, against the dry rows `Q`, `random_mean`, `hv`, `shuf`, `full_be`
   (`pair_means_equal`), `elig_b`, and the ordered B1-B4 decision inputs (`decision_inputs_equal`).
-- `d`: both dry runs finished with every `invalid_reasons` list empty, neither claim `invalid`,
-  no causal batch `invalid_reasons` and no extraction `check_failures`.
-- `e`: `dry` is processed in raw order and `dry_perm` in a permutation that moves every pair's
+- `d`: both dry runs finished, with `inputs.mode` equal to the run's mode and `inputs.threads` "4",
+  every `invalid_reasons` list empty, neither claim `invalid`, no causal batch `invalid_reasons`
+  and no extraction `check_failures`.
+- `e`: `dry` is processed in raw order and `dry_perm` in the fixed permutation (19 j + 1) mod n, which moves every pair's
   in-batch position and changes every batch's members (each run's recorded `inputs.order` is the
   hash of its processed id order); per pair id every row value of (b) and (c), every ordered
   decision input and every raw causal value per (pair id, order, condition) of `dry_perm` equal
   `dry`'s.
+- `code_state` (ruling R8): `code_state.dirty` is false in both `results.json` and in this check's
+  own `code_state()`, and all three `commit` values are equal; a missing key fails.
 - `run_records`: both `runs/e5/<mode>/run.json` are `finished`; every recorded stage file hashes to
   its recorded SHA-256; every extract/causal batch file on disk is a recorded stage.
 
@@ -37,14 +40,15 @@ empty). `hashes` maps ROOT-relative POSIX paths to the SHA-256 of the file bytes
 `e5run.require_lock` re-verifies): the three pilot references, the PROBE-VAL ids and
 `experiments/e5/pairs.json`, the head and component indexes and files, both `results.json`, both
 `run.json` (which carry every raw stage file hash), `scripts/e5_test.py`, this script and
-`src/ncm_sudoku/{e5test,e5batch,e5run,e5stats,e5causal,e5extract,probes}.py`. `ids_sha256` is the
+`src/ncm_sudoku/{e5test,e5batch,e5run,e5stats,e5causal,e5extract,probes,e5pilot}.py`, and the PROBE-VAL
+pair and activation files part (b) reads (`PROBE_VAL_FILES`). `ids_sha256` is the
 `sha256_ids` of the ordered id list. Reported, not gates: `tie_rule_effect` (pilot pair ids whose
 `w` differs from `w_pilot_rule`, per representation) and `prediction_max_abs_diff` (dry vs pilot,
 dry_perm vs dry).
 
 Fail-closed: a missing file or key, a shape mismatch or an unexpected NaN fails the affected part
 with a reason and the record is still written (exit 1). A file that exists but cannot be parsed
-stops the check without a record (exit 2). Exit 0 only when `passed` is true.
+stops the check without a record (exit 2), as does any other unexpected error. Exit 0 only when `passed` is true.
 """
 
 import argparse
@@ -66,15 +70,25 @@ from ncm_sudoku.wp2 import atomic_json, atomic_write, file_sha256
 
 CODE_ROOT = ROOT  # code hashes always come from the repository itself
 BATCH = 50  # protocol §4.4
+THREADS = 4  # protocol §4.4; scripts/e5_test.py records it as the string "4" in inputs.threads
 MODES = ("dry", "dry_perm")
 REPS = {"P2": "P2", "z6": "Z"}  # representation -> row-key suffix
 A_FIELDS = ("n_disc", "w_P2", "w_Z", "w_pilot_rule_P2", "w_pilot_rule_Z", "delta", "elig_a")
 B_FIELDS = ("Q", "random_mean", "hv", "shuf", "full_be", "elig_b")
 A_INPUTS, B_INPUTS = ("A1_lower", "A1_upper", "A2"), ("B1", "B2", "B3", "B4")
 CODE_FILES = ["scripts/e5_test.py", "scripts/e5_dry_check.py"] + [
-    f"src/ncm_sudoku/{m}.py" for m in ("e5test", "e5batch", "e5run", "e5stats", "e5causal", "e5extract", "probes")]
+    f"src/ncm_sudoku/{m}.py" for m in ("e5test", "e5batch", "e5run", "e5stats", "e5causal", "e5extract", "probes",
+                                       "e5pilot")]
+# PROBE-VAL pair and activation files that part (b) reads through e5pilot.load_subset / representation
+PROBE_VAL_FILES = ["runs/e5/pairs/probe_val/a.npy", "runs/e5/pairs/probe_val/b.npy"] + [
+    f"runs/e5/acts/probe_val/{m}/{f}.npy" for m in "ab" for f in ("codes", "solved", "prefix_cells", "z6")]
 BATCH_FILE = re.compile(r"^(ab|ba)_batch_(\d+)\.npz$")
 MAX_LISTED = 5
+
+
+def fixed_permutation(n: int) -> np.ndarray:
+    """The recorded §9.4(e) order; restates `scripts/e5_test.py` PERMUTATION (pinned by a test)."""
+    return (19 * np.arange(n) + 1) % n
 
 
 class Missing(Exception):
@@ -122,6 +136,7 @@ class Ctx:
         self.root, self.run_dir, self.out_dir = root, run_dir, out_dir
         self._cache: dict = {}
         self.tie_rule_effect = None
+        self.code_state = None
 
     def get(self, key, fn):
         if key not in self._cache:
@@ -166,8 +181,19 @@ class Ctx:
 
 # --- comparison helpers --------------------------------------------------------------------------
 
-def _f64(values) -> np.ndarray:
-    return np.array([np.nan if v is None else v for v in values], dtype=np.float64)
+def _f64(values, bools: bool = False) -> np.ndarray:
+    """float64 array of per-pair values, None -> NaN. With `bools`, every value must be a bool;
+    otherwise every value must be None or a real number (never a bool or a string)."""
+    out = []
+    for v in values:
+        if bools:
+            if not isinstance(v, (bool, np.bool_)):
+                raise TypeError(f"expected a bool, got {v!r}")
+        elif v is not None and (isinstance(v, (bool, np.bool_))
+                                or not isinstance(v, (int, float, np.integer, np.floating))):
+            raise TypeError(f"expected a number or None, got {v!r}")
+        out.append(np.nan if v is None else v)
+    return np.array(out, dtype=np.float64)
 
 
 def _eq(x: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -205,7 +231,11 @@ def _rows(res: dict, ids: list, fields, reasons: list, label: str) -> dict | Non
         if absent:
             reasons.append(f"{label}: field {f} missing for {len(absent)} pair(s), first {absent[0]}")
             return None
-        out[f] = _f64([rows[i][f] for i in ids])
+        try:
+            out[f] = _f64([rows[i][f] for i in ids], bools=f.startswith("elig_"))
+        except TypeError as e:
+            reasons.append(f"{label}: field {f}: {e}")
+            return None
     return out
 
 
@@ -265,7 +295,7 @@ def _causal_table(label: str, n: int, entries: list, reasons: list) -> np.ndarra
         if pidx.dtype.kind not in "iu" or order.dtype.kind not in "iu":
             reasons.append(f"{label} {src}: pair_index/order are not integer arrays")
             return None
-        if ((pidx < 0) | (pidx >= n)).any() or ~np.isin(order, (0, 1)).all():
+        if ((pidx < 0) | (pidx >= n)).any() or not np.isin(order, (0, 1)).all():
             reasons.append(f"{label} {src}: pair index or order code out of range")
             return None
         col = [names.index(c) for c in CONDITIONS]
@@ -451,6 +481,11 @@ def part_d(ctx: Ctx) -> dict:
             continue
         if res.get("mode") != mode:
             reasons.append(f"{mode}: results mode is {res.get('mode')!r}")
+        inputs = res.get("inputs") if isinstance(res.get("inputs"), dict) else {}
+        if inputs.get("mode") != mode:
+            reasons.append(f"{mode}: recorded inputs.mode is {inputs.get('mode')!r}")
+        if inputs.get("threads") != str(THREADS):
+            reasons.append(f"{mode}: recorded inputs.threads is {inputs.get('threads')!r}, expected {str(THREADS)!r}")
         if res.get("status") != "finished":
             reasons.append(f"{mode}: status {res.get('status')!r}")
         inv = res.get("invalid_reasons")
@@ -499,6 +534,8 @@ def part_e(ctx: Ctx) -> dict:
         if not np.array_equal(orders["dry"], np.arange(n)):
             reasons.append("dry: not processed in raw order")
         perm, j = orders["dry_perm"], np.arange(n)
+        if not np.array_equal(perm, fixed_permutation(n)):
+            reasons.append("dry_perm: processing order is not the fixed permutation (19 j + 1) mod n")
         if (perm % BATCH == j % BATCH).any():
             reasons.append("dry_perm: some pair keeps its in-batch position")
         raw_batches = [set(range(s, min(s + BATCH, n))) for s in range(0, n, BATCH)]
@@ -551,7 +588,23 @@ def part_run_records(ctx: Ctx) -> dict:
     return {"passed": not reasons, "reasons": reasons}
 
 
-PARTS = {"a": part_a, "b": part_b, "c": part_c, "d": part_d, "e": part_e, "run_records": part_run_records}
+def part_code_state(ctx: Ctx) -> dict:
+    """Ruling R8: both dry runs and this check ran on clean code at one and the same commit."""
+    reasons = []
+    states = {mode: ctx.results(mode).get("code_state") for mode in MODES}
+    states["check"] = ctx.code_state
+    for who, st in states.items():
+        if not isinstance(st, dict) or "dirty" not in st or "commit" not in st:
+            reasons.append(f"{who}: code_state missing or without dirty/commit")
+        elif st["dirty"] is not False:
+            reasons.append(f"{who}: code_state dirty is {st['dirty']!r}")
+    commits = {who: st.get("commit") for who, st in states.items() if isinstance(st, dict)}
+    if len(set(commits.values())) != 1 or None in commits.values():
+        reasons.append(f"commits differ or are missing: {commits}")
+    return {"passed": not reasons, "reasons": reasons, "commits": commits}
+
+
+PARTS = {"code_state": part_code_state, "a": part_a, "b": part_b, "c": part_c, "d": part_d, "e": part_e, "run_records": part_run_records}
 
 
 def _run_part(fn, ctx: Ctx) -> dict:
@@ -605,6 +658,7 @@ def _hash_files(ctx: Ctx, problems: list) -> dict:
     data = [r / "runs/e5/pilot/P2__shared__none.npy", r / "runs/e5/pilot/z6__shared__none.npy",
             r / "runs/e5/causal/primary.npz", r / "runs/e5/pairs/probe_val/ids.json", r / "experiments/e5/pairs.json",
             r / "experiments/e5/causal/heads.json", r / "experiments/e5/lock/components.json"]
+    data += [r / f for f in PROBE_VAL_FILES]
     for name, key, keys in (("experiments/e5/causal/heads.json", "heads", ("P2", "P4", "P8")),
                             ("experiments/e5/lock/components.json", "files",
                              ("z6_head", "W", "Q", "H", "R", "Pi"))):
@@ -633,6 +687,7 @@ def _hash_files(ctx: Ctx, problems: list) -> dict:
 def run_check(root: Path, run_dir: dict, out_dir: dict) -> dict:
     """The §9.4 record; raises `Unreadable` if an existing input cannot be parsed."""
     ctx = Ctx(root, run_dir, out_dir)
+    ctx.code_state = code_state()
     parts = {name: _run_part(fn, ctx) for name, fn in PARTS.items()}
     problems: list = []
     hashes = _hash_files(ctx, problems)
@@ -645,7 +700,7 @@ def run_check(root: Path, run_dir: dict, out_dir: dict) -> dict:
     return {"note": "E5 dry-run pass rule (e5_protocol_v1.md §9.4); exact comparisons, no tolerance",
             "date": time.strftime("%Y-%m-%d"), "passed": bool(passed), "parts": parts,
             "tie_rule_effect": ctx.tie_rule_effect, "prediction_max_abs_diff": prediction_info(ctx),
-            "ids_sha256": ids_sha, "hashes": hashes, "hash_problems": problems, "code_state": code_state()}
+            "ids_sha256": ids_sha, "hashes": hashes, "hash_problems": problems, "code_state": ctx.code_state}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -658,6 +713,9 @@ def main(argv: list[str] | None = None) -> None:
         record = run_check(ROOT, e5run.RUN_DIR, e5run.OUT_DIR)
     except Unreadable as e:
         print(f"e5_dry_check: unreadable input, no record written: {e}", file=sys.stderr, flush=True)
+        sys.exit(2)
+    except Exception as e:  # noqa: BLE001 - any other failure: no record, nonzero exit
+        print(f"e5_dry_check: {type(e).__name__}: {e}; no record written", file=sys.stderr, flush=True)
         sys.exit(2)
     atomic_json(check, record)
     atomic_write(sidecar, file_sha256(check) + "\n")
