@@ -20,14 +20,14 @@
       "name": "dry_run_record",
       "path": "experiments/e5/dry/check.json",
       "format": "file",
-      "sha256": "ed2675107ac28d64621179be34c7f2b8d8e6542026a5e6abb106ccc614c9facb",
+      "sha256": "9df2716baf73a9a0d314e2efb345b6f34470d431d339c5ba2025b2ca509b83cb",
       "retrieval": "committed in this repository"
     },
     {
       "name": "dry_run_record_sha256",
       "path": "experiments/e5/dry/check.sha256",
       "format": "file",
-      "sha256": "033b08701624e38ebf008b950bb8a9434de93ce41642184243dee17a2b271b00",
+      "sha256": "66d89362d56ae5397eff0193afc6c29f7472262cf20958d6d3b0cbb6aead0f57",
       "retrieval": "committed in this repository"
     },
     {
@@ -272,7 +272,7 @@
       "name": "test_runner",
       "path": "scripts/e5_test.py",
       "format": "file",
-      "sha256": "5807f3f9a39de8d865343e9f8f5ad9d18aa2dcc9732bb85e5a9ee3843c93e154",
+      "sha256": "1623663180e02c25343c52250ec1476522d39a4d6fbb97406228c6c9091d2d00",
       "retrieval": "committed in this repository"
     },
     {
@@ -391,7 +391,7 @@
       "name": "src:e5run.py",
       "path": "src/ncm_sudoku/e5run.py",
       "format": "file",
-      "sha256": "2805eb500aba12ab89f5a3f6138719d55445d6cab3e146a2af933c5f3ac938ae",
+      "sha256": "630c207792178918d3506a88402a5a38189aa792306f09d21918ba8177c15f91",
       "retrieval": "committed in this repository"
     },
     {
@@ -713,35 +713,42 @@
       "name": "dry_hash:experiments/e5/dry/results.json",
       "path": "experiments/e5/dry/results.json",
       "format": "file",
-      "sha256": "7cc50e91df1b50ad3df555df52e1dc94ec047c701492274f2397d2f418a98f07",
+      "sha256": "a5b4889e152f1709f7cfee369d0b19dcca86ae1c51ad9c4060a5f14815d39b06",
       "retrieval": "committed in this repository"
     },
     {
       "name": "dry_hash:runs/e5/dry/run.json",
       "path": "runs/e5/dry/run.json",
       "format": "file",
-      "sha256": "895efd625757e7c031d838d11140667f338e48ad516f43de93402ca036a64e05",
+      "sha256": "a5fd31bc5325acc8810b2d7067afe90b3bfb6e3c2280429976cb5361cad94178",
       "retrieval": "scripts/e5_test.py --mode dry"
     },
     {
       "name": "dry_hash:experiments/e5/dry_perm/results.json",
       "path": "experiments/e5/dry_perm/results.json",
       "format": "file",
-      "sha256": "9eaeba6ddfa5e851386cea55e973a92c848c69c69f28a3582c5f14eac8b5abc4",
+      "sha256": "82180630ff26bf638a39556c9e5cbcc8c63455fff65099c9cc6df956c076c610",
       "retrieval": "committed in this repository"
     },
     {
       "name": "dry_hash:runs/e5/dry_perm/run.json",
       "path": "runs/e5/dry_perm/run.json",
       "format": "file",
-      "sha256": "a8c0d014563459b533969d941045c95e7cb90438a12f34da51be4f4ee6ee368c",
+      "sha256": "a90ed2673056940a0069310bb7ecc1de78144e0881c4ca7ea3bf784ea4a9ebe3",
       "retrieval": "scripts/e5_test.py --mode dry_perm"
     },
     {
       "name": "dry_hash:scripts/e5_dry_check.py",
       "path": "scripts/e5_dry_check.py",
       "format": "file",
-      "sha256": "e807316d9bb7c9f18f878b36b51bb49758bdde11ef65ca230fae4893a56ae8e8",
+      "sha256": "3897e1a662a0c11d32303857f0c17dbeb0d0a5415fb69d359898ba98498acb81",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:pyproject.toml",
+      "path": "pyproject.toml",
+      "format": "file",
+      "sha256": "3774d7395cbcd6b58a08098233c675b21c301ed0ba4445986b7b769344e11c12",
       "retrieval": "committed in this repository"
     }
   ]
