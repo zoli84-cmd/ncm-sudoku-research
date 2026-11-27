@@ -109,3 +109,52 @@ def test_evaluate_batch_reports_injected_failures(model, released, monkeypatch):
     monkeypatch.setattr(e5batch, "_patch_values", tampered_values)
     reasons = e5batch.evaluate_batch(model, *args)["invalid_reasons"]
     assert "written_rows" in reasons
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+def test_evaluate_batch_reports_untouched_rows_and_hook_level(model, released, monkeypatch):
+    from ncm_sudoku import e5batch, e5causal
+
+    args = _batch_inputs(model, released)
+
+    def leaky_patch(self, _m, _a, out):  # `Level7Hooks._patch`, but the BOS row 0 is changed too
+        self.applied += 1
+        self.captured["L2_before"] = out.detach().clone()
+        if self.patch is None:
+            return out
+        rows, values = self.patch
+        new = out.clone()
+        new[:, 0] += 1.0
+        mask = torch.as_tensor(rows)[..., None]
+        new[:, self.cells] = torch.where(mask, torch.as_tensor(values, dtype=new.dtype), new[:, self.cells])
+        self.written_ok, self.untouched_ok = e5causal.isolation_check(out, new, self.cells, rows, values)
+        self.captured["L2_after"] = new.detach().clone()
+        return new
+
+    with monkeypatch.context() as mp:
+        mp.setattr(e5causal.Level7Hooks, "_patch", leaky_patch)
+        assert "untouched_rows" in e5batch.evaluate_batch(model, *args)["invalid_reasons"]
+
+    orig_level_logits = e5batch.level_logits
+
+    def wrong_level(m, prefix, codes, level):  # every call runs level 6 instead of 7
+        return orig_level_logits(m, prefix, codes, level - 1)
+
+    monkeypatch.setattr(e5batch, "level_logits", wrong_level)
+    assert "hook_level" in e5batch.evaluate_batch(model, *args)["invalid_reasons"]
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+def test_evaluate_batch_flags_a_foreign_hook(model, released):
+    from ncm_sudoku.e5batch import evaluate_batch
+
+    args = _batch_inputs(model, released)
+    handle = model.net.transformer.blocks[5].register_forward_pre_hook(lambda _m, _a: None)
+    try:
+        assert evaluate_batch(model, *args)["invalid_reasons"] == ["hook_count"]
+    finally:
+        handle.remove()

@@ -10,11 +10,24 @@ tv(p_cond, p_full) with p_clean from the capture-call logits.
 
 Call order per batch (fixed): plain clean `level_logits` (no hook anywhere on the
 model); capture-only call on the recipient (its logits must equal the plain call bit
-for bit); capture-only call on the donor with its own codes; self-donor at the
-both-empty cells (d := r through the donor indexing path); self-donor at all 91
-prefix positions; the both-empty full swap; every condition in `CONDITIONS` order
+for bit); capture-only call on the donor with its own codes; a separate
+capture-only self-donor call with d := r (the recipient's prefix and codes, the
+donor-capture path; this extra forward is part of the fixed order); self-donor at the
+both-empty cells (rows from that self-donor capture through the donor indexing path);
+self-donor at all 91 prefix positions (rows from the same self-donor capture); the
+both-empty full swap; every condition in `CONDITIONS` order
 (`full_be` reuses the full swap, `full_input` is `level_logits(m, pd, cr, 7)` under a
 capture-only hook).
+
+Hook checks on every hooked call: no forward or forward-pre hook anywhere on the model
+(module or global) before the call, exactly the three `Level7Hooks` forward hooks
+during it (one on blocks[1]) and one application (`hook_count`); the hooked forward is
+the level-7 call: the captured blocks[1] output has `prefix_len + levels[6]` positions
+(the decoder input of `intervene.level_logits` for level 7: prefix plus the level-7
+query positions) and the logits have `levels[6]` queries (`hook_level`).
+Reasons: `hook_count`, `hook_level`, `capture_only_identity`, `self_donor_cells`,
+`self_donor_prefix91`, `written_rows`, `untouched_rows`, `zero_rule`, `hv_invariance`,
+`shuffled_direction`.
 
 A failed check never stops the batch and never drops a pair: it appends its reason
 (each at most once per batch, first-seen order) to `invalid_reasons`, which makes
@@ -48,7 +61,7 @@ CONDITIONS = ["Q"] + [f"rand{j}" for j in range(N_DRAWS)] + ["hv", "shuf", "full
 OUTCOMES = ("directed", "undirected", "argmax_changes", "shift4", "shift8", "flip4", "flip8")
 HV_TOL = 1e-8  # §6 high-variance invariance: max_d |(W step)_d| <= HV_TOL ||W||_F ||step||
 SHUF_TOL = 1e-8  # §6 shuffled direction: cos(W step, Pi(W Delta)) >= 1 - SHUF_TOL
-REASONS = ("hook_count", "capture_only_identity", "self_donor_cells", "self_donor_prefix91", "written_rows",
+REASONS = ("hook_count", "hook_level", "capture_only_identity", "self_donor_cells", "self_donor_prefix91", "written_rows",
            "untouched_rows", "zero_rule", "hv_invariance", "shuffled_direction")
 
 
@@ -89,8 +102,6 @@ def evaluate_batch(m, comps: dict, heads: dict, pr, pd, cr, cd, empty_r, empty_d
     for name, c in (("cr", cr), ("cd", cd)):
         if c.ndim != 2 or c.shape[1] != LEVELS_1_6:
             raise ValueError(f"{name} must hold exactly the {LEVELS_1_6} codes of levels 1-6, got shape {c.shape}")
-    if LEVEL != 7:
-        raise ValueError("the causal batch patches the level-7 call only")
     cr_t, cd_t = torch.as_tensor(cr, dtype=torch.long), torch.as_tensor(cd, dtype=torch.long)
     W, Q, H, R, Pi = (np.asarray(comps[k]) for k in ("W", "Q", "H", "R", "Pi"))
     reasons: list[str] = []
@@ -102,8 +113,19 @@ def evaluate_batch(m, comps: dict, heads: dict, pr, pd, cr, cd, empty_r, empty_d
     blocks = m.net.transformer.blocks
     cells_t = torch.as_tensor(PREFIX_CELLS)
 
+    n_queries = int(m.levels[LEVEL - 1])
+    seq_len = int(m.net.prefix_len) + n_queries  # decoder input length of the level-7 call
+
+    def hook_counts() -> tuple[int, int]:
+        """(forward hooks, forward-pre hooks) over every module of the model plus the
+        global module hook dicts."""
+        g = torch.nn.modules.module
+        fwd = sum(len(mod._forward_hooks) for mod in m.net.modules()) + len(g._global_forward_hooks)
+        pre = sum(len(mod._forward_pre_hooks) for mod in m.net.modules()) + len(g._global_forward_pre_hooks)
+        return fwd, pre
+
     def no_hooks() -> bool:
-        return all(len(b._forward_hooks) == 0 for b in blocks)
+        return hook_counts() == (0, 0)
 
     def call(prefix, codes, patch=None, expected=None, cells=PREFIX_CELLS):
         """Hooked level-7 call (one hooked forward at a time); checks the hook count,
@@ -112,12 +134,14 @@ def evaluate_batch(m, comps: dict, heads: dict, pr, pd, cr, cd, empty_r, empty_d
         if not no_hooks():
             fail("hook_count")
         with Level7Hooks(m.net, cells) as h:
-            if len(blocks[1]._forward_hooks) != 1:
+            if hook_counts() != (3, 0) or len(blocks[1]._forward_hooks) != 1:
                 fail("hook_count")
             h.patch = patch
             logits = level_logits(m, prefix, codes, LEVEL)
         if h.applied != 1:
             fail("hook_count")
+        if h.captured["L2_before"].shape[1] != seq_len or logits.shape[1] != n_queries:
+            fail("hook_level")
         if patch is not None:
             if not h.untouched_ok:
                 fail("untouched_rows")
@@ -151,12 +175,16 @@ def evaluate_batch(m, comps: dict, heads: dict, pr, pd, cr, cd, empty_r, empty_d
     z_clean = {k: head_logits(sub(cap_r, k), heads["P" + k[1]]) for k in ("L4", "L8")}
     check_finite("head_logits", *z_clean.values())
 
-    # 4. self-donor at the both-empty cells, through the donor indexing path (d := r)
-    lg_self, _ = call(pr, cr_t, (both, _patch_values(xr, both, donor=xr)), (both, xr32[both]))
+    # 4. self-donor capture (d := r through the donor-capture call), then the patch at
+    # the both-empty cells through the donor indexing path
+    _, cap_s = call(pr, cr_t)
+    xs32 = sub(cap_s, "L2_before")
+    lg_self, _ = call(pr, cr_t, (both, _patch_values(xr, both, donor=xs32.astype(np.float64))), (both, xs32[both]))
     if not torch.equal(lg_self, lg_c):
         fail("self_donor_cells")
-    # 5. self-donor at all 91 prefix positions
-    own91 = cap_r["L2_before"][:, :PREFIX_LEN].numpy().copy()
+    # 5. self-donor at all 91 prefix positions; the rows come from the separate
+    # self-donor capture, so the logits test compares two independent forwards
+    own91 = cap_s["L2_before"][:, :PREFIX_LEN].numpy().copy()
     all91 = np.ones(own91.shape[:2], dtype=bool)
     lg_self91, _ = call(pr, cr_t, (all91, own91), (all91, own91[all91]), cells=np.arange(PREFIX_LEN))
     if not torch.equal(lg_self91, lg_c):
