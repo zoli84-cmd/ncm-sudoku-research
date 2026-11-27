@@ -18,9 +18,27 @@ from ncm_sudoku.probes import SEEDS, build_inputs, train_probe
 STATE_DIM = 512
 
 
+def compare_predictions(pred: np.ndarray, saved: np.ndarray) -> dict:
+    """Protocol §9.1 reproduction check of a refitted head against the saved pilot
+    predictions: equal shape, equal NaN pattern (given cells), every evaluable element
+    finite on both sides, and exact equality on the evaluable elements."""
+    out = {"shape_equal": pred.shape == saved.shape, "nan_pattern_equal": False, "finite": False,
+           "n_unequal": None, "max_abs_diff": None}
+    if out["shape_equal"]:
+        nan_p, nan_s = np.isnan(pred), np.isnan(saved)
+        out["nan_pattern_equal"] = bool(np.array_equal(nan_p, nan_s))
+        ev = ~nan_s
+        out["finite"] = bool(np.isfinite(pred[ev]).all() and np.isfinite(saved[ev]).all())
+        if out["nan_pattern_equal"] and out["finite"]:
+            out["n_unequal"] = int((pred[ev] != saved[ev]).sum())
+            out["max_abs_diff"] = float(np.abs(pred[ev] - saved[ev]).max(initial=0.0))
+    out["passed"] = bool(out["shape_equal"] and out["nan_pattern_equal"] and out["finite"] and out["n_unequal"] == 0)
+    return out
+
+
 def refit_head(root: Path, rep: str) -> dict:
     """Refits the pilot head `<rep>__shared__none` and compares its seed-averaged
-    PROBE-VAL predictions with the saved pilot predictions."""
+    PROBE-VAL predictions with the saved pilot predictions (`compare_predictions`)."""
     pilot = json.loads((root / "experiments" / "e5" / "pilot" / f"{rep}__shared__none.json").read_text())
     wd, lr = pilot["summary"]["config"]
     train, val = load_subset(root, "probe_train"), load_subset(root, "probe_val")
@@ -37,8 +55,9 @@ def refit_head(root: Path, rep: str) -> dict:
         states.append({k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
     pred = scatter(np.mean(preds, axis=0), val["empty"])
     saved = np.load(root / "runs" / "e5" / "pilot" / f"{rep}__shared__none.npy")
-    diff = float(np.nanmax(np.abs(pred - saved)))
-    return {"rep": rep, "config": [wd, lr], "state_dicts": states, "max_abs_diff_vs_pilot": diff}
+    check = compare_predictions(pred, saved)
+    return {"rep": rep, "config": [wd, lr], "state_dicts": states, "max_abs_diff_vs_pilot": check["max_abs_diff"],
+            "reproduction": check}
 
 
 def state_weights(state_dicts: list[dict]) -> np.ndarray:
@@ -103,15 +122,30 @@ def high_variance_basis(diffs: np.ndarray, Q: np.ndarray, r: int = 9) -> np.ndar
 
 # --- D102(2), (4)(f): hooked level-7 call ------------------------------------------------
 
+def isolation_check(out: torch.Tensor, new: torch.Tensor, cells, rows: np.ndarray, values: np.ndarray) -> tuple[bool, bool]:
+    """Protocol §6 patch checks for one hooked output (B, T, d): (written_ok,
+    untouched_ok). Written: every targeted cell row of `new` equals the expected float32
+    row in `values` bit for bit. Untouched: every other row of the sequence (query, BOS,
+    separator, clue and non-targeted cell rows) is bit-identical to `out`."""
+    rows_t = torch.as_tensor(rows, dtype=torch.bool)
+    targeted = torch.zeros(new.shape[:2], dtype=torch.bool)
+    targeted[:, torch.as_tensor(cells)] = rows_t
+    written = bool(torch.equal(new[:, torch.as_tensor(cells)][rows_t],
+                               torch.as_tensor(values, dtype=new.dtype)[rows_t]))
+    untouched = bool(torch.equal(new[~targeted], out[~targeted]))
+    return written, untouched
+
+
 class Level7Hooks:
     """Forward hooks for one `intervene.level_logits(..., level=7)` call: optionally
     replaces prefix cell rows at the output of blocks[1] and captures the outputs of
-    blocks[1], blocks[3] and blocks[7]. Counts hook applications."""
+    blocks[1], blocks[3] and blocks[7]. Counts hook applications; after a patch,
+    `written_ok` and `untouched_ok` hold the `isolation_check` flags."""
 
     def __init__(self, net, prefix_cells: np.ndarray):
         self.net, self.cells = net, torch.as_tensor(prefix_cells)
         self.patch = None  # (rows (B, 81) bool, values (B, 81, d) float32) or None
-        self.captured, self.applied, self.query_unchanged = {}, 0, None
+        self.captured, self.applied, self.written_ok, self.untouched_ok = {}, 0, None, None
 
     def _patch(self, _m, _a, out):
         self.applied += 1
@@ -124,11 +158,7 @@ class Level7Hooks:
         mask = torch.as_tensor(rows)[..., None]
         cells = torch.where(mask, torch.as_tensor(values, dtype=new.dtype), cells)
         new[:, self.cells] = cells
-        P = self.net.prefix_len
-        keep = torch.ones(new.shape[1], dtype=torch.bool)
-        keep[self.cells] = False
-        self.query_unchanged = bool(torch.equal(new[:, P:], out[:, P:])) and bool(
-            torch.equal(new[:, :P][:, keep[:P]], out[:, :P][:, keep[:P]]))
+        self.written_ok, self.untouched_ok = isolation_check(out, new, self.cells, rows, values)
         self.captured["L2_after"] = new.detach().clone()
         return new
 

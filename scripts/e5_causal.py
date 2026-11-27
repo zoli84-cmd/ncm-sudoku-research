@@ -105,7 +105,7 @@ def main() -> None:
             logits = level_logits(m, prefix, torch.as_tensor(cds), 7)
             if h.applied != 1:
                 diag["applied_ok"] = False
-            if patch is not None and not h.query_unchanged:
+            if patch is not None and not (h.untouched_ok and h.written_ok):
                 diag["query_isolation_ok"] = False
             cells = torch.as_tensor(PREFIX_CELLS)
             return logits, {k: h.captured[k][:, cells].numpy() for k in ("L2_before", "L4", "L8")}
