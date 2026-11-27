@@ -11,7 +11,12 @@ before any TEST data exist: the protocol file; the checkpoint files; the generat
 and PROBE-VAL pair arrays; the primary heads (Z<=6, P2), the P4/P8 heads, Q, H, R, Pi, W; the
 secondary components as the file SHA-256 of `scripts/e5_pilot.py` and `scripts/e5_pilot_ref.py`
 (protocol §4.3: they refit the secondary components deterministically on PROBE data); the TEST
-runner and every `src/ncm_sudoku/*.py`; `uv.lock`; the approved dry-run record and its sidecar hash.
+runner and every `src/ncm_sudoku/*.py`; `uv.lock`; the approved dry-run record and its sidecar
+hash, plus one entry for every path the record's own `hashes` dict (§9.4) names that no earlier
+bucket already covers (e.g. `pairs.json`, `causal/heads.json`, `lock/components.json`, both dry
+modes' `results.json`/`run.json`, `e5_dry_check.py`, the pilot predictions, `causal/primary.npz`
+and the PROBE-VAL activation arrays), so a change to anything the dry-run approval relies on is
+caught by `--verify` too.
 
 Every entry is `{name, path (ROOT-relative POSIX), format, sha256, retrieval}` (ruling R4), format
 one of `file`, `sha256_ids`, `sha256_array`. Because `runs/`, `checkpoints/` and `data/` are not in
@@ -168,11 +173,48 @@ def misc_entries(root: Path) -> list[dict]:
     ]
 
 
+def _dry_record_retrieval(rel: str) -> str:
+    """Reconstruction recipe for a path named in the dry-run record's own `hashes` dict (§9.4)
+    that no other bucket already covers; committed paths need none."""
+    if rel.startswith("runs/e5/dry_perm/"):
+        return "scripts/e5_test.py --mode dry_perm"
+    if rel.startswith("runs/e5/dry/"):
+        return "scripts/e5_test.py --mode dry"
+    if rel.startswith("runs/e5/pilot/"):
+        return "scripts/e5_pilot.py"
+    if rel == "runs/e5/causal/primary.npz":
+        return "scripts/e5_causal.py"
+    if rel.startswith("runs/e5/acts/"):
+        return "scripts/e5_extract.py"
+    return IN_REPO
+
+
+def dry_record_hash_entries(root: Path, covered: dict[str, str]) -> list[dict]:
+    """Protocol §10: "the approved dry-run record and the hashes it states". `check.json`'s own
+    `hashes` dict (§9.4) hashes every path - ids and arrays included - as plain file bytes
+    (`wp2.file_sha256`), not through `subsets.sha256_ids`/`sha256_array`: those give a different
+    value for the same path (an id list's canonical JSON re-dump, or an array's raw buffer, differ
+    from the file's own bytes). So a path already in the manifest under one of those formats is
+    *not* covered here unless its value happens to equal the record's (`covered` maps path ->
+    sha256 of every entry already built); every other path named in `hashes`, covered or not, gets
+    its own `file` entry, so a change to anything the dry-run approval relies on - not just the
+    record's own bytes - is caught by `--verify`."""
+    rec = json.loads((root / "experiments" / "e5" / "dry" / "check.json").read_text(encoding="utf-8"))
+    out = []
+    for rel, expected in rec["hashes"].items():
+        if covered.get(rel) == expected:
+            continue
+        out.append(file_entry(f"dry_hash:{rel}", root, root / rel, _dry_record_retrieval(rel)))
+    return out
+
+
 def build_manifest(root: Path) -> dict:
     root = Path(root)
     ensure_screening_corpus(root)
     entries = (misc_entries(root) + checkpoint_entries(root) + screening_entries(root) + released_entries(root)
               + pair_entries(root) + component_entries(root) + secondary_entries(root) + code_entries(root))
+    covered = {e["path"]: e["sha256"] for e in entries}
+    entries += dry_record_hash_entries(root, covered)
     names = [e["name"] for e in entries]
     dupes = sorted({n for n in names if names.count(n) > 1})
     assert not dupes, f"duplicate manifest entry name(s): {dupes}"

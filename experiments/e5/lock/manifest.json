@@ -589,6 +589,160 @@
       "format": "file",
       "sha256": "039a72d422af735cd40987f2d0120f7b8b363b75df5fe48d917c021c866a512a",
       "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/pilot/P2__shared__none.npy",
+      "path": "runs/e5/pilot/P2__shared__none.npy",
+      "format": "file",
+      "sha256": "820db2d9f9b2b422784540eec66b051efa033f89c15132823e77fefcb13dbe66",
+      "retrieval": "scripts/e5_pilot.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/pilot/z6__shared__none.npy",
+      "path": "runs/e5/pilot/z6__shared__none.npy",
+      "format": "file",
+      "sha256": "c8cb200cc0bdc74d7c3d58487e6aeffdfba0a557415f092ac61e69d52a12ebb2",
+      "retrieval": "scripts/e5_pilot.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/causal/primary.npz",
+      "path": "runs/e5/causal/primary.npz",
+      "format": "file",
+      "sha256": "f51c9cd76dbb8233ad818418fad3791fd10a9540b7a6eb3f619999185821c905",
+      "retrieval": "scripts/e5_causal.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/pairs/probe_val/ids.json",
+      "path": "runs/e5/pairs/probe_val/ids.json",
+      "format": "file",
+      "sha256": "b47ebdef644c082ec22276a333b9cd3b2e5e6ec49bbb1c65d9a941dd65884382",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:experiments/e5/pairs.json",
+      "path": "experiments/e5/pairs.json",
+      "format": "file",
+      "sha256": "72f68adc716726200edf78fd307a94d287e2cc4ab67088dfdb6d2161c99fc470",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:experiments/e5/causal/heads.json",
+      "path": "experiments/e5/causal/heads.json",
+      "format": "file",
+      "sha256": "b0add535f98641bddb28b09f88dc9e749c9b06b1ba3f327d190dfdb70e970b38",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:experiments/e5/lock/components.json",
+      "path": "experiments/e5/lock/components.json",
+      "format": "file",
+      "sha256": "03dcaa4f59a27f8e465412ce4c759502e1e715231b55f6eb02e8488c1dcdf670",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/pairs/probe_val/a.npy",
+      "path": "runs/e5/pairs/probe_val/a.npy",
+      "format": "file",
+      "sha256": "8d577413c6034ed223433969185716d76f4db094f18317a38358ce3e90b727ad",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/pairs/probe_val/b.npy",
+      "path": "runs/e5/pairs/probe_val/b.npy",
+      "format": "file",
+      "sha256": "38d1e029ccf3fdda30cf3b5510efb4b7100ca6833c46b8ca4547b2b7da23e167",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/a/codes.npy",
+      "path": "runs/e5/acts/probe_val/a/codes.npy",
+      "format": "file",
+      "sha256": "f47abcd131119eb9a7a5dd4b4a99137070965e1cbc5ea6b1396139fc1f6df8c9",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/a/solved.npy",
+      "path": "runs/e5/acts/probe_val/a/solved.npy",
+      "format": "file",
+      "sha256": "091a3f3501a7fb08a9b882e98fb718a0ba2dbec90cf7404ae391fdc0ea70e632",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/a/prefix_cells.npy",
+      "path": "runs/e5/acts/probe_val/a/prefix_cells.npy",
+      "format": "file",
+      "sha256": "7bacf5c42cd1dd02561fd2edbdaf121a38df0ada2218a47f67d7641e923d46e3",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/a/z6.npy",
+      "path": "runs/e5/acts/probe_val/a/z6.npy",
+      "format": "file",
+      "sha256": "96e9a4faf2e006f80f0d35ce90eb43e2cd5d33e65b0312924e5b6f52f37d3be2",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/b/codes.npy",
+      "path": "runs/e5/acts/probe_val/b/codes.npy",
+      "format": "file",
+      "sha256": "4f509abd5c9f11724ab5afa7c5b72b6efcf192c8a7fde75de5ad05afb257bfe1",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/b/solved.npy",
+      "path": "runs/e5/acts/probe_val/b/solved.npy",
+      "format": "file",
+      "sha256": "0db385ebbdd5e911a72d248208102d3c1972e41ceb04097d2d650e8cebbf670d",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/b/prefix_cells.npy",
+      "path": "runs/e5/acts/probe_val/b/prefix_cells.npy",
+      "format": "file",
+      "sha256": "b9f211ebfc3e5547c88ceace90ec073389d74f11cb19357e54436adf56fb321a",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:runs/e5/acts/probe_val/b/z6.npy",
+      "path": "runs/e5/acts/probe_val/b/z6.npy",
+      "format": "file",
+      "sha256": "d7e55a3c59d9f4990583d19aaa8edf89d23749e2cec1061daed3a12ff741ea23",
+      "retrieval": "scripts/e5_extract.py"
+    },
+    {
+      "name": "dry_hash:experiments/e5/dry/results.json",
+      "path": "experiments/e5/dry/results.json",
+      "format": "file",
+      "sha256": "7cc50e91df1b50ad3df555df52e1dc94ec047c701492274f2397d2f418a98f07",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/dry/run.json",
+      "path": "runs/e5/dry/run.json",
+      "format": "file",
+      "sha256": "895efd625757e7c031d838d11140667f338e48ad516f43de93402ca036a64e05",
+      "retrieval": "scripts/e5_test.py --mode dry"
+    },
+    {
+      "name": "dry_hash:experiments/e5/dry_perm/results.json",
+      "path": "experiments/e5/dry_perm/results.json",
+      "format": "file",
+      "sha256": "9eaeba6ddfa5e851386cea55e973a92c848c69c69f28a3582c5f14eac8b5abc4",
+      "retrieval": "committed in this repository"
+    },
+    {
+      "name": "dry_hash:runs/e5/dry_perm/run.json",
+      "path": "runs/e5/dry_perm/run.json",
+      "format": "file",
+      "sha256": "a8c0d014563459b533969d941045c95e7cb90438a12f34da51be4f4ee6ee368c",
+      "retrieval": "scripts/e5_test.py --mode dry_perm"
+    },
+    {
+      "name": "dry_hash:scripts/e5_dry_check.py",
+      "path": "scripts/e5_dry_check.py",
+      "format": "file",
+      "sha256": "e807316d9bb7c9f18f878b36b51bb49758bdde11ef65ca230fae4893a56ae8e8",
+      "retrieval": "committed in this repository"
     }
   ]
 }

@@ -96,10 +96,50 @@ def build_fixture_root(root) -> None:
                           for k in ("z6_head", "W", "Q", "H", "R", "Pi")},
                  "verified_heads": {rep: {"file": f"runs/e5/causal/heads/{rep}.pt"} for rep in ("P2", "P4", "P8")}})
 
+    # extra artifacts the dry-run record's own "hashes" dict names (protocol §9.4): some already
+    # covered by an earlier bucket (deduplicated), most not (get their own manifest entry)
+    (root / "scripts" / "e5_dry_check.py").write_text("# fake e5_dry_check.py\n", encoding="utf-8")
+    _write_json(root / "experiments" / "e5" / "causal" / "heads.json", {"heads": {}})
+    _write_json(root / "experiments" / "e5" / "dry" / "results.json", {"mode": "dry"})
+    _write_json(root / "experiments" / "e5" / "dry_perm" / "results.json", {"mode": "dry_perm"})
+    _write_json(root / "runs" / "e5" / "dry" / "run.json", {"status": "finished"})
+    _write_json(root / "runs" / "e5" / "dry_perm" / "run.json", {"status": "finished"})
+    pilot_dir = root / "runs" / "e5" / "pilot"
+    pilot_dir.mkdir(parents=True, exist_ok=True)
+    np.save(pilot_dir / "P2__shared__none.npy", np.zeros((2, 81, 9)))
+    np.save(pilot_dir / "z6__shared__none.npy", np.zeros((2, 81, 9)))
+    np.savez(root / "runs" / "e5" / "causal" / "primary.npz", directed=np.zeros(3))
+    for member in "ab":
+        acts_dir = root / "runs" / "e5" / "acts" / "probe_val" / member
+        acts_dir.mkdir(parents=True, exist_ok=True)
+        for key in ("codes", "solved", "prefix_cells", "z6"):
+            np.save(acts_dir / f"{key}.npy", np.zeros(3))
+
+    hashable = {
+        # already covered by another bucket: must not get a duplicate entry
+        "runs/e5/lock/W.npy": root / "runs" / "e5" / "lock" / "W.npy",
+        "runs/e5/pairs/probe_val/ids.json": root / "runs" / "e5" / "pairs" / "probe_val" / "ids.json",
+        # not covered anywhere else: each must get its own entry
+        "experiments/e5/pairs.json": root / "experiments" / "e5" / "pairs.json",
+        "experiments/e5/causal/heads.json": root / "experiments" / "e5" / "causal" / "heads.json",
+        "experiments/e5/lock/components.json": root / "experiments" / "e5" / "lock" / "components.json",
+        "experiments/e5/dry/results.json": root / "experiments" / "e5" / "dry" / "results.json",
+        "experiments/e5/dry_perm/results.json": root / "experiments" / "e5" / "dry_perm" / "results.json",
+        "runs/e5/dry/run.json": root / "runs" / "e5" / "dry" / "run.json",
+        "runs/e5/dry_perm/run.json": root / "runs" / "e5" / "dry_perm" / "run.json",
+        "scripts/e5_dry_check.py": root / "scripts" / "e5_dry_check.py",
+        "runs/e5/pilot/P2__shared__none.npy": pilot_dir / "P2__shared__none.npy",
+        "runs/e5/pilot/z6__shared__none.npy": pilot_dir / "z6__shared__none.npy",
+        "runs/e5/causal/primary.npz": root / "runs" / "e5" / "causal" / "primary.npz",
+        "runs/e5/acts/probe_val/a/codes.npy": root / "runs" / "e5" / "acts" / "probe_val" / "a" / "codes.npy",
+        "runs/e5/acts/probe_val/b/z6.npy": root / "runs" / "e5" / "acts" / "probe_val" / "b" / "z6.npy",
+    }
+
     # dry-run record
     dry_dir = root / "experiments" / "e5" / "dry"
     dry_dir.mkdir(parents=True, exist_ok=True)
-    (dry_dir / "check.json").write_text(json.dumps({"passed": True}), encoding="utf-8")
+    hashes = {rel: wp2.file_sha256(p) for rel, p in hashable.items()}
+    _write_json(dry_dir / "check.json", {"passed": True, "hashes": hashes})
     (dry_dir / "check.sha256").write_text(wp2.file_sha256(dry_dir / "check.json") + "\n", encoding="utf-8")
 
 
@@ -139,7 +179,10 @@ def test_verify_fails_naming_the_tampered_entry(fixture_root, monkeypatch):
 def test_ids_are_hashed_with_sha256_ids_not_sha256_array(fixture_root):
     m = _mod()
     manifest = m.build_manifest(fixture_root)
-    ids_entries = [e for e in manifest["entries"] if e["path"].endswith("ids.json")]
+    # the id-list buckets (screening corpus, E5 pairs), not the dry record's own plain-file-hash
+    # entries at the same paths (a different, deliberately separate, hashing convention)
+    ids_entries = [e for e in manifest["entries"]
+                   if e["path"].endswith("ids.json") and not e["name"].startswith("dry_hash:")]
     assert ids_entries
     for e in ids_entries:
         assert e["format"] == "sha256_ids"
@@ -174,6 +217,41 @@ def test_ensure_screening_corpus_is_a_noop_when_already_present(fixture_root, mo
     monkeypatch.setattr(m.subsets, "generate_subset", lambda name, n: called.append(name))
     m.ensure_screening_corpus(fixture_root)
     assert called == []
+
+
+def test_every_dry_record_hash_is_covered_by_the_manifest(fixture_root):
+    """Protocol §10: "the approved dry-run record and the hashes it states" - every path named
+    in check.json's own `hashes` dict must appear in the manifest (whether via a dedicated
+    dry_hash:* entry or an earlier bucket) with a matching SHA-256."""
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    by_path = {e["path"]: e for e in manifest["entries"]}
+    record = json.loads((fixture_root / "experiments" / "e5" / "dry" / "check.json").read_text(encoding="utf-8"))
+    assert record["hashes"]
+    for rel, expected in record["hashes"].items():
+        assert rel in by_path, f"{rel} has no manifest entry"
+        assert by_path[rel]["sha256"] == expected, f"{rel}: manifest sha256 differs from the dry record's"
+        assert by_path[rel]["format"] == "file"
+
+
+def test_dry_record_entries_skip_only_matching_hashes(fixture_root):
+    """A path already in the manifest is only skipped by `dry_record_hash_entries` when an
+    existing entry's SHA-256 already equals the record's value for that path (same hashing
+    convention); a different convention at the same path (e.g. `sha256_ids` vs. the record's
+    plain file hash) still gets its own `dry_hash:*` entry."""
+    m = _mod()
+    manifest = m.build_manifest(fixture_root)
+    names = [e["name"] for e in manifest["entries"]]
+    paths = [e["path"] for e in manifest["entries"]]
+    # same convention (plain file hash both times): no duplicate
+    assert paths.count("runs/e5/lock/W.npy") == 1
+    assert "dry_hash:runs/e5/lock/W.npy" not in names
+    # different convention at the same path (sha256_ids vs. the record's plain file hash): the
+    # dry record's own entry is still added even though the path already appears elsewhere
+    assert paths.count("runs/e5/pairs/probe_val/ids.json") == 2
+    assert "dry_hash:runs/e5/pairs/probe_val/ids.json" in names
+    # not covered by any other bucket at all: a fresh entry
+    assert "dry_hash:experiments/e5/pairs.json" in names
 
 
 def test_verify_rejects_missing_entry(fixture_root, monkeypatch):
