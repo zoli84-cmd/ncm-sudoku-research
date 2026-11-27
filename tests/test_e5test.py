@@ -132,16 +132,28 @@ def test_pair_scores_match_pilot_w_auc_without_identical_inputs():
 
 def test_same_inputs_exact_equality_per_cell():
     n = 2
-    features = np.zeros((2 * n, 81, 3))
+    features = np.zeros((2 * n, 81, 3), dtype=np.float32)
     features[0, 5] = [1.0, 2.0, 3.0]
     features[n + 0, 5] = [1.0, 2.0, 3.0]  # pair 0, cell 5: identical
     features[1, 5] = [1.0, 2.0, 3.0]
-    features[n + 1, 5] = [1.0, 2.0, 3.0 + 1e-9]  # pair 1, cell 5: differs
+    features[n + 1, 5] = [1.0, 2.0, 3.5]  # pair 1, cell 5: differs
 
     same = same_inputs(features, n)
 
     assert same[0, 5] == True  # noqa: E712
     assert same[1, 5] == False  # noqa: E712
+
+
+def test_same_inputs_zero_and_negative_zero_are_not_identical():
+    n = 1
+    features = np.zeros((2 * n, 81, 1), dtype=np.float32)
+    features[0, 0, 0] = 0.0
+    features[n + 0, 0, 0] = -0.0
+    assert features[0, 0, 0] == features[n + 0, 0, 0]  # equal as floats (IEEE 754)
+
+    same = same_inputs(features, n)
+
+    assert same[0, 0] == False  # noqa: E712 -- but not bit-identical
 
 
 def _random_head_state_dict(rng: np.random.Generator, in_dim: int) -> dict:
@@ -193,7 +205,43 @@ def test_head_probs_independent_of_batch_size():
 
 
 def test_decide_hand_computed_case():
-    w_p2 = np.array([1.0, 1.0, 0.75])
+    # Three pairs with n_disc 1, 4 and 9, built through pair_scores: pair 0 and 1
+    # score 1.0 on every discordant bit; pair 2 has 6 wins and 3 exact ties (score
+    # 0.5), so w = 7.5 / 9. The unweighted (equal-pair-weight) mean of w -- what
+    # the protocol uses -- differs from the bit-pooled mean over all 14 bits.
+    n = 3
+    pred = np.full((2 * n, 81, 9), 0.5)
+    mask = np.zeros((2 * n, 81, 9), dtype=bool)
+    empty = np.zeros((2 * n, 81), dtype=bool)
+    same_input = np.zeros((n, 81), dtype=bool)
+
+    mask[0, 0, 0] = True  # pair 0: 1 discordant bit, candidate wins
+    pred[0, 0, 0], pred[n + 0, 0, 0] = 0.9, 0.1
+    empty[0, 0] = empty[n + 0, 0] = True
+
+    for c in range(4):  # pair 1: 4 discordant bits, candidate wins every time
+        mask[1, c, 0] = True
+        pred[1, c, 0], pred[n + 1, c, 0] = 0.9, 0.1
+        empty[1, c] = empty[n + 1, c] = True
+
+    for c in range(9):  # pair 2: 9 discordant bits, 6 wins and 3 exact ties
+        mask[2, c, 0] = True
+        if c < 6:
+            pred[2, c, 0], pred[n + 2, c, 0] = 0.9, 0.1
+        else:
+            pred[2, c, 0], pred[n + 2, c, 0] = 0.5, 0.5
+        empty[2, c] = empty[n + 2, c] = True
+
+    scores = pair_scores(pred, mask, empty, same_input, n)
+    assert scores["n_disc"] == [1, 4, 9]
+    w_p2 = np.array(scores["w"])
+    np.testing.assert_allclose(w_p2, [1.0, 1.0, 7.5 / 9])
+
+    n_disc = np.array(scores["n_disc"], dtype=np.float64)
+    unweighted_mean = float(np.mean(w_p2))  # equal pair weight
+    bit_pooled_mean = float((w_p2 * n_disc).sum() / n_disc.sum())
+    assert unweighted_mean != pytest.approx(bit_pooled_mean)
+
     w_z = np.array([0.5, 0.5, 0.5])
     elig_a = np.array([True, True, True])
     q = np.zeros(3)
@@ -204,14 +252,30 @@ def test_decide_hand_computed_case():
 
     res = decide(w_p2, w_z, elig_a, q, rand, hv, shuf, elig_b, [], [])
 
-    delta = w_p2 - w_z  # [0.5, 0.5, 0.25]
-    assert float(np.mean(delta)) == pytest.approx((0.5 + 0.5 + 0.25) / 3)  # equal pair weight
+    delta = w_p2 - w_z
     expected_a2 = e5stats.to_unit(delta)
     np.testing.assert_allclose(res["inputs"]["A2"], expected_a2)
     np.testing.assert_allclose(res["inputs"]["A1_lower"], w_z)
     np.testing.assert_allclose(res["inputs"]["A1_upper"], 1.0 - w_z)
     expected_log_k = float(e5stats.betting_logk(expected_a2, e5stats.to_unit(e5stats.DELTA_MIN), n_plan=400))
     assert res["log_k"]["A2"] == pytest.approx(expected_log_k)
+
+
+def test_decide_both_claims_hold():
+    n = 400
+    w_p2 = np.full(n, 1.0)
+    w_z = np.full(n, 0.5)
+    elig_a = np.ones(n, dtype=bool)
+    q = np.full(n, 1.0)
+    rand = np.zeros(n)
+    hv = np.zeros(n)
+    shuf = np.zeros(n)
+    elig_b = np.ones(n, dtype=bool)
+
+    res = decide(w_p2, w_z, elig_a, q, rand, hv, shuf, elig_b, [], [])
+
+    assert res["outcomes"]["A"] == "holds"
+    assert res["outcomes"]["B"] == "holds"
 
 
 def test_decide_n_a_below_400_uses_only_eligible_pairs_and_n_plan_400():

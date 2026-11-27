@@ -156,10 +156,17 @@ def head_probs(
 
 
 def same_inputs(features: np.ndarray, n: int) -> np.ndarray:
-    """(n, 81) bool: exact (bit-identical) equality of the two members' feature rows
-    at each cell -- the protocol §5.1 identical-input tie rule. Members stacked a
-    then b, as everywhere else in this module."""
-    a, b = features[:n], features[n:]
+    """(n, 81) bool: exact bit-for-bit equality, in the float32 probe-input
+    representation, of the two members' feature rows at each cell -- the protocol
+    §5.1 identical-input tie rule. Compared as the raw uint32 bit pattern, not as a
+    float equality: 0.0 and -0.0 compare equal as floats but differ in
+    representation, and are not treated as identical here. Members stacked a then
+    b, as everywhere else in this module."""
+
+    def bits(x: np.ndarray) -> np.ndarray:
+        return np.ascontiguousarray(np.asarray(x, dtype=np.float32)).view(np.uint32)
+
+    a, b = bits(features[:n]), bits(features[n:])
     return np.all(a == b, axis=-1)
 
 
@@ -214,7 +221,15 @@ def decide(
     `claim_a`/`claim_b` and every condition's log capital at the fixed `N_PLAN`
     (400, never the realized eligible count). Outcome per claim (§6): `invalid` if
     its invalid-reason list is non-empty, else `not_estimable` if no pair is
-    eligible, else `holds` or `not_shown` from the claim's intersection flag."""
+    eligible, else `holds` or `not_shown` from the claim's intersection flag.
+
+    `log_k` is NaN only for the conditions of a claim whose outcome is
+    `not_estimable` (no eligible pair, so there is nothing to bet on); every other
+    outcome, including `invalid`, still carries a real log capital computed from
+    whatever eligible rows exist. This function does not itself check finiteness
+    of its inputs or call `bootstrap` -- callers must run `check_finite` on every
+    value (per-pair quantities, decision inputs) before any `bootstrap` call,
+    since `bootstrap` silently drops non-finite values rather than raising."""
     w_p2, w_z = np.asarray(w_p2, np.float64), np.asarray(w_z, np.float64)
     elig_a = np.asarray(elig_a, bool)
     q, rand, hv, shuf = (np.asarray(a, np.float64) for a in (q, rand, hv, shuf))
