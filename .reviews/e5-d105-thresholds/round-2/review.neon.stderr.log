@@ -1,0 +1,1 @@
+Warning: Skipped workspace MCP servers (.mcp.json) because the folder "C:\Users\ako2bp\Documents\VS Code Projects\NCM-research" is not trusted. To load them without approving all tools, add the folder to "trustedFolders" in C:\Users\ako2bp\.copilot\config.json. COPILOT_ALLOW_ALL=true also trusts it, but approves all tools.
