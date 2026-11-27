@@ -15,6 +15,7 @@ def _run_dir(tmp_path, monkeypatch):
     run_dir = {"dry": tmp_path / "runs" / "dry", "dry_perm": tmp_path / "runs" / "dry_perm",
                "test": tmp_path / "runs" / "test"}
     monkeypatch.setattr(e5run, "RUN_DIR", run_dir)
+    monkeypatch.setattr(e5run, "OUT_DIR", {k: tmp_path / "out" / k for k in run_dir})
     return run_dir
 
 
@@ -220,6 +221,62 @@ def test_fresh_start_refuses_existing_record_without_resume(tmp_path, monkeypatc
     (e5run.RUN_DIR["dry"] / ".lock").unlink()
     with pytest.raises(e5run.RunStateError, match="resume"):
         e5run.start_run("dry", {"head": "h1"}, resume=False)
+
+
+def test_finished_test_with_deleted_run_json_is_refused(tmp_path, monkeypatch):
+    """Review fix 1: the single look does not rest on the git-ignored run.json alone."""
+    _run_dir(tmp_path, monkeypatch)
+    e5run.start_run("test", {"head": "h1"}, resume=False)
+    stage = e5run.RUN_DIR["test"] / "pairs.npz"
+    stage.write_bytes(b"stage")
+    e5run.record_output("test", "pairs", stage)
+    out = e5run.OUT_DIR["test"]
+    out.mkdir(parents=True)
+    (out / "results.json").write_text("{}", encoding="utf-8")
+    e5run.finish_run("test", "finished", {})
+    (e5run.RUN_DIR["test"] / "run.json").unlink()
+    with pytest.raises(e5run.RunStateError, match="single look"):
+        e5run.start_run("test", {"head": "h1"}, resume=False)
+    assert not (e5run.RUN_DIR["test"] / "run.json").exists()
+    assert not (e5run.RUN_DIR["test"] / ".lock").exists()
+
+
+@pytest.mark.parametrize("leftover", ["results.json", "report.md", "screening_log.json", "run_dir_file",
+                                      "lock_file", "run_dir_subdir"])
+def test_test_fresh_start_refuses_any_leftover(tmp_path, monkeypatch, leftover):
+    _run_dir(tmp_path, monkeypatch)
+    rd, od = e5run.RUN_DIR["test"], e5run.OUT_DIR["test"]
+    rd.mkdir(parents=True)
+    od.mkdir(parents=True)
+    if leftover == "run_dir_file":
+        (rd / "pairs.npz").write_bytes(b"x")
+    elif leftover == "lock_file":
+        (rd / ".lock").write_text("{}", encoding="utf-8")
+    elif leftover == "run_dir_subdir":
+        (rd / "extract" / "a").mkdir(parents=True)
+    else:
+        (od / leftover).write_text("x", encoding="utf-8")
+    assert e5run.spent_look_evidence()
+    with pytest.raises(e5run.RunStateError, match="single look"):
+        e5run.start_run("test", {"head": "h1"}, resume=False)
+    assert not (rd / "run.json").exists()
+
+
+def test_test_fresh_start_allowed_after_a_refused_before_start_attempt(tmp_path, monkeypatch):
+    """A refused-before-start attempt leaves at most an empty RUN_DIR["test"]; that is no evidence."""
+    _run_dir(tmp_path, monkeypatch)
+    e5run.RUN_DIR["test"].mkdir(parents=True)
+    e5run.OUT_DIR["test"].mkdir(parents=True)
+    assert e5run.spent_look_evidence() == []
+    rec = e5run.start_run("test", {"head": "h1"}, resume=False)
+    assert rec["status"] == "running"
+
+
+def test_dry_fresh_start_ignores_output_leftovers(tmp_path, monkeypatch):
+    _run_dir(tmp_path, monkeypatch)
+    e5run.OUT_DIR["dry"].mkdir(parents=True)
+    (e5run.OUT_DIR["dry"] / "results.json").write_text("{}", encoding="utf-8")
+    assert e5run.start_run("dry", {"head": "h1"}, resume=False)["status"] == "running"
 
 
 def test_resume_without_prior_run_refuses(tmp_path, monkeypatch):

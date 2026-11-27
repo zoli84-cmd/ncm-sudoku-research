@@ -29,7 +29,11 @@ git-ignored `runs/e5/lock/screening/<name>/` with `ncm_sudoku.subsets.generate_s
 already present); PROBE-TRAIN, PROBE-VAL, the WP2 TEST set and the released hard set are already on
 disk from earlier steps and are hashed as-is.
 
-Without --verify: writes `experiments/e5/lock/manifest.json`; refuses to overwrite unless --force.
+Without --verify: writes `experiments/e5/lock/manifest.json`; refuses to overwrite unless --force,
+and refuses to build at all unless the approved code is unchanged since the dry check
+(`approved_code_problem`): `git diff --quiet <check.json code_state.commit> HEAD -- src
+scripts/e5_test.py scripts/e5_dry_check.py pyproject.toml uv.lock e5_protocol_v1.md` must exit 0,
+so the manifest never pins code the dry-run approval did not run.
 With --verify: recomputes every entry through `ncm_sudoku.e5run.verify_manifest` and exits 0, or
 prints the first mismatch (naming the entry) and exits 1.
 
@@ -38,6 +42,7 @@ so the whole assembly is testable against a synthetic root in `tmp_path`.
 """
 
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -53,6 +58,9 @@ IN_REPO = "committed in this repository"
 
 # Screening-corpus subsets not yet saved anywhere else; materialized by this script.
 MATERIALIZE = {"gate": 1000, "cal": 300}
+# Paths the dry-run approval must have run unchanged (compared between its commit and HEAD).
+APPROVED_CODE_PATHS = ("src", "scripts/e5_test.py", "scripts/e5_dry_check.py", "pyproject.toml", "uv.lock",
+                       "e5_protocol_v1.md")
 EXISTING_COUNTS = {"probe_train": 2000, "probe_val": 500, "test": 600}
 
 
@@ -208,6 +216,26 @@ def dry_record_hash_entries(root: Path, covered: dict[str, str]) -> list[dict]:
     return out
 
 
+def approved_code_problem(root: Path) -> str | None:
+    """None if `APPROVED_CODE_PATHS` are identical at the dry-run record's `code_state.commit` and at
+    HEAD (`git diff --quiet <commit> HEAD -- ...` exits 0); otherwise the reason the build is refused
+    (record or commit missing, code changed since the approval, or git failing)."""
+    rec_path = Path(root) / "experiments" / "e5" / "dry" / "check.json"
+    if not rec_path.is_file():
+        return f"{rec_path}: missing"
+    commit = (json.loads(rec_path.read_text(encoding="utf-8")).get("code_state") or {}).get("commit")
+    if not isinstance(commit, str) or not commit:
+        return f"{rec_path}: no code_state.commit"
+    r = subprocess.run(["git", "-C", str(root), "diff", "--quiet", commit, "HEAD", "--", *APPROVED_CODE_PATHS],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if r.returncode == 1:
+        return (f"approved code changed between the dry-run commit {commit} and HEAD "
+                f"({', '.join(APPROVED_CODE_PATHS)}); redo the dry runs and the dry check first")
+    if r.returncode != 0:
+        return f"git diff {commit} HEAD failed (exit {r.returncode}): {r.stderr.strip()}"
+    return None
+
+
 def build_manifest(root: Path) -> dict:
     root = Path(root)
     ensure_screening_corpus(root)
@@ -232,6 +260,9 @@ def main() -> None:
         return
     if OUT.exists() and "--force" not in sys.argv:
         sys.exit(f"{OUT.relative_to(ROOT)} exists; use --force")
+    problem = approved_code_problem(ROOT)
+    if problem:
+        sys.exit(f"e5_manifest: refused, nothing written: {problem}")
     manifest = build_manifest(ROOT)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     atomic_json(OUT, manifest)

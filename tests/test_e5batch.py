@@ -146,6 +146,94 @@ def test_evaluate_batch_reports_untouched_rows_and_hook_level(model, released, m
     assert "hook_level" in e5batch.evaluate_batch(model, *args)["invalid_reasons"]
 
 
+def _nudge_call(monkeypatch, e5batch, target):
+    """`level_logits` with the output of the `target`-th call (1-based, in the fixed call order:
+    1 plain clean, 2 capture-only recipient, 3 capture-only donor, 4 self-donor capture,
+    5 self-donor at the both-empty cells, 6 self-donor at all 91 prefix positions) moved by 1 ulp."""
+    orig, n = e5batch.level_logits, {"k": 0}
+
+    def nudged(m, prefix, codes, level):
+        out = orig(m, prefix, codes, level)
+        n["k"] += 1
+        if n["k"] == target:
+            out = out.clone()
+            out.view(-1)[0] = torch.nextafter(out.view(-1)[0], torch.tensor(float("inf")))
+        return out
+
+    monkeypatch.setattr(e5batch, "level_logits", nudged)
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+@pytest.mark.parametrize("target,reason", [(1, "capture_only_identity"), (5, "self_donor_cells"),
+                                           (6, "self_donor_prefix91")])
+def test_evaluate_batch_reports_identity_failures(model, released, monkeypatch, target, reason):
+    from ncm_sudoku import e5batch
+
+    args = _batch_inputs(model, released)
+    _nudge_call(monkeypatch, e5batch, target)
+    assert e5batch.evaluate_batch(model, *args)["invalid_reasons"] == [reason]
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+def test_evaluate_batch_reports_shuffled_direction(model, released, monkeypatch):
+    from ncm_sudoku import e5batch
+
+    args = _batch_inputs(model, released)
+    orig = e5batch.shuffled_raw
+    # the shuffled step built with a different permutation than the one the check expects
+    monkeypatch.setattr(e5batch, "shuffled_raw", lambda delta, W, Pi: orig(delta, W, np.roll(Pi, 1)))
+    out = e5batch.evaluate_batch(model, *args)
+    assert out["invalid_reasons"] == ["shuffled_direction"]
+    assert out["directed"].shape == (4, len(e5batch.CONDITIONS))
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+def test_evaluate_batch_reports_hook_applied_twice(model, released, monkeypatch):
+    from ncm_sudoku import e5batch, e5causal
+
+    args = _batch_inputs(model, released)
+    orig = e5causal.Level7Hooks._patch
+
+    def twice(self, m, a, out):  # the patch hook counts two applications for one forward
+        new = orig(self, m, a, out)
+        self.applied += 1
+        return new
+
+    monkeypatch.setattr(e5causal.Level7Hooks, "_patch", twice)
+    assert e5batch.evaluate_batch(model, *args)["invalid_reasons"] == ["hook_count"]
+
+
+@pytest.mark.slow
+@needs_model
+@needs_components
+@pytest.mark.parametrize("where", ["logits", "steps", "outcomes"])
+def test_evaluate_batch_raises_on_non_finite(model, released, monkeypatch, where):
+    from ncm_sudoku import e5batch
+    from ncm_sudoku.e5test import NonFiniteError
+
+    args = _batch_inputs(model, released)
+    comps = args[0]
+    if where == "logits":
+        orig = e5batch.level_logits
+        monkeypatch.setattr(e5batch, "level_logits",
+                            lambda m, p, c, level: torch.full_like(orig(m, p, c, level), float("nan")))
+    elif where == "steps":
+        orig = e5batch.project_step
+        monkeypatch.setattr(e5batch, "project_step",
+                            lambda delta, basis: orig(delta, basis) * (np.nan if basis is comps["Q"] else 1.0))
+    else:
+        orig = e5batch.tv
+        monkeypatch.setattr(e5batch, "tv", lambda p, q: orig(p, q) * np.nan)
+    with pytest.raises(NonFiniteError, match=where):
+        e5batch.evaluate_batch(model, *args)
+
+
 @pytest.mark.slow
 @needs_model
 @needs_components

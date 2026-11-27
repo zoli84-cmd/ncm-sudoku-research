@@ -147,6 +147,19 @@ def test_all_equal_passes_and_record_has_the_lock_format(tree):
     assert rec["prediction_max_abs_diff"]["dry_vs_pilot"]["P2"]["max_abs_diff"] == 0.0
 
 
+def test_code_files_cover_every_module_the_runner_can_use(tree):
+    """Review fix 3: the approval hashes the whole package, both E5 scripts, the environment lock and
+    the protocol, so require_lock catches a change to any module the runner imports."""
+    m, root, _ = tree
+    package = {f"src/ncm_sudoku/{p.name}" for p in (ROOT / "src" / "ncm_sudoku").glob("*.py")}
+    named = {"scripts/e5_test.py", "scripts/e5_dry_check.py", "pyproject.toml", "uv.lock", "e5_protocol_v1.md"}
+    assert set(m.CODE_FILES) == package | named and len(m.CODE_FILES) == len(package | named)
+    assert _main(m) == 0
+    hashes = _record(root)["hashes"]
+    for rel in package | named:
+        assert hashes[rel] == wp2.file_sha256(ROOT / rel)
+
+
 def test_one_ulp_off_per_pair_value_fails_part_b(tree):
     m, root, ids = tree
 

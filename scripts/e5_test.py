@@ -14,10 +14,22 @@ Modes:
 
 Start (§6): torch threads set to 4 (refuses otherwise); every input hashed into `run.json`
 (`e5run.start_run`; `--resume` continues only an interrupted run with identical inputs and
-verified partial outputs). Hash checks by §6 category (ruling R5): checkpoint, generator guard,
-pair set, screening corpus, P2 head (and in test mode the manifest and dry record) -> the run stops
-invalid for both claims; Z<=6 head -> claim A invalid; W, Q, H, R, Pi, P4, P8 -> claim B invalid;
-the run continues for the other claim.
+verified partial outputs). Every start check runs before `start_run`; §6 categories (ruling R5):
+checkpoint, generator guard, pair set / screening corpus, P2 head -> shared (both claims); Z<=6
+head -> claim A; W, Q, H, R, Pi, P4, P8 -> claim B.
+- Dry modes: a failed start check is recorded in the run; a shared failure finishes it `invalid`
+  for both claims, a claim-specific one makes only that claim invalid and the run continues for
+  the other claim.
+- Test mode: no TEST pair exists yet at start, so nothing has been observed and a failed start
+  check must not spend the single look. Every start check - `e5run.require_lock` (`LockError`: not
+  at the tag; `DataIntegrityError`: manifest or approved dry record), every shared and every
+  claim-specific category above, and (on a fresh start, or a resume whose `pairs` stage is not yet
+  recorded) the screening corpus's WP2 TEST set against `experiments/lock/test_set.json` - refuses
+  to start: no run record, no output, exit 2 with the reason (`main`). This is stricter than §6,
+  which would let a claim-specific mismatch (e.g. a changed claim-A scoring input) spend the look
+  on the other claim. A fresh TEST start is also refused whenever an earlier TEST attempt left
+  anything behind (`e5run.spent_look_evidence`, enforced by `e5run.start_run`), even if
+  `runs/e5/test/run.json` was deleted.
 
 Stages under `e5run.RUN_DIR[mode]` (each written atomically and recorded in run.json; a resumed
 run skips recorded stages): `pairs.npz` (a, b, solutions and ids in raw order, the processing
@@ -37,7 +49,7 @@ hashes, threads, code state; dry modes also the max abs difference to the saved 
 predictions, information only) and `report.md` (the §8 rows selected by the outcomes, copied
 verbatim from the protocol), plus `screening_log.json` (the per-raw-index screening log). A
 non-finite value (also inside greedy generation, `e5extract` hooks), a failed extraction check or
-capture, a TEST generation error, an internal collision or a shared hash mismatch stops the run:
+capture, a TEST generation error, an internal collision or (dry modes) a shared start hash mismatch stops the run:
 status `invalid`, both claims invalid.
 """
 
@@ -93,6 +105,10 @@ NOT_ESTIMABLE = "If the number of eligible pairs for a claim is 0, the claim is 
 
 class Stop(Exception):
     """A shared failure (§6): the run stops and both claims are invalid."""
+
+
+class StartRefused(RuntimeError):
+    """Test mode: a start check failed before any TEST pair exists; no run record is written."""
 
 
 def _paths() -> dict:
@@ -173,10 +189,8 @@ def _inputs(mode: str, P: dict) -> tuple[dict, dict]:
     return inputs, expected
 
 
-def _start_checks(mode: str, P: dict, inputs: dict, expected: dict, lock_problem: str | None) -> dict:
+def _start_checks(mode: str, P: dict, inputs: dict, expected: dict) -> dict:
     inv = {"shared": [], "A": [], "B": []}
-    if lock_problem:
-        inv["shared"].append(lock_problem)
     try:
         verify_checkpoints(P["ckpt"])
     except DataIntegrityError as e:
@@ -196,9 +210,31 @@ def _start_checks(mode: str, P: dict, inputs: dict, expected: dict, lock_problem
 
 # --- stages --------------------------------------------------------------------------------------
 
+def screening_corpus(P: dict) -> tuple[dict, dict, str | None]:
+    """The external screening corpus of §4.1 (gate, CAL, PROBE-TRAIN, PROBE-VAL, WP2 TEST, released
+    hard set, E5 PROBE pairs) as `(entries, info, problem)`; `problem` names a WP2 TEST set that
+    differs from `experiments/lock/test_set.json` (None if it matches)."""
+    gen = {name: subsets.generate_subset(name, n) for name, n in EXISTING.items()}
+    ts = _json(P["test_set"])["sha256"]
+    if (subsets.sha256_ids([g.puzzle_id for g in gen["test"]]) != ts["ids"]
+            or subsets.sha256_array(np.stack([g.solution for g in gen["test"]])) != ts["solutions"]):
+        return {}, {}, "screening_corpus_hash: WP2 TEST differs from experiments/lock/test_set.json"
+    entries = {name: [(g.puzzle_id, g.solution) for g in v] for name, v in gen.items()}
+    _, rel = load_released(P["released"])
+    entries["released"] = [(f"released-hard-{i}", s) for i, s in enumerate(rel)]
+    for subset in ("probe_train", "probe_val"):
+        ids, arr, _ = _load_pairs(P, subset)
+        entries[f"pairs_{subset}"] = list(zip(ids, arr["solutions"]))
+    flat = [x for v in entries.values() for x in v]
+    return entries, {"counts": {k: len(v) for k, v in entries.items()},
+                     "sha256_ids": subsets.sha256_ids([i for i, _ in flat]),
+                     "sha256_solutions": subsets.sha256_array(np.stack([s for _, s in flat]))}, None
+
+
 class Runner:
-    def __init__(self, mode: str, P: dict, done: set, inv: dict):
+    def __init__(self, mode: str, P: dict, done: set, inv: dict, corpus: tuple[dict, dict] | None = None):
         self.mode, self.P, self.done, self.inv = mode, P, done, inv
+        self.corpus = corpus  # test mode: built and checked before start_run (`_test_prestart`)
         self.rd = e5run.RUN_DIR[mode]
         self.info: dict = {}
         self._model = None
@@ -258,22 +294,13 @@ class Runner:
         self.elig_a, self.elig_b = eligibility(self.mask, self.empty, self.n)
 
     def _corpus(self) -> tuple[dict, dict]:
-        gen = {name: subsets.generate_subset(name, n) for name, n in EXISTING.items()}
-        ts = _json(self.P["test_set"])["sha256"]
-        if (subsets.sha256_ids([g.puzzle_id for g in gen["test"]]) != ts["ids"]
-                or subsets.sha256_array(np.stack([g.solution for g in gen["test"]])) != ts["solutions"]):
-            self.inv["shared"].append("screening_corpus_hash: WP2 TEST differs from experiments/lock/test_set.json")
+        if self.corpus is not None:
+            return self.corpus
+        entries, info, problem = screening_corpus(self.P)  # fallback only; run() builds it before start
+        if problem:
+            self.inv["shared"].append(problem)
             raise Stop("screening corpus")
-        entries = {name: [(g.puzzle_id, g.solution) for g in v] for name, v in gen.items()}
-        _, rel = load_released(self.P["released"])
-        entries["released"] = [(f"released-hard-{i}", s) for i, s in enumerate(rel)]
-        for subset in ("probe_train", "probe_val"):
-            ids, arr, _ = _load_pairs(self.P, subset)
-            entries[f"pairs_{subset}"] = list(zip(ids, arr["solutions"]))
-        flat = [x for v in entries.values() for x in v]
-        return entries, {"counts": {k: len(v) for k, v in entries.items()},
-                         "sha256_ids": subsets.sha256_ids([i for i, _ in flat]),
-                         "sha256_solutions": subsets.sha256_array(np.stack([s for _, s in flat]))}
+        return entries, info
 
     def extract(self):
         feats, codes = {"P2": [], "z6": []}, []
@@ -502,6 +529,22 @@ def _finish(mode: str, rn: Runner | None, inputs: dict, inv: dict, status: str, 
     return status
 
 
+def _test_prestart(P: dict, inv: dict, resume: bool) -> tuple[dict, dict] | None:
+    """Test mode, before `start_run`: refuses (`StartRefused`, no record) on any failed start check of
+    any §6 category, then builds the screening corpus (refusing on a WP2 TEST mismatch) unless a
+    resumed run has already recorded its `pairs` stage (returns None then)."""
+    problems = [f"{cat}: {r}" for cat in ("shared", "A", "B") for r in inv[cat]]
+    if problems:
+        raise StartRefused("start checks failed before any TEST pair exists: " + "; ".join(problems))
+    run_json = e5run.RUN_DIR["test"] / "run.json"
+    if resume and run_json.is_file() and "pairs" in (_json(run_json).get("stages") or {}):
+        return None
+    entries, info, problem = screening_corpus(P)
+    if problem:
+        raise StartRefused(problem)
+    return entries, info
+
+
 def run(mode: str, resume: bool) -> str:
     t0 = time.perf_counter()
     torch.set_num_threads(THREADS)
@@ -509,16 +552,19 @@ def run(mode: str, resume: bool) -> str:
         raise SystemExit(f"torch.get_num_threads() = {torch.get_num_threads()} != {THREADS}; refusing to start")
     torch.use_deterministic_algorithms(True)
     P = _paths()
-    lock_problem = None
+    corpus = None
     if mode == "test":
-        try:
-            e5run.require_lock(P["manifest"], P["dry_record"])  # LockError (not at the tag) refuses to start
-        except e5run.DataIntegrityError as e:
-            lock_problem = f"manifest_or_dry_record: {e}"
+        leftovers = [] if resume else e5run.spent_look_evidence()
+        if leftovers:  # cheap early refusal; e5run.start_run enforces the same rule
+            raise e5run.RunStateError(f"test: an earlier TEST attempt left {leftovers[:5]}; "
+                                      "a fresh TEST start is refused (single look)")
+        e5run.require_lock(P["manifest"], P["dry_record"])  # LockError / DataIntegrityError: refused, no record
     inputs, expected = _inputs(mode, P)
+    inv = _start_checks(mode, P, inputs, expected)
+    if mode == "test":
+        corpus = _test_prestart(P, inv, resume)
     rec = e5run.start_run(mode, inputs, resume)
-    inv = _start_checks(mode, P, inputs, expected, lock_problem)
-    rn = Runner(mode, P, set(rec.get("stages") or {}), inv)
+    rn = Runner(mode, P, set(rec.get("stages") or {}), inv, corpus)
     try:
         if inv["shared"]:
             raise Stop("start hash checks")
@@ -540,7 +586,12 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--mode", required=True, choices=tuple(e5run.RUN_DIR))
     ap.add_argument("--resume", action="store_true")
     args = ap.parse_args(argv)
-    status = run(args.mode, args.resume)
+    try:
+        status = run(args.mode, args.resume)
+    except (e5run.LockError, e5run.DataIntegrityError, e5run.RunStateError, StartRefused) as e:
+        print(f"e5_test --mode {args.mode}: refused: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        sys.exit(2)
     print(json.dumps(_json(e5run.OUT_DIR[args.mode] / "results.json")["outcomes"]), status, flush=True)
     sys.exit(0 if status == "finished" else 1)
 

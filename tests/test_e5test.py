@@ -80,6 +80,28 @@ def test_eligibility_from_labels():
     assert elig_b.tolist() == [True]
 
 
+def test_eligibility_true_positive_for_a_genuine_discordant_bit():
+    """elig_a is True when a both-empty cell has a digit that is a candidate in exactly one member:
+    b keeps cell 20 as a clue that a leaves empty (and vice versa for cell 21), which removes that
+    digit from the candidates of the both-empty cells 0-19 sharing its row, column or box."""
+    sol = random_solution(np.random.default_rng(8))
+    a, b = sol.copy(), sol.copy()
+    a[:21] = 0
+    b[:20] = 0
+    b[21] = 0
+    ma, mb = candidate_mask(a), candidate_mask(b)
+    both = (a == 0) & (b == 0)
+    disc = both[:, None] & ((ma > 0.5) != (mb > 0.5))
+    assert disc.any()  # a genuine discordant bit exists, computed independently of `eligibility`
+    other = sol.copy()
+    other[:21] = 0  # second pair: identical members, no discordant bit
+    mask = np.stack([ma, candidate_mask(other), mb, candidate_mask(other)])
+    empty = np.stack([a == 0, other == 0, b == 0, other == 0])
+    elig_a, elig_b = eligibility(mask, empty, n=2)
+    assert elig_a.tolist() == [True, False]
+    assert elig_b.tolist() == [True, True]
+
+
 # --- Task 2: within-pair scoring, probe inference, decisions and outcomes ---
 
 

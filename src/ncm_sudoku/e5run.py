@@ -7,7 +7,10 @@ generator), `dry_perm` (the same dry run with the fixed reordering permutation o
 
 A run record (`RUN_DIR[mode]/run.json`) is `{"status", "inputs", "threads", "started", "stages"}`;
 `status` is `"running"`, `"finished"` or `"invalid"`. `start_run` is the only way to begin or
-resume a run: a finished or invalid record is never rerun (single look); a single-writer lock file
+resume a run: a finished or invalid record is never rerun (single look); in `test` mode a fresh
+start also needs an empty (or absent) `RUN_DIR["test"]` and none of the runner's outputs
+(`TEST_OUTPUTS`) in `OUT_DIR["test"]`, so deleting the git-ignored `run.json` never reopens the
+single look (`spent_look_evidence`); a single-writer lock file
 `RUN_DIR[mode]/.lock` (exclusive create) refuses a second concurrent writer; `--resume` requires
 the stored `inputs` and thread count to match exactly and re-hashes every partial output already
 listed in `stages`, so a changed input or a tampered output stops the resume rather than silently
@@ -97,6 +100,25 @@ def input_hashes(paths: dict[str, Path]) -> dict[str, str]:
     return {name: wp2.file_sha256(Path(p)) for name, p in paths.items()}
 
 
+# Files the runner writes into OUT_DIR[mode] when a run ends (scripts/e5_test.py `_finish`).
+TEST_OUTPUTS = ("results.json", "report.md", "screening_log.json")
+
+
+def spent_look_evidence() -> list[str]:
+    """What blocks a fresh `test` start besides an existing `run.json` (single look; review fix 1).
+
+    Every check that can refuse a TEST start runs before `start_run` (scripts/e5_test.py), and a
+    refusal inside `start_run` itself removes the lock file it created, so a refused-before-start
+    attempt leaves at most an empty `RUN_DIR["test"]`. Anything else there (a `run.json`, a lock
+    file, a stage file such as `pairs.npz`) or any of `TEST_OUTPUTS` in `OUT_DIR["test"]` means a
+    TEST run has started (or finished) before, even if its `run.json` was deleted since. Returns the
+    offending paths (empty list: a fresh start is allowed)."""
+    rd, od = RUN_DIR["test"], OUT_DIR["test"]
+    found = sorted(str(p) for p in rd.rglob("*")) if rd.is_dir() else ([str(rd)] if rd.exists() else [])
+    found += [str(od / f) for f in TEST_OUTPUTS if (od / f).exists()]
+    return found
+
+
 def _lock_info() -> dict:
     return {"pid": os.getpid(), "host": socket.gethostname(), "started": _now()}
 
@@ -120,6 +142,11 @@ def start_run(mode: str, inputs: dict[str, str], resume: bool) -> dict:
     the ordered id list, so that a reordering (a different hash) is refused on resume exactly like
     any other changed input.
 
+    Test mode, fresh start: additionally refuses unless `spent_look_evidence()` is empty (an empty or
+    absent `RUN_DIR["test"]` and no `TEST_OUTPUTS` in `OUT_DIR["test"]`), so a finished or invalid
+    TEST whose git-ignored `run.json` was deleted can never be started again. A dry mode has no such
+    check (dry runs may be redone from a clean directory).
+
     Resume (`resume=True`): requires a stored record with `status="running"` and `inputs` and
     `threads` identical to the ones given here (a changed checkpoint hash, pair-set hash, thread
     count, etc. refuses the resume rather than continuing from a different state); re-hashes every
@@ -141,6 +168,13 @@ def start_run(mode: str, inputs: dict[str, str], resume: bool) -> dict:
     if stored is not None and stored.get("status") in ("finished", "invalid"):
         raise RunStateError(f"{mode}: run.json at {run_path} has status {stored['status']!r}; "
                             "a finished or invalid run is never rerun")
+    if mode == "test" and not resume and stored is None:
+        leftovers = spent_look_evidence()
+        if leftovers:
+            shown = ", ".join(leftovers[:5]) + (f" (+{len(leftovers) - 5} more)" if len(leftovers) > 5 else "")
+            raise RunStateError(f"test: a TEST run has already started or finished (found {shown}); "
+                                "the single look is spent - a fresh TEST start is refused even without "
+                                "run.json. Never delete runs/e5/test/ or experiments/e5/test/ outputs.")
 
     run_path.parent.mkdir(parents=True, exist_ok=True)
     try:

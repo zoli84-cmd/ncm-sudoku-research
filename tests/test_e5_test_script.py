@@ -13,7 +13,9 @@ from ncm_sudoku import e5pairs, e5run, subsets, wp2
 from ncm_sudoku.generate import random_solution
 
 N = 250
+N_T = 60  # TEST size in the model-free test-mode runs (two extraction batches, the second partial)
 D, Z = 4, 3  # fake residual and Z<=6 state widths
+OFFSET = 1000  # test-mode runs redirect the TEST seed namespace 10 to 1010: real TEST pairs are never generated
 
 
 def _mod():
@@ -78,7 +80,7 @@ def _fake_evaluate(fail_batches=()):
     return evaluate_batch
 
 
-def _setup(tmp_path, monkeypatch, extract=None, evaluate=None):
+def _setup(tmp_path, monkeypatch, extract=None, evaluate=None, test_inputs=False):
     s = _mod()
     rng = np.random.default_rng(0)
     root = tmp_path / "root"
@@ -93,8 +95,28 @@ def _setup(tmp_path, monkeypatch, extract=None, evaluate=None):
            "solutions": subsets.sha256_array(sol)}
     (root / "experiments" / "e5" / "causal").mkdir(parents=True)
     (root / "experiments" / "e5" / "lock").mkdir(parents=True)
-    (root / "experiments" / "e5" / "pairs.json").write_text(
-        json.dumps({"subsets": {"probe_val": {"count": N, "ids": ids, "sha256": sha}}}), encoding="utf-8")
+    pairs_json = {"subsets": {"probe_val": {"count": N, "ids": ids, "sha256": sha}}}
+    if test_inputs:  # the extra files `_inputs("test", ...)` hashes: PROBE-TRAIN pairs, released set, WP2 TEST
+        pt = root / "runs" / "e5" / "pairs" / "probe_train"
+        pt.mkdir(parents=True)
+        pt_ids = [f"e5pair-v1-8-{i}" for i in range(N)]
+        (pt / "ids.json").write_text(json.dumps(pt_ids), encoding="utf-8")
+        for k, v in (("a", a), ("b", b), ("solutions", sol)):
+            np.save(pt / f"{k}.npy", v)
+        pairs_json["subsets"]["probe_train"] = {"count": N, "ids": pt_ids,
+                                                "sha256": {**sha, "ids": subsets.sha256_ids(pt_ids)}}
+        rel = root / "data" / "released" / "sudoku" / "hard"
+        rel.mkdir(parents=True)
+        files = {}
+        for name in ("puzzles.pickle", "solutions.pickle"):
+            (rel / name).write_bytes(b"fake " + name.encode())
+            files[f"sudoku/hard/{name}"] = {"sha256": wp2.file_sha256(rel / name)}
+        (root / "experiments" / "provenance").mkdir(parents=True)
+        (root / "experiments" / "provenance" / "released_data.json").write_text(
+            json.dumps({"hard": {"files": files}}), encoding="utf-8")
+        (root / "experiments" / "lock").mkdir(parents=True)
+        (root / "experiments" / "lock" / "test_set.json").write_text(json.dumps({"sha256": {}}), encoding="utf-8")
+    (root / "experiments" / "e5" / "pairs.json").write_text(json.dumps(pairs_json), encoding="utf-8")
 
     heads_dir, lock_dir = root / "runs" / "e5" / "causal" / "heads", root / "runs" / "e5" / "lock"
     heads_dir.mkdir(parents=True), lock_dir.mkdir(parents=True)
@@ -128,6 +150,9 @@ def _setup(tmp_path, monkeypatch, extract=None, evaluate=None):
                         lambda m, puzzles, batch_size: torch.as_tensor(np.asarray(puzzles)[:, :40] % 16).long())
     monkeypatch.setattr(e5run, "RUN_DIR", {k: tmp_path / "runs" / k for k in e5run.RUN_DIR})
     monkeypatch.setattr(e5run, "OUT_DIR", {k: tmp_path / "out" / k for k in e5run.OUT_DIR})
+    if test_inputs:
+        monkeypatch.setattr(e5run, "require_lock", lambda manifest, dry_record: None)
+        monkeypatch.setattr(s, "N_TEST", N_T)
     return s, ids
 
 
@@ -269,7 +294,7 @@ def test_test_generation_error_stops_with_reason(tmp_path, monkeypatch):
     monkeypatch.setattr(e5run, "require_lock", lambda manifest, dry_record: None)
     monkeypatch.setattr(s, "_inputs", lambda mode, P: ({"mode": mode}, {}))
     monkeypatch.setattr(s, "_start_checks", lambda *a: {"shared": [], "A": [], "B": []})
-    monkeypatch.setattr(s.Runner, "_corpus", lambda self: ({}, {"counts": {}}))
+    monkeypatch.setattr(s, "screening_corpus", lambda P: ({}, {"counts": {}}, None))
     real = e5pairs.generate_pair
 
     def gen(seed, index):
@@ -317,3 +342,226 @@ def test_start_hash_categories(tmp_path, monkeypatch, target, expect):
         assert len(res["pairs"]) == N  # the run continued for the other claim
         key = "component/z6_head" if target == "z6" else f"head/{target}"
         assert res["invalid_reasons"][expect["A"] and "A" or "B"] == [f"hash_mismatch: {key}"]
+
+
+# --- test mode (review fixes 1, 2, 4): TEST generation redirected to a non-TEST namespace -------
+
+
+def _redirect_generation(monkeypatch, replace=None):
+    """`e5pairs.generate_pair` with seed 10 redirected to 10 + OFFSET; `replace` maps a raw index to
+    the pair to return instead (internal-collision injection). Returns the list of raw indices asked."""
+    real, asked = e5pairs.generate_pair, []
+
+    def gen(seed, index):
+        assert seed == e5pairs.PAIR_SEEDS["pairs_test"] == 10
+        asked.append(index)
+        if replace and index in replace:
+            return replace[index]
+        return real(seed + OFFSET, index)
+
+    monkeypatch.setattr(e5pairs, "generate_pair", gen)
+    return asked
+
+
+def test_test_mode_screening_end_to_end(tmp_path, monkeypatch):
+    s, _ = _setup(tmp_path, monkeypatch, test_inputs=True)
+    real = e5pairs.generate_pair
+    rejected = real(10 + OFFSET, 3)
+    monkeypatch.setattr(s, "screening_corpus",
+                        lambda P: ({"fake": [("ext-0", rejected.solution)]}, {"counts": {"fake": 1}}, None))
+    asked = _redirect_generation(monkeypatch)
+    assert s.run("test", resume=False) == "finished"
+
+    assert asked == list(range(N_T + 1))  # raw-index stepping past the one external collision
+    kept = [i for i in range(N_T + 1) if i != 3]
+    z = np.load(tmp_path / "runs" / "test" / "pairs.npz", allow_pickle=False)
+    assert z["ids"].tolist() == [f"e5pair-v1-{10 + OFFSET}-{i}" for i in kept]
+    pairs = [real(10 + OFFSET, i) for i in kept]
+    for key, attr in (("a", "a"), ("b", "b"), ("solutions", "solution")):
+        assert z[key].dtype == np.uint8 and z[key].shape == (N_T, 81)
+        assert np.array_equal(z[key], np.stack([getattr(p, attr) for p in pairs]))
+    assert z["order"].tolist() == list(range(N_T))
+    meta = json.loads(str(z["meta_json"]))
+    screen = meta["screen"]
+    assert (screen["applied"], screen["n_candidates"], screen["n_rejected"], screen["n_accepted"]) == (
+        True, N_T + 1, 1, N_T)
+    assert screen["log"][3] == {"index": 3, "pair_id": rejected.pair_id, "accepted": False,
+                                "reason": "external_collision", "colliding_id": "ext-0"}
+    assert meta["internal_collisions"] == []
+
+    res = _results(tmp_path, "test")
+    assert res["mode"] == "test" and res["n_pairs"] == N_T and list(res["pairs"]) == z["ids"].tolist()
+    assert res["screening"]["n_rejected"] == 1 and "pilot_prediction_max_abs_diff" not in res
+    log = json.loads((tmp_path / "out" / "test" / "screening_log.json").read_text(encoding="utf-8"))
+    assert len(log["log"]) == N_T + 1 and log["log"][3]["accepted"] is False
+    assert _run_json(tmp_path, "test")["status"] == "finished"
+
+    # review fix 1: deleting the git-ignored run.json never reopens the single look
+    before = (tmp_path / "out" / "test" / "results.json").read_bytes()
+    (tmp_path / "runs" / "test" / "run.json").unlink()
+    with pytest.raises(e5run.RunStateError, match="single look"):
+        s.run("test", resume=False)
+    assert (tmp_path / "out" / "test" / "results.json").read_bytes() == before
+    assert not (tmp_path / "runs" / "test" / "run.json").exists()
+
+
+def test_test_mode_internal_collision_stops_the_run(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    s, _ = _setup(tmp_path, monkeypatch, test_inputs=True)
+    monkeypatch.setattr(s, "screening_corpus", lambda P: ({}, {"counts": {}}, None))
+    twin = replace(e5pairs.generate_pair(10 + OFFSET, 2), pair_id=f"e5pair-v1-{10 + OFFSET}-5", index=5)
+    _redirect_generation(monkeypatch, replace={5: twin})
+    monkeypatch.setattr(s, "extract_batch", lambda *a, **k: pytest.fail("extraction after an internal collision"))
+    assert s.run("test", resume=False) == "invalid"
+    res = _results(tmp_path, "test")
+    assert res["outcomes"] == {"A": "invalid", "B": "invalid"}
+    assert res["invalid_reasons"]["shared"] == [
+        f"internal_collision: e5pair-v1-{10 + OFFSET}-2 e5pair-v1-{10 + OFFSET}-5"]
+    assert res["internal_collisions"] == [[f"e5pair-v1-{10 + OFFSET}-2", f"e5pair-v1-{10 + OFFSET}-5"]]
+    assert _run_json(tmp_path, "test")["status"] == "invalid"
+    assert (tmp_path / "out" / "test" / "screening_log.json").is_file()
+    assert s.STOP_ROW in (tmp_path / "out" / "test" / "report.md").read_text(encoding="utf-8")
+
+
+def _no_test_generation(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("TEST pair generation reached after a start refusal")
+
+    monkeypatch.setattr(e5pairs, "generate_pair", boom)
+
+
+def _nothing_started(tmp_path):
+    rd = tmp_path / "runs" / "test"
+    assert not rd.exists() or not any(rd.iterdir()), "a refused TEST start left something in RUN_DIR"
+    assert not (tmp_path / "out" / "test").exists()
+
+
+@pytest.mark.parametrize("exc", ["LockError", "DataIntegrityError"])
+def test_test_mode_lock_failures_refuse_without_a_record(tmp_path, monkeypatch, exc):
+    s, _ = _setup(tmp_path, monkeypatch, test_inputs=True)
+    err = getattr(e5run, exc)
+
+    def require_lock(manifest, dry_record):
+        raise err("injected")
+
+    monkeypatch.setattr(e5run, "require_lock", require_lock)
+    _no_test_generation(monkeypatch)
+    with pytest.raises(err, match="injected"):
+        s.run("test", resume=False)
+    _nothing_started(tmp_path)
+    with pytest.raises(SystemExit) as ex:
+        s.main(["--mode", "test"])
+    assert ex.value.code == 2
+    _nothing_started(tmp_path)
+
+
+@pytest.mark.parametrize("target,category", [
+    ("z6", "A"), ("P4", "B"), ("component/Q", "B"), ("P2", "shared"), ("checkpoint", "shared"),
+    ("corpus", "shared"),
+])
+def test_test_mode_start_check_failures_refuse_without_a_record(tmp_path, monkeypatch, target, category):
+    """Review fix 2: in test mode every start check of every §6 category refuses before start."""
+    s, _ = _setup(tmp_path, monkeypatch, test_inputs=True)
+    monkeypatch.setattr(s, "screening_corpus", lambda P: ({}, {"counts": {}}, None))
+    if target == "z6":
+        _tamper_head(s, tmp_path, "runs/e5/lock/z6.pt", Z)
+    elif target in ("P2", "P4"):
+        _tamper_head(s, tmp_path, f"runs/e5/causal/heads/{target}.pt", D)
+    elif target == "component/Q":
+        np.save(s.ROOT / "runs" / "e5" / "lock" / "Q.npy", np.zeros((D, 9)))
+    elif target == "checkpoint":
+        def bad(d):
+            raise wp2.DataIntegrityError("checkpoint differs")
+
+        monkeypatch.setattr(s, "verify_checkpoints", bad)
+    else:
+        monkeypatch.setattr(s, "screening_corpus", lambda P: ({}, {}, "screening_corpus_hash: WP2 TEST differs"))
+    _no_test_generation(monkeypatch)
+    with pytest.raises(s.StartRefused) as ex:
+        s.run("test", resume=False)
+    if target != "corpus":
+        assert f"{category}: " in str(ex.value)
+    else:
+        assert "screening_corpus_hash" in str(ex.value)
+    _nothing_started(tmp_path)
+    with pytest.raises(SystemExit) as ex2:
+        s.main(["--mode", "test"])
+    assert ex2.value.code == 2
+    _nothing_started(tmp_path)
+
+
+def test_dry_mode_still_records_claim_specific_start_failures(tmp_path, monkeypatch):
+    """Dry modes keep the §6 behaviour: a claim-B start mismatch is recorded and the run continues."""
+    s, _ = _setup(tmp_path, monkeypatch)
+    np.save(s.ROOT / "runs" / "e5" / "lock" / "Q.npy", np.zeros((D, 9)))
+    assert s.run("dry", resume=False) == "finished"
+    res = _results(tmp_path, "dry")
+    assert res["invalid_reasons"]["B"] == ["hash_mismatch: component/Q"] and res["outcomes"]["B"] == "invalid"
+
+
+# --- non-finite stops at every runner-level gate (protocol §6) ----------------------------------
+
+
+def _assert_non_finite_stop(tmp_path, s, name):
+    assert s.run("dry", resume=False) == "invalid"
+    res = _results(tmp_path, "dry")
+    assert res["outcomes"] == {"A": "invalid", "B": "invalid"}
+    assert res["invalid_reasons"]["shared"] == [f"non_finite: {name}"]
+    assert _run_json(tmp_path, "dry")["status"] == "invalid"
+
+
+def test_non_finite_probe_prediction_stops(tmp_path, monkeypatch):
+    s, _ = _setup(tmp_path, monkeypatch)
+    real = s.head_probs
+
+    def nan_probs(sd, feats, empty, batch):
+        per_seed, mean = real(sd, feats, empty, batch=batch)
+        mean = mean.copy()
+        r, c = np.argwhere(empty)[0]
+        mean[r, c, 0] = np.nan
+        return per_seed, mean
+
+    monkeypatch.setattr(s, "head_probs", nan_probs)
+    _assert_non_finite_stop(tmp_path, s, "probes/P2")
+    assert not (tmp_path / "runs" / "dry" / "causal").exists()
+
+
+def test_non_finite_per_pair_a_value_stops(tmp_path, monkeypatch):
+    s, _ = _setup(tmp_path, monkeypatch)
+    real = s.pair_scores
+
+    def nan_scores(pred, mask, empty, same, n):
+        out = real(pred, mask, empty, same, n)
+        return {**out, "w": [np.nan] * n}
+
+    monkeypatch.setattr(s, "pair_scores", nan_scores)
+    _assert_non_finite_stop(tmp_path, s, "per_pair_A")
+    assert not (tmp_path / "runs" / "dry" / "decisions.json").exists()
+
+
+def test_non_finite_per_pair_b_value_stops(tmp_path, monkeypatch):
+    base = _fake_evaluate()
+
+    def nan_evaluate(*a, **k):
+        out = base(*a, **k)
+        out["directed"] = out["directed"].copy()
+        out["directed"][0, 0] = np.nan
+        return out
+
+    s, _ = _setup(tmp_path, monkeypatch, evaluate=nan_evaluate)
+    _assert_non_finite_stop(tmp_path, s, "per_pair_B")
+
+
+def test_non_finite_decision_input_stops(tmp_path, monkeypatch):
+    s, _ = _setup(tmp_path, monkeypatch)
+    real = s.decide
+
+    def nan_decide(*a, **k):
+        dec = real(*a, **k)
+        dec["inputs"]["A2"] = [np.nan] + list(dec["inputs"]["A2"][1:])
+        return dec
+
+    monkeypatch.setattr(s, "decide", nan_decide)
+    _assert_non_finite_stop(tmp_path, s, "decision_inputs")
+    assert not (tmp_path / "runs" / "dry" / "decisions.json").exists()

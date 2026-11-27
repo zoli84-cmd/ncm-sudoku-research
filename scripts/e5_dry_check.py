@@ -39,9 +39,10 @@ without a discordant bit); there is no tolerance anywhere. Parts (each `{"passed
 empty). `hashes` maps ROOT-relative POSIX paths to the SHA-256 of the file bytes (the format
 `e5run.require_lock` re-verifies): the three pilot references, the PROBE-VAL ids and
 `experiments/e5/pairs.json`, the head and component indexes and files, both `results.json`, both
-`run.json` (which carry every raw stage file hash), `scripts/e5_test.py`, this script and
-`src/ncm_sudoku/{e5test,e5batch,e5run,e5stats,e5causal,e5extract,probes,e5pilot}.py`, and the PROBE-VAL
-pair and activation files part (b) reads (`PROBE_VAL_FILES`). `ids_sha256` is the
+`run.json` (which carry every raw stage file hash), the code the approval covers (`CODE_FILES`:
+`scripts/e5_test.py`, this script, every `src/ncm_sudoku/*.py`, `pyproject.toml`, `uv.lock` and
+`e5_protocol_v1.md`), and the PROBE-VAL pair and activation files part (b) reads
+(`PROBE_VAL_FILES`). `ids_sha256` is the
 `sha256_ids` of the ordered id list. Reported, not gates: `tie_rule_effect` (pilot pair ids whose
 `w` differs from `w_pilot_rule`, per representation) and `prediction_max_abs_diff` (dry vs pilot,
 dry_perm vs dry).
@@ -76,9 +77,10 @@ REPS = {"P2": "P2", "z6": "Z"}  # representation -> row-key suffix
 A_FIELDS = ("n_disc", "w_P2", "w_Z", "w_pilot_rule_P2", "w_pilot_rule_Z", "delta", "elig_a")
 B_FIELDS = ("Q", "random_mean", "hv", "shuf", "full_be", "elig_b")
 A_INPUTS, B_INPUTS = ("A1_lower", "A1_upper", "A2"), ("B1", "B2", "B3", "B4")
-CODE_FILES = ["scripts/e5_test.py", "scripts/e5_dry_check.py"] + [
-    f"src/ncm_sudoku/{m}.py" for m in ("e5test", "e5batch", "e5run", "e5stats", "e5causal", "e5extract", "probes",
-                                       "e5pilot")]
+# Every module the runner can import (the whole package), the two E5 scripts, the environment
+# lock and the protocol: a change to any of them after the approval is caught by require_lock.
+CODE_FILES = ["scripts/e5_test.py", "scripts/e5_dry_check.py", "pyproject.toml", "uv.lock", "e5_protocol_v1.md"] + [
+    f"src/ncm_sudoku/{p.name}" for p in sorted((CODE_ROOT / "src" / "ncm_sudoku").glob("*.py"))]
 # PROBE-VAL pair and activation files that part (b) reads through e5pilot.load_subset / representation
 PROBE_VAL_FILES = ["runs/e5/pairs/probe_val/a.npy", "runs/e5/pairs/probe_val/b.npy"] + [
     f"runs/e5/acts/probe_val/{m}/{f}.npy" for m in "ab" for f in ("codes", "solved", "prefix_cells", "z6")]

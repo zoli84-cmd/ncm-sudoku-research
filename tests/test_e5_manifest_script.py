@@ -263,3 +263,75 @@ def test_verify_rejects_missing_entry(fixture_root, monkeypatch):
     monkeypatch.setattr(e5run, "ROOT", fixture_root)
     with pytest.raises(e5run.DataIntegrityError, match="component:W"):
         e5run.verify_manifest(p)
+
+
+# --- review fix 3: the manifest pins only code the dry-run approval ran ---------------------------
+
+
+def _git(cwd, *args):
+    import subprocess
+
+    return subprocess.check_output(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
+                                    "-c", "core.autocrlf=false", *args], cwd=cwd, text=True,
+                                   stderr=subprocess.DEVNULL).strip()
+
+
+def _approved_repo(root):
+    """A throwaway repo whose dry-run record names the commit of its first (and only) commit."""
+    _git(root, "init", "-q")
+    for rel in ("src/ncm_sudoku/a.py", "scripts/e5_test.py", "scripts/e5_dry_check.py", "scripts/other.py",
+                "pyproject.toml", "uv.lock", "e5_protocol_v1.md", "docs/notes.md"):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(f"# {rel}\n", encoding="utf-8")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "dry runs")
+    commit = _git(root, "rev-parse", "HEAD")
+    _write_json(root / "experiments" / "e5" / "dry" / "check.json", {"passed": True, "code_state": {"commit": commit}})
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "approval")
+    return commit
+
+
+def test_approved_code_unchanged_passes(tmp_path):
+    m = _mod()
+    _approved_repo(tmp_path)
+    # a later commit outside the approved paths does not block the manifest
+    (tmp_path / "scripts" / "other.py").write_text("# changed\n", encoding="utf-8")
+    (tmp_path / "docs" / "notes.md").write_text("changed\n", encoding="utf-8")
+    _git(tmp_path, "commit", "-qam", "unrelated")
+    assert m.approved_code_problem(tmp_path) is None
+
+
+@pytest.mark.parametrize("rel", ["src/ncm_sudoku/a.py", "scripts/e5_test.py", "scripts/e5_dry_check.py",
+                                 "pyproject.toml", "uv.lock", "e5_protocol_v1.md", "src/ncm_sudoku/new.py"])
+def test_approved_code_changed_since_the_dry_check_refuses(tmp_path, rel):
+    m = _mod()
+    commit = _approved_repo(tmp_path)
+    (tmp_path / rel).write_text("# changed after the dry check\n", encoding="utf-8")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-q", "-m", "code change")
+    problem = m.approved_code_problem(tmp_path)
+    assert problem and commit in problem and "changed" in problem
+
+
+def test_approved_code_record_without_commit_or_unknown_commit_refuses(tmp_path):
+    m = _mod()
+    _approved_repo(tmp_path)
+    rec = tmp_path / "experiments" / "e5" / "dry" / "check.json"
+    _write_json(rec, {"passed": True})
+    assert "code_state.commit" in m.approved_code_problem(tmp_path)
+    _write_json(rec, {"passed": True, "code_state": {"commit": "f" * 40}})
+    assert "failed" in m.approved_code_problem(tmp_path)
+    rec.unlink()
+    assert "missing" in m.approved_code_problem(tmp_path)
+
+
+def test_main_refuses_to_build_when_approved_code_changed(tmp_path, monkeypatch):
+    m = _mod()
+    monkeypatch.setattr(m, "OUT", tmp_path / "manifest.json")
+    monkeypatch.setattr(m, "approved_code_problem", lambda root: "approved code changed")
+    monkeypatch.setattr(m, "build_manifest", lambda root: pytest.fail("manifest built despite a code change"))
+    monkeypatch.setattr(m.sys, "argv", ["e5_manifest.py"])
+    with pytest.raises(SystemExit, match="approved code changed"):
+        m.main()
+    assert not (tmp_path / "manifest.json").exists()
